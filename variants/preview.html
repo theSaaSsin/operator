@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheSaaSsin — Variant Preview</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif}
+body{background:#0a0a0f;color:#f0f0f5;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.toolbar{display:flex;align-items:center;gap:12px;padding:10px 18px;background:#121218;border-bottom:1px solid rgba(255,42,42,0.25);flex-shrink:0;flex-wrap:wrap}
+.toolbar-title{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#ff2a2a;margin-right:8px}
+.tab{padding:8px 20px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#b0b0b0;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;line-height:1.4}
+.tab:hover{border-color:rgba(255,42,42,0.4);color:#fff}
+.tab.active{background:#ff2a2a;border-color:#ff2a2a;color:#fff}
+.tab-label{font-size:.65rem;opacity:.7;display:block;margin-top:1px;text-transform:uppercase;letter-spacing:.06em}
+.spacer{flex:1}
+.meta{font-size:.72rem;color:#555;text-align:right;line-height:1.5}
+.frame-wrap{flex:1;position:relative}
+iframe{position:absolute;inset:0;width:100%;height:100%;border:none;display:none}
+iframe.active{display:block}
+.badge{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#121218;border:1px solid rgba(255,42,42,0.3);color:#b0b0b0;font-size:.72rem;padding:6px 16px;border-radius:999px;pointer-events:none;z-index:9999;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="toolbar-title">Preview</span>
+  <button class="tab active" onclick="show('f1',this)">
+    v1 — Original<span class="tab-label">Untouched clone</span>
+  </button>
+  <button class="tab" onclick="show('f2',this)">
+    v2 — Optimised<span class="tab-label">Mobile + Spacing + CTA</span>
+  </button>
+  <button class="tab" onclick="show('f3',this)">
+    v3 — Conversion<span class="tab-label">Headline + CTA copy</span>
+  </button>
+  <div class="spacer"></div>
+  <div class="meta">TheSaaSsin Variant System<br>Pick best · Deploy</div>
+</div>
+<div class="frame-wrap">
+  <iframe id="f1" class="active" src="v1.html" title="v1 Original"></iframe>
+  <iframe id="f2" src="v2.html" title="v2 Optimised"></iframe>
+  <iframe id="f3" src="v3.html" title="v3 Conversion"></iframe>
+</div>
+<div class="badge" id="badge">Viewing: v1 — Original</div>
+<script>
+var labels={f1:'v1 — Original',f2:'v2 — Optimised',f3:'v3 — Conversion'};
+function show(id,btn){
+  document.querySelectorAll('iframe').forEach(function(f){f.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('badge').textContent='Viewing: '+labels[id];
+}
+</script>
+</body>
+</html>

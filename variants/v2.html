@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-GTLT5Z6GBM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-GTLT5Z6GBM');
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheSaaSsin | Automate. Eliminate. Dominate.</title>
+<meta name="description" content="We design high-converting websites, automate your workflows, build CRM systems and lead pipelines that bring you consistent clients — without manual effort. For startups and scaling businesses.">
+<link rel="canonical" href="https://thesaassin.com">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root {
+  --dark-bg: #0a0a0f;
+  --darker-bg: #050508;
+  --card-bg: #121218;
+  --text-primary: #f0f0f5;
+  --text-secondary: #b0b0b0;
+  --accent: #ff2a2a;
+  --accent-glow: rgba(255,42,42,0.15);
+  --transition-speed: 0.4s;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
+html{scroll-behavior:smooth}
+body{background-color:var(--dark-bg);color:var(--text-primary);line-height:1.6;overflow-x:hidden;position:relative;min-height:100vh}
+#matrixCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-2;opacity:0.3}
+#dustCanvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.5;mix-blend-mode:screen}
+.scan-line{position:fixed;top:0;left:0;width:100%;height:2px;background:rgba(255,42,42,0.25);box-shadow:0 0 8px rgba(255,42,42,0.4);animation:scan 8s linear infinite;z-index:0}
+@keyframes scan{0%{top:0}100%{top:100%}}
+.container{width:90%;max-width:1100px;margin:0 auto;padding:0 20px;position:relative;z-index:10}
+section{padding:120px 0;opacity:0;transform:translateY(20px);transition:opacity 0.8s ease,transform 0.8s ease;position:relative}
+section:not(:last-of-type)::after{content:"";position:absolute;bottom:-40px;left:0;width:100%;height:80px;pointer-events:none;background:linear-gradient(to bottom,rgba(255,42,42,0) 0%,rgba(255,42,42,0.12) 50%,rgba(255,42,42,0) 100%);z-index:1}
+section:not(:last-of-type)::before{content:"";position:absolute;bottom:0;left:0;width:100%;height:2px;background:rgba(255,42,42,0.35);box-shadow:0 0 10px rgba(255,42,42,0.5);z-index:2}
+section.visible{opacity:1;transform:translateY(0)}
+h1,h2,h3,h4{font-weight:700;line-height:1.2;letter-spacing:-0.02em}
+.hero-headline{font-size:3.2rem;margin-bottom:20px}
+.headline-main{display:inline-block;background:linear-gradient(90deg,var(--accent) 0%,var(--accent) 45%,#fff 50%,var(--accent) 55%,var(--accent) 100%);background-size:200% 100%;animation:textSweep 6s linear infinite;-webkit-background-clip:text;background-clip:text;color:transparent}
+.headline-sub{font-size:0.65em;opacity:0.7;display:block;margin-top:10px;color:var(--accent)}
+@keyframes textSweep{0%{background-position:200% 50%}100%{background-position:-200% 50%}}
+h2{font-size:2.4rem;margin-bottom:50px;text-align:center;position:relative;color:#fff;letter-spacing:-0.01em}
+h2:after{content:'';position:absolute;bottom:-15px;left:50%;transform:translateX(-50%);width:80px;height:4px;background:var(--accent);border-radius:2px}
+p{font-size:1.1rem;color:var(--text-secondary);margin-bottom:20px;letter-spacing:.01em}
+.btn{display:inline-block;background:var(--accent);color:#fff;padding:16px 36px;border-radius:30px;text-decoration:none;font-weight:600;text-transform:uppercase;letter-spacing:1px;transition:all .3s ease;border:none;cursor:pointer;font-size:.95rem;box-shadow:0 5px 15px rgba(255,42,42,0.2);position:relative;overflow:hidden;z-index:1}
+.btn:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 12px 25px rgba(255,42,42,0.3);color:#fff}
+.btn:active{transform:translateY(1px)}
+.btn-outline{background:transparent;border:2px solid var(--accent);color:var(--accent);box-shadow:none}
+.btn-outline:hover{background:rgba(255,42,42,0.1);color:#fff}
+header{padding:20px 0;position:fixed;width:100%;top:0;z-index:1000;background:rgba(10,10,15,0.85);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,0.05);transition:all .3s ease}
+.header-container{display:flex;justify-content:space-between;align-items:center}
+.logo-container{display:flex;align-items:center;gap:0}
+.logo{font-size:1.8rem;font-weight:800;color:var(--text-primary);text-decoration:none;display:flex;align-items:center}
+.logo-part{transition:all .3s ease}
+.logo-the{color:#fff}
+.logo-saas{color:var(--accent)}
+.logo-sin{color:#fff}
+.tagline{font-size:.9rem;color:var(--text-secondary);margin-top:5px;transition:color .3s ease;letter-spacing:.05em}
+nav ul{display:flex;list-style:none;align-items:center}
+nav ul li{margin-left:30px}
+nav ul li a{color:var(--text-secondary);text-decoration:none;font-weight:500;transition:color .3s ease;position:relative;letter-spacing:.02em}
+nav ul li a:hover{color:var(--accent)}
+nav ul li a:after{content:'';position:absolute;bottom:-5px;left:0;width:0;height:2px;background:var(--accent);transition:width .3s ease}
+nav ul li a:hover:after{width:100%}
+.nav-cta{background:var(--accent);color:#fff!important;padding:10px 20px;border-radius:20px;font-size:.85rem!important;letter-spacing:.05em}
+.nav-cta:hover{opacity:.9}
+.nav-cta:after{display:none!important}
+.hero{padding:180px 0 120px;position:relative;overflow:hidden;text-align:center;background:radial-gradient(circle at center,rgba(0,0,0,0.7) 0%,rgba(0,0,0,0) 70%)}
+.hero-content{max-width:1000px;margin:0 auto;position:relative;z-index:2}
+.hero p{font-size:1.3rem;margin-bottom:30px;max-width:650px;margin-left:auto;margin-right:auto;color:#e0e0e0}
+.hero-btns{display:flex;justify-content:center;gap:20px;margin-top:30px;flex-wrap:wrap}
+.hero-hook{font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:var(--accent);margin-bottom:16px;opacity:.9}
+.hero-tags{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:30px}
+.hero-tag{background:rgba(255,42,42,0.08);border:1px solid rgba(255,42,42,0.2);color:var(--text-secondary);padding:6px 16px;border-radius:20px;font-size:.82rem;letter-spacing:.04em}
+
+/* WHO IS IT FOR */
+.who-section{background:var(--darker-bg)}
+.who-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:30px;margin-top:50px}
+.who-card{background:var(--card-bg);border-radius:15px;padding:36px 30px;border:1px solid rgba(255,255,255,0.05);position:relative;overflow:hidden;transition:transform .3s ease,box-shadow .3s ease}
+.who-card:hover{transform:translateY(-8px);box-shadow:0 20px 40px rgba(0,0,0,0.5)}
+.who-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .4s ease}
+.who-card:hover::before{transform:scaleX(1)}
+.who-icon{font-size:2.5rem;color:var(--accent);margin-bottom:16px}
+.who-card h3{font-size:1.3rem;color:#fff;margin-bottom:10px}
+.who-card p{font-size:.92rem;margin-bottom:0}
+
+/* FEATURES */
+.features{background:var(--darker-bg)}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:40px;margin-top:50px}
+.feature-card{background:var(--card-bg);border-radius:15px;padding:40px 30px;text-align:center;transition:transform .4s ease,box-shadow .4s ease;border:1px solid rgba(255,255,255,0.05);position:relative;overflow:hidden}
+.feature-card:before{content:'';position:absolute;top:0;left:0;width:100%;height:4px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .4s ease}
+.feature-card:hover{transform:translateY(-12px);box-shadow:0 20px 35px rgba(0,0,0,0.4)}
+.feature-card:hover:before{transform:scaleX(1)}
+.feature-icon{font-size:3rem;color:var(--accent);margin-bottom:20px}
+.feature-card h3{font-size:1.8rem;margin-bottom:15px;color:#fff}
+.feature-card ul{list-style:none;text-align:left;margin-top:15px}
+.feature-card ul li{font-size:.9rem;color:var(--text-secondary);padding:5px 0;display:flex;align-items:flex-start;gap:8px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.feature-card ul li:last-child{border-bottom:none}
+.feature-card ul li::before{content:'→';color:var(--accent);flex-shrink:0;margin-top:1px}
+
+/* PROCESS */
+.process{background:var(--dark-bg)}
+.process-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:30px;margin-top:50px}
+.process-step{background:var(--card-bg);padding:30px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);text-align:center;transition:transform .3s ease,box-shadow .3s ease;position:relative}
+.process-step::after{content:'→';position:absolute;right:-22px;top:50%;transform:translateY(-50%);color:var(--accent);font-size:1.4rem;z-index:2}
+.process-step:last-child::after{display:none}
+.process-step:hover{transform:translateY(-6px);box-shadow:0 10px 25px rgba(0,0,0,0.3)}
+.process-step h3{color:var(--accent);margin-bottom:10px}
+
+/* TICKER */
+.ss-ticker-wrap{background:var(--darker-bg);overflow:hidden;padding:18px 0;border-top:1px solid rgba(255,42,42,0.2);border-bottom:1px solid rgba(255,42,42,0.2)}
+.ss-ticker-track{display:flex;width:max-content;animation:ss-ticker 30s linear infinite}
+.ss-ticker-track:hover{animation-play-state:paused}
+.ss-ticker-item{display:flex;align-items:center;gap:12px;padding:0 48px;white-space:nowrap}
+.ss-ticker-num{font-size:1.5rem;font-weight:800;color:var(--accent);letter-spacing:-0.02em}
+.ss-ticker-label{font-size:.85rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.08em}
+.ss-ticker-sep{color:var(--accent);font-size:1.2rem;opacity:.5}
+@keyframes ss-ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* SHOWCASE */
+.ss-showcase{background:var(--darker-bg)}
+.ss-demo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:30px;margin-top:50px}
+.ss-demo-card{background:var(--card-bg);border-radius:15px;padding:30px;border:1px solid rgba(255,255,255,0.05);position:relative;overflow:hidden;transition:transform .4s ease,box-shadow .4s ease}
+.ss-demo-card:hover{transform:translateY(-8px);box-shadow:0 20px 40px rgba(0,0,0,0.5)}
+.ss-demo-card:before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .4s ease}
+.ss-demo-card:hover:before{transform:scaleX(1)}
+.ss-demo-title{font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.ss-demo-title i{color:var(--accent)}
+.ss-demo-screen{background:#0a0a0f;border-radius:8px;padding:16px;min-height:110px;margin-bottom:20px;font-family:monospace;font-size:.82rem;color:#b0b0b0;border:1px solid rgba(255,42,42,0.15);position:relative;overflow:hidden}
+.ss-type-cursor{display:inline-block;width:2px;height:1em;background:var(--accent);vertical-align:text-bottom;animation:ss-blink .7s step-end infinite}
+@keyframes ss-blink{0%,100%{opacity:1}50%{opacity:0}}
+.ss-flow-step{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:.82rem;color:var(--text-secondary);opacity:.3;transition:opacity .5s}
+.ss-flow-step.ss-lit{opacity:1;color:#fff}
+.ss-flow-step.ss-lit .ss-flow-dot{background:var(--accent);box-shadow:0 0 6px rgba(255,42,42,0.6)}
+.ss-flow-dot{width:8px;height:8px;border-radius:50%;background:#333;flex-shrink:0;transition:background .3s,box-shadow .3s}
+.ss-counter-display{text-align:center;padding:16px}
+.ss-counter-num{font-size:3rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.ss-counter-label{font-size:.8rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.1em;margin-top:4px}
+.ss-demo-cta{display:inline-block;color:var(--accent);font-size:.9rem;font-weight:600;text-decoration:none;letter-spacing:.02em;transition:opacity .2s}
+.ss-demo-cta:hover{opacity:.8}
+
+/* PRICING */
+.ss-pricing{background:var(--dark-bg)}
+.pricing-intro{text-align:center;max-width:700px;margin:0 auto 50px;font-size:1.1rem;color:var(--text-secondary)}
+.ss-price-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:25px;align-items:start}
+.ss-price-card{background:var(--card-bg);border-radius:15px;padding:36px 28px;border:1px solid rgba(255,255,255,0.05);transition:transform .3s ease;display:flex;flex-direction:column}
+.ss-price-card:hover{transform:translateY(-6px)}
+.ss-price-card.ss-featured{border:2px solid var(--accent);position:relative}
+.ss-price-badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:.75rem;font-weight:700;padding:4px 18px;border-radius:999px;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+.ss-price-name{font-size:1rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+.ss-price-amount{font-size:2.6rem;font-weight:800;color:#fff;line-height:1;margin-bottom:6px}
+.ss-price-amount span{font-size:1.1rem;font-weight:400;color:var(--text-secondary)}
+.ss-price-desc{font-size:.88rem;color:var(--text-secondary);margin-bottom:20px}
+.ss-price-list{list-style:none;margin-bottom:28px;flex:1}
+.ss-price-list li{font-size:.88rem;color:var(--text-secondary);padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:flex-start;gap:10px}
+.ss-price-list li:last-child{border-bottom:none}
+.ss-price-list li:before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:6px}
+.ss-price-list li.dimmed{opacity:.5}
+.ss-price-list li.dimmed:before{background:var(--text-secondary)}
+.price-cta-note{text-align:center;margin-top:30px;font-size:.85rem;color:var(--text-secondary)}
+.price-cta-note a{color:var(--accent);text-decoration:none}
+
+/* CASE STUDIES */
+.ss-cases{background:var(--darker-bg)}
+.ss-cases-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:30px;margin-top:50px}
+.ss-case-card{background:var(--card-bg);border-radius:15px;padding:36px 30px;border:1px solid rgba(255,255,255,0.05)}
+.ss-case-label{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:8px}
+.ss-case-client{font-size:1.2rem;font-weight:700;color:#fff;margin-bottom:24px}
+.ss-case-ba{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.ss-case-col{background:rgba(0,0,0,0.3);border-radius:10px;padding:16px}
+.ss-case-col-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-secondary);margin-bottom:8px}
+.ss-case-col p{font-size:.88rem;color:var(--text-secondary);margin-bottom:0;line-height:1.4}
+.ss-case-col.ss-after .ss-case-col-label{color:var(--accent)}
+.ss-case-col.ss-after p{color:#fff}
+.ss-case-metric{display:flex;align-items:baseline;gap:8px}
+.ss-case-metric-num{font-size:3.5rem;font-weight:800;color:var(--accent);line-height:1}
+.ss-case-metric-label{font-size:.85rem;color:var(--text-secondary)}
+
+/* FAQ */
+.faq-section{background:var(--dark-bg)}
+.faq-list{max-width:800px;margin:50px auto 0}
+.faq-item{background:var(--card-bg);border:1px solid rgba(255,255,255,0.05);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.faq-q{width:100%;background:none;border:none;color:#fff;text-align:left;padding:20px 24px;font-size:1rem;font-weight:600;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;letter-spacing:.01em;transition:background .2s}
+.faq-q:hover{background:rgba(255,42,42,0.05)}
+.faq-q i{color:var(--accent);font-size:.9rem;transition:transform .3s;flex-shrink:0}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .4s ease,padding .4s ease}
+.faq-a-inner{padding:0 24px 20px;font-size:.95rem;color:var(--text-secondary);line-height:1.7}
+.faq-item.open .faq-q i{transform:rotate(180deg)}
+.faq-item.open .faq-a{max-height:300px}
+
+/* CTA */
+.cta{text-align:center;padding:120px 0;background:radial-gradient(circle at center,rgba(0,0,0,0.8) 0%,rgba(0,0,0,0) 70%)}
+.cta h2{font-size:2.8rem;margin-bottom:30px}
+.cta p{max-width:700px;margin:0 auto 40px;font-size:1.2rem;color:#e0e0e0}
+
+/* FOOTER */
+footer{background:var(--darker-bg);padding:70px 0 40px;text-align:center;border-top:1px solid rgba(255,255,255,0.05);position:relative}
+footer::before{content:"";position:absolute;top:-40px;left:0;width:100%;height:80px;pointer-events:none;background:linear-gradient(to bottom,rgba(255,42,42,0) 0%,rgba(255,42,42,0.15) 50%,rgba(255,42,42,0) 100%);z-index:1}
+footer::after{content:"";position:absolute;top:0;left:0;width:100%;height:2px;background:rgba(255,42,42,0.4);box-shadow:0 0 12px rgba(255,42,42,0.6);z-index:2}
+.footer-logo{font-size:2rem;font-weight:800;margin-bottom:20px;display:inline-block;text-decoration:none}
+.footer-logo .logo-the{color:#fff}
+.footer-logo .logo-saas{color:var(--accent)}
+.footer-logo .logo-sin{color:#fff}
+.established{color:var(--text-secondary);font-size:.9rem;margin:15px 0;letter-spacing:.05em}
+.social-links{display:flex;justify-content:center;gap:25px;margin:40px 0}
+.social-links a{display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:50%;background:var(--card-bg);color:var(--accent);font-size:1.5rem;transition:all .3s ease;text-decoration:none}
+.social-links a:hover{transform:translateY(-5px);background:var(--accent);color:var(--darker-bg)}
+.footer-links{display:flex;justify-content:center;gap:30px;flex-wrap:wrap;margin:20px 0}
+.footer-links a{color:var(--text-secondary);text-decoration:none;font-size:.9rem;transition:color .2s}
+.footer-links a:hover{color:var(--accent)}
+.copyright{color:var(--text-secondary);font-size:.9rem;margin-top:30px;letter-spacing:.03em}
+
+/* FIXED UI */
+.cta-ribbon{position:fixed;top:78px;left:20px;background:linear-gradient(135deg,#ff2a2a,#ff4d4d);color:#fff;padding:8px 16px;font-size:13px;font-weight:600;border-radius:999px;text-decoration:none;box-shadow:0 4px 15px rgba(255,42,42,0.25);z-index:1001;transition:all .25s ease;white-space:nowrap}
+.cta-ribbon:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(255,42,42,0.4)}
+.floating-tab{position:fixed;top:50%;right:-60px;transform:rotate(-90deg) translateY(-50%);transform-origin:right center;background:var(--accent);color:#fff;padding:16px 36px;border-radius:30px;text-decoration:none;font-weight:600;text-transform:uppercase;letter-spacing:1px;transition:.3s;box-shadow:0 5px 15px rgba(255,42,42,.2);z-index:9999}
+.floating-tab:hover{right:-30px}
+
+/* MEGA MENU */
+.mega-dropdown{position:relative}
+.mega-menu{position:absolute;top:120%;left:50%;transform:translateX(-50%) translateY(10px);display:flex;min-width:500px;background:var(--card-bg);border:1px solid rgba(255,255,255,0.05);border-radius:12px;overflow:hidden;opacity:0;pointer-events:none;transition:all .25s ease;z-index:9999}
+.mega-dropdown:hover .mega-menu{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.menu-left{width:40%;border-right:1px solid rgba(255,255,255,0.05)}
+.menu-item{padding:14px 18px;cursor:pointer;color:var(--text-secondary);transition:all .25s ease}
+.menu-item:hover,.menu-item.active{color:var(--accent);background:rgba(255,42,42,0.05)}
+.menu-right{width:60%;padding:16px}
+.menu-content{display:none}
+.contact-menu .menu-content{display:block}
+.menu-content.active{display:block}
+.menu-goto{display:inline-block;margin-top:12px;color:var(--accent);font-size:.85rem;font-weight:600;text-decoration:none;letter-spacing:.03em;transition:opacity .2s}
+.menu-goto:hover{opacity:.75}
+.menu-right h4{font-size:1rem;color:#fff;margin-bottom:8px}
+.menu-right p{font-size:.85rem;color:var(--text-secondary);margin-bottom:0;line-height:1.5}
+
+/* CHATBOT */
+#ss-chatbot{position:fixed;bottom:30px;right:30px;z-index:9998;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
+.ss-chat-toggle{width:56px;height:56px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:1.4rem;cursor:pointer;box-shadow:0 4px 20px rgba(255,42,42,0.4);transition:transform .2s,box-shadow .2s;display:flex;align-items:center;justify-content:center}
+.ss-chat-toggle:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(255,42,42,0.5)}
+.ss-chat-panel{position:absolute;bottom:70px;right:0;width:340px;background:var(--card-bg);border:1px solid rgba(255,42,42,0.2);border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.6);transform:scale(.95) translateY(10px);transform-origin:bottom right;opacity:0;pointer-events:none;transition:transform .25s ease,opacity .25s ease}
+.ss-chat-panel.ss-open{transform:scale(1) translateY(0);opacity:1;pointer-events:auto}
+.ss-chat-header{background:var(--accent);padding:14px 18px;display:flex;align-items:center;gap:10px}
+.ss-chat-avatar{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;flex-shrink:0}
+.ss-chat-header-info{flex:1}
+.ss-chat-header-name{font-size:.9rem;font-weight:700;color:#fff}
+.ss-chat-header-status{font-size:.72rem;color:rgba(255,255,255,0.8)}
+.ss-chat-close{background:none;border:none;color:rgba(255,255,255,0.8);font-size:1.1rem;cursor:pointer;padding:0;line-height:1}
+.ss-chat-close:hover{color:#fff}
+.ss-chat-msgs{height:260px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+.ss-chat-msgs::-webkit-scrollbar{width:4px}
+.ss-chat-msgs::-webkit-scrollbar-track{background:transparent}
+.ss-chat-msgs::-webkit-scrollbar-thumb{background:rgba(255,42,42,0.3);border-radius:2px}
+.ss-msg{max-width:85%;padding:10px 13px;border-radius:12px;font-size:.85rem;line-height:1.45}
+.ss-msg.ss-bot{background:rgba(255,255,255,0.06);color:var(--text-primary);align-self:flex-start;border-bottom-left-radius:4px}
+.ss-msg.ss-user{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.ss-msg.ss-typing{display:flex;gap:4px;align-items:center;padding:12px 16px}
+.ss-typing-dot{width:6px;height:6px;border-radius:50%;background:var(--text-secondary);animation:ss-tdot 1.2s infinite}
+.ss-typing-dot:nth-child(2){animation-delay:.2s}
+.ss-typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes ss-tdot{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
+.ss-chat-foot{padding:12px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:8px}
+.ss-chat-input{flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:9px 14px;color:var(--text-primary);font-size:.85rem;outline:none;font-family:inherit}
+.ss-chat-input::placeholder{color:var(--text-secondary)}
+.ss-chat-input:focus{border-color:rgba(255,42,42,0.4)}
+.ss-chat-send{width:36px;height:36px;border-radius:50%;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.85rem;transition:transform .15s;flex-shrink:0}
+.ss-chat-send:hover{transform:scale(1.1)}
+.ss-chat-powered{text-align:center;font-size:.65rem;color:rgba(255,255,255,0.25);padding:6px 0 10px}
+
+/* LASER */
+body.cursor-ready{cursor:none}
+a,button{cursor:none !important}
+.laser-dot{position:fixed;width:10px;height:10px;pointer-events:none;z-index:9999999;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,#fff 0%,#ff2a2a 30%,rgba(255,42,42,0.3) 60%,transparent 80%);box-shadow:0 0 4px rgba(255,255,255,0.8),0 0 12px rgba(255,42,42,0.6),0 0 25px rgba(255,42,42,0.3)}
+.laser-shot{position:fixed;width:6px;height:6px;border-radius:50%;background:#ff2a2a;pointer-events:none;z-index:9999998;transform:translate(-50%,-50%);animation:laserShot .35s ease-out forwards}
+@keyframes laserShot{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}70%{opacity:.6;transform:translate(-50%,-50%) scale(3)}100%{opacity:0;transform:translate(-50%,-50%) scale(5)}}
+@keyframes pulse{0%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.5)}100%{transform:translate(-50%,-50%) scale(1)}}
+
+/* MOBILE NAV */
+.hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:5px}
+.hamburger span{display:block;width:24px;height:2px;background:var(--text-primary);transition:all .3s ease;border-radius:2px}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.mobile-nav{display:none;position:fixed;top:0;left:0;width:100%;height:100vh;background:rgba(5,5,8,0.98);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:30px}
+.mobile-nav.open{display:flex}
+.mobile-nav a{color:#fff;text-decoration:none;font-size:1.5rem;font-weight:700;transition:color .2s}
+.mobile-nav a:hover{color:var(--accent)}
+.mobile-nav-close{position:absolute;top:30px;right:30px;background:none;border:none;color:#fff;font-size:1.8rem;cursor:pointer}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .header-container{flex-direction:row;justify-content:space-between}
+  nav{display:none}
+  .hamburger{display:flex}
+  .cta-ribbon{display:none}
+  h1,.hero-headline{font-size:2.2rem}
+  h2{font-size:1.8rem}
+  .hero{padding:140px 0 80px}
+  .hero-btns{flex-direction:column;align-items:center}
+  .hero-btns .btn{width:100%;max-width:300px;text-align:center}
+  .process-step::after{display:none}
+  .floating-tab{display:none}
+  section{padding:80px 0}
+  .ss-chat-panel{width:calc(100vw - 40px);right:-10px}
+}
+@media(max-width:576px){
+  .hero-headline{font-size:1.9rem}
+  .ss-price-grid{grid-template-columns:1fr}
+  .ss-cases-grid{grid-template-columns:1fr}
+  .who-grid{grid-template-columns:1fr}
+}
+
+/* ── Hero Video Player ─────────────────────────────────────────── */
+.hero-video-wrap {
+  width: min(100%, 900px);
+  margin: 0 auto 48px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 0 0 1px rgba(255,42,42,0.25), 0 24px 80px rgba(0,0,0,0.7);
+  position: relative;
+}
+.hero-video-wrap video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16/9;
+  object-fit: contain;
+}
+@media(max-width:700px) {
+  .hero-video-wrap { border-radius: 10px; margin-bottom: 32px; }
+}
+
+/* ── Video hover controls ── */
+.hero-video-wrap{position:relative;}
+.hero-video-wrap:hover #hvBar{opacity:1!important;}
+</style>
+</head>
+<body>
+
+<a href="https://calendly.com/thesaassin/build-your-system" class="cta-ribbon" target="_blank" rel="noopener noreferrer">🚀 Book Your Free Strategy Call →</a>
+<canvas id="matrixCanvas" aria-hidden="true"></canvas>
+<canvas id="dustCanvas" aria-hidden="true"></canvas>
+<div class="scan-line" aria-hidden="true"></div>
+
+<!-- MOBILE NAV -->
+<div class="mobile-nav" id="mobileNav" role="dialog" aria-modal="true" aria-label="Mobile navigation">
+  <button class="mobile-nav-close" id="mobileNavClose" aria-label="Close menu">&times;</button>
+  <a href="#who-section">Who We Help</a>
+  <a href="#features">Services</a>
+  <a href="#ss-pricing">Pricing</a>
+  <a href="#ss-cases">Results</a>
+  <a href="#faq">FAQ</a>
+  <a href="https://thesaassin.gumroad.com/" target="_blank" rel="noopener noreferrer">Store</a>
+  <a href="https://calendly.com/thesaassin/build-your-system" target="_blank" rel="noopener noreferrer" class="btn" style="margin-top:10px">Book Free Call</a>
+</div>
+
+<header role="banner">
+  <div class="container header-container">
+    <div class="logo-container">
+      <a href="#" class="logo" aria-label="TheSaaSsin Home">
+        <span class="logo-part logo-the">The</span><span class="logo-part logo-saas">SaaS</span><span class="logo-part logo-sin">sin</span>
+      </a>
+      <div class="tagline">Automate. Eliminate. Dominate.</div>
+    </div>
+    <nav role="navigation" aria-label="Main navigation">
+      <ul>
+
+        <!-- SOLUTIONS -->
+        <li class="mega-dropdown">
+          <a href="#features" aria-haspopup="true">Solutions</a>
+          <div class="mega-menu" role="menu">
+            <div class="menu-left" role="menubar">
+              <div class="menu-item active" data-target="sol-web" role="menuitem" tabindex="0">Website Systems</div>
+              <div class="menu-item" data-target="sol-auto" role="menuitem" tabindex="-1">Automation</div>
+              <div class="menu-item" data-target="sol-leads" role="menuitem" tabindex="-1">Lead Generation</div>
+              <div class="menu-item" data-target="sol-crm" role="menuitem" tabindex="-1">CRM Setup</div>
+              <div class="menu-item" data-target="sol-dfy" role="menuitem" tabindex="-1">Done-For-You</div>
+            </div>
+            <div class="menu-right">
+              <div class="menu-content active" id="sol-web" role="tabpanel">
+                <h4>Website Systems</h4>
+                <p>Custom-built, conversion-focused sites from landing pages to full multi-page builds. Mobile-first, SEO-ready and wired to capture leads automatically.</p>
+                <a href="#features" class="menu-goto">View Service Details →</a>
+              </div>
+              <div class="menu-content" id="sol-auto" role="tabpanel">
+                <h4>Automation Systems</h4>
+                <p>We map and automate your entire workflow using Make.com, n8n and Zapier — lead capture, CRM updates, invoicing, follow-ups, all hands-free.</p>
+                <a href="#features" class="menu-goto">View Service Details →</a>
+              </div>
+              <div class="menu-content" id="sol-leads" role="tabpanel">
+                <h4>Lead Generation</h4>
+                <p>Inbound and outbound systems that fill your pipeline daily. Cold email, LinkedIn outreach, SEO and lead magnets — built and managed for you.</p>
+                <a href="#features" class="menu-goto">View Service Details →</a>
+              </div>
+              <div class="menu-content" id="sol-crm" role="tabpanel">
+                <h4>CRM Setup &amp; Management</h4>
+                <p>We select, configure and connect your CRM so every lead is tracked, followed up and converted. Works with HubSpot, GoHighLevel, Notion and more.</p>
+                <a href="#features" class="menu-goto">View Service Details →</a>
+              </div>
+              <div class="menu-content" id="sol-dfy" role="tabpanel">
+                <h4>Done-For-You Retainer</h4>
+                <p>We own and manage your entire growth stack ongoing. Unlimited flows, dedicated account management, weekly calls and quarterly audits.</p>
+                <a href="#features" class="menu-goto">View Service Details →</a>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <!-- PRICING -->
+        <li class="mega-dropdown">
+          <a href="#ss-pricing" aria-haspopup="true">Pricing</a>
+          <div class="mega-menu" role="menu">
+            <div class="menu-left" role="menubar">
+              <div class="menu-item active" data-target="pri-kick" role="menuitem" tabindex="0">Kickstart</div>
+              <div class="menu-item" data-target="pri-starter" role="menuitem" tabindex="-1">Starter</div>
+              <div class="menu-item" data-target="pri-growth" role="menuitem" tabindex="-1">Growth</div>
+              <div class="menu-item" data-target="pri-scale" role="menuitem" tabindex="-1">Scale</div>
+              <div class="menu-item" data-target="pri-products" role="menuitem" tabindex="-1">Digital Products</div>
+            </div>
+            <div class="menu-right">
+              <div class="menu-content active" id="pri-kick" role="tabpanel">
+                <h4>Kickstart — £97 <span style="font-size:.8rem;font-weight:400;color:var(--text-secondary)">one-off</span></h4>
+                <p>Just starting out? We get your online presence live fast — a clean landing page, contact form and basic setup so clients can find you.</p>
+                <a href="#ss-pricing" class="menu-goto">See Full Plan →</a>
+              </div>
+              <div class="menu-content" id="pri-starter" role="tabpanel">
+                <h4>Starter — £247 <span style="font-size:.8rem;font-weight:400;color:var(--text-secondary)">one-off</span></h4>
+                <p>A complete first system — 1-page high-converting site, lead capture, CRM hook and your first automation flow. Everything you need to start winning clients.</p>
+                <a href="#ss-pricing" class="menu-goto">See Full Plan →</a>
+              </div>
+              <div class="menu-content" id="pri-growth" role="tabpanel">
+                <h4>Growth — £597 <span style="font-size:.8rem;font-weight:400;color:var(--text-secondary)">/mo</span></h4>
+                <p>Full stack: multi-page site, CRM setup, 3 automation flows, lead generation system and monthly optimisation calls. The most popular choice.</p>
+                <a href="#ss-pricing" class="menu-goto">See Full Plan →</a>
+              </div>
+              <div class="menu-content" id="pri-scale" role="tabpanel">
+                <h4>Scale — £1,197 <span style="font-size:.8rem;font-weight:400;color:var(--text-secondary)">/mo</span></h4>
+                <p>Fully managed, hands-free growth stack. Unlimited flows, outbound lead gen, dedicated account manager and same-day support.</p>
+                <a href="#ss-pricing" class="menu-goto">See Full Plan →</a>
+              </div>
+              <div class="menu-content" id="pri-products" role="tabpanel">
+                <h4>Digital Products — From £9</h4>
+                <p>Ready-made automation templates, CRM blueprints and workflow packs available on our Gumroad store. Instant download, deploy today.</p>
+                <a href="https://thesaassin.gumroad.com/" target="_blank" rel="noopener noreferrer" class="menu-goto">Visit Store →</a>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <!-- RESULTS -->
+        <li class="mega-dropdown">
+          <a href="#ss-cases" aria-haspopup="true">Results</a>
+          <div class="mega-menu" role="menu">
+            <div class="menu-left" role="menubar">
+              <div class="menu-item active" data-target="res-cs1" role="menuitem" tabindex="0">Trade Business</div>
+              <div class="menu-item" data-target="res-cs2" role="menuitem" tabindex="-1">Freelance Consultant</div>
+              <div class="menu-item" data-target="res-cs3" role="menuitem" tabindex="-1">New Startup</div>
+            </div>
+            <div class="menu-right">
+              <div class="menu-content active" id="res-cs1" role="tabpanel">
+                <h4>Local Trade Business</h4>
+                <p>Went from zero online presence to fully booked 3 weeks out. Automated quotes, online booking, and a steady flow of new enquiries — in under 2 weeks.</p>
+                <div style="margin-top:10px;font-size:1.6rem;font-weight:800;color:var(--accent)">3x <span style="font-size:.85rem;font-weight:400;color:var(--text-secondary)">monthly enquiries</span></div>
+                <a href="#ss-cases" class="menu-goto">See Full Case Study →</a>
+              </div>
+              <div class="menu-content" id="res-cs2" role="tabpanel">
+                <h4>Freelance Consultant</h4>
+                <p>Reduced admin from 15hrs/week to under 3hrs. Took on 2 extra retainer clients without hiring. Everything automated — invoicing, scheduling, follow-ups.</p>
+                <div style="margin-top:10px;font-size:1.6rem;font-weight:800;color:var(--accent)">5x <span style="font-size:.85rem;font-weight:400;color:var(--text-secondary)">reduction in admin</span></div>
+                <a href="#ss-cases" class="menu-goto">See Full Case Study →</a>
+              </div>
+              <div class="menu-content" id="res-cs3" role="tabpanel">
+                <h4>New Startup — 0 to Launch</h4>
+                <p>Went from idea to fully operational in 14 days. Website, CRM, lead gen and automation all live. Started generating enquiries in week one.</p>
+                <div style="margin-top:10px;font-size:1.6rem;font-weight:800;color:var(--accent)">14 days <span style="font-size:.85rem;font-weight:400;color:var(--text-secondary)">zero to operational</span></div>
+                <a href="#ss-cases" class="menu-goto">See Full Case Study →</a>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <!-- FAQ -->
+        <li class="mega-dropdown">
+          <a href="#faq" aria-haspopup="true">FAQ</a>
+          <div class="mega-menu" role="menu">
+            <div class="menu-left" role="menubar">
+              <div class="menu-item active" data-target="faq-new" role="menuitem" tabindex="0">Brand New?</div>
+              <div class="menu-item" data-target="faq-tools" role="menuitem" tabindex="-1">What Tools?</div>
+              <div class="menu-item" data-target="faq-time" role="menuitem" tabindex="-1">How Long?</div>
+              <div class="menu-item" data-target="faq-call" role="menuitem" tabindex="-1">Free Call?</div>
+              <div class="menu-item" data-target="faq-tech" role="menuitem" tabindex="-1">Not Tech-Savvy?</div>
+            </div>
+            <div class="menu-right">
+              <div class="menu-content active" id="faq-new" role="tabpanel">
+                <h4>I have nothing set up yet</h4>
+                <p>That's absolutely fine — we love working with people starting from zero. We'll build your entire digital foundation from scratch with no jargon and no overwhelm.</p>
+                <a href="#faq" class="menu-goto">See All FAQs →</a>
+              </div>
+              <div class="menu-content" id="faq-tools" role="tabpanel">
+                <h4>What tools do you use?</h4>
+                <p>Make.com, n8n, Zapier for automation. Custom HTML/CSS or WordPress for websites. HubSpot, GoHighLevel, Notion for CRM. We recommend the right fit for you.</p>
+                <a href="#faq" class="menu-goto">See All FAQs →</a>
+              </div>
+              <div class="menu-content" id="faq-time" role="tabpanel">
+                <h4>How fast can you build?</h4>
+                <p>Kickstart and Starter builds go live in 3–7 days. Growth and Scale packages are typically live within 10–14 days. No 6-week agency waits.</p>
+                <a href="#faq" class="menu-goto">See All FAQs →</a>
+              </div>
+              <div class="menu-content" id="faq-call" role="tabpanel">
+                <h4>What's the free strategy call?</h4>
+                <p>A genuine 30-minute call where we learn about your business and map out what you actually need. No hard sell. If we're not the right fit, you still leave with clarity.</p>
+                <a href="#faq" class="menu-goto">See All FAQs →</a>
+              </div>
+              <div class="menu-content" id="faq-tech" role="tabpanel">
+                <h4>I'm not tech-savvy at all</h4>
+                <p>Perfect — most of our clients aren't. We build everything to be simple to manage and walk you through anything you need. Most clients barely touch the system once it's live.</p>
+                <a href="#faq" class="menu-goto">See All FAQs →</a>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <!-- CONTACT -->
+        <li class="mega-dropdown">
+          <a href="#contact" aria-haspopup="true">Contact</a>
+          <div class="mega-menu" role="menu">
+            <div class="menu-left" role="menubar">
+              <div class="menu-item active" data-target="con-call" role="menuitem" tabindex="0">Book a Call</div>
+              <div class="menu-item" data-target="con-store" role="menuitem" tabindex="-1">Gumroad Store</div>
+              <div class="menu-item" data-target="con-x" role="menuitem" tabindex="-1">Twitter / X</div>
+              <div class="menu-item" data-target="con-reddit" role="menuitem" tabindex="-1">Reddit</div>
+            </div>
+            <div class="menu-right">
+              <div class="menu-content active" id="con-call" role="tabpanel">
+                <h4>📅 Book a Free Strategy Call</h4>
+                <p>30 minutes, zero pressure. We'll map out the exact system you need and give you a clear plan — whether you're just starting or ready to scale.</p>
+                <a href="https://calendly.com/thesaassin/build-your-system" target="_blank" rel="noopener noreferrer" class="menu-goto">Book on Calendly →</a>
+              </div>
+              <div class="menu-content" id="con-store" role="tabpanel">
+                <h4>🛒 Gumroad Store</h4>
+                <p>Browse our ready-made automation templates, CRM blueprints and workflow packs. Instant download — start automating your business today for as little as £9.</p>
+                <a href="https://thesaassin.gumroad.com/" target="_blank" rel="noopener noreferrer" class="menu-goto">Visit the Store →</a>
+              </div>
+              <div class="menu-content" id="con-x" role="tabpanel">
+                <h4>🐦 Follow on X / Twitter</h4>
+                <p>We post automation tips, system breakdowns and behind-the-scenes content. DMs are open — feel free to reach out directly anytime.</p>
+                <a href="https://x.com/TheSaaSsin" target="_blank" rel="noopener noreferrer" class="menu-goto">Follow @TheSaaSsin →</a>
+              </div>
+              <div class="menu-content" id="con-reddit" role="tabpanel">
+                <h4>👽 Find Us on Reddit</h4>
+                <p>We're active in the automation and business communities. Drop a message or follow our posts for free tips, breakdowns and system walkthroughs.</p>
+                <a href="https://www.reddit.com/user/TheSaaSsin/" target="_blank" rel="noopener noreferrer" class="menu-goto">View Reddit Profile →</a>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <li><a href="./Untitled-simulator.html" class="nav-cta">Simulate Your Business now</a></li>
+      </ul>
+    </nav>
+    <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero" role="main">
+  <div class="container">
+    <div class="hero-content">
+
+      <div class="hero-video-wrap" id="hvWrap">
+        <video id="hvVid" preload="auto" playsinline autoplay
+               aria-label="TheSaaSsin promotional video"
+               style="display:block;width:100%;height:auto;cursor:pointer">
+          <source src="https://raw.githubusercontent.com/theSaaSsin/thesaassin/main/thesaassin-promo.mp4" type="video/mp4">
+        </video>
+        <!-- Video controls bar -->
+        <div id="hvBar" style="position:absolute;bottom:0;left:0;right:0;padding:10px 14px;background:linear-gradient(to top,rgba(0,0,0,0.75),transparent);display:flex;align-items:center;gap:10px;opacity:0;transition:opacity .25s;z-index:10;">
+          <button id="hvPlay" aria-label="Play/Pause" style="background:none;border:none;cursor:pointer;padding:4px;color:#fff;font-size:1.1rem;line-height:1;"><i class="fas fa-pause" id="hvPlayIco"></i></button>
+          <div id="hvProg" style="flex:1;height:4px;background:rgba(255,255,255,0.25);border-radius:2px;cursor:pointer;position:relative;">
+            <div id="hvFill" style="height:100%;background:#ff2a2a;border-radius:2px;width:0%;pointer-events:none;"></div>
+          </div>
+          <button id="hvMute" aria-label="Mute/Unmute" style="background:none;border:none;cursor:pointer;padding:4px;color:#fff;font-size:1.1rem;line-height:1;"><i class="fas fa-volume-up" id="hvMuteIco"></i></button>
+        </div>
+      </div>
+
+      <p class="hero-hook">Stop Losing Clients to Broken Systems</p>
+      <h1 class="hero-headline">
+        <span class="headline-main">We Build the Machine.</span>
+        <br><span class="headline-sub">You Close the Deals.</span>
+      </h1>
+      <p>Automated websites, CRM pipelines and lead systems that fill your calendar and run your business — without you lifting a finger. From £97. Live in 14 days.</p>
+      <div class="hero-btns">
+        <a href="https://calendly.com/thesaassin/build-your-system" class="btn" target="_blank" rel="noopener noreferrer">🚀 Get My Free System Plan</a>
+        <a href="https://thesaassin.gumroad.com/" class="btn btn-outline" target="_blank" rel="noopener noreferrer">Browse Templates</a>
+      </div>
+      <div class="hero-tags">
+        <span class="hero-tag">✦ 14-Day Delivery</span>
+        <span class="hero-tag">✦ From £97</span>
+        <span class="hero-tag">✦ 100% Done-For-You</span>
+        <span class="hero-tag">✦ CRM + Automation</span>
+        <span class="hero-tag">✦ Lead Generation</span>
+        <span class="hero-tag">✦ Startups Welcome</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHO IS IT FOR -->
+<section id="who-section" class="who-section">
+  <div class="container">
+    <h2>Who We Work With</h2>
+    <p style="text-align:center;max-width:650px;margin:0 auto 50px">From first-time founders to established operators — our systems are designed to meet you exactly where you are.</p>
+    <div class="who-grid">
+      <div class="who-card">
+        <div class="who-icon"><i class="fas fa-seedling"></i></div>
+        <h3>Startups &amp; New Founders</h3>
+        <p>No idea where to start? We build your entire digital foundation — website, CRM, lead gen — from scratch. Get professional systems without the agency price tag.</p>
+      </div>
+      <div class="who-card">
+        <div class="who-icon"><i class="fas fa-hard-hat"></i></div>
+        <h3>Builders &amp; Tradespeople</h3>
+        <p>Plumbers, electricians, contractors — we automate your quotes, follow-ups, and booking so you spend time on the tools, not the admin.</p>
+      </div>
+      <div class="who-card">
+        <div class="who-icon"><i class="fas fa-chart-line"></i></div>
+        <h3>Scaling Businesses</h3>
+        <p>Already going but growth is plateauing? We build custom automation stacks and lead pipelines that remove the bottlenecks holding you back.</p>
+      </div>
+      <div class="who-card">
+        <div class="who-icon"><i class="fas fa-laptop"></i></div>
+        <h3>Freelancers &amp; Agencies</h3>
+        <p>Turn your service into a scalable system. Automate client onboarding, reporting, delivery and follow-up so you can take on more without burning out.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROCESS -->
+<section class="process">
+  <div class="container">
+    <h2>How It Works</h2>
+    <div class="process-grid">
+      <div class="process-step"><h3>1. Book</h3><p>Free 30-min strategy call. Tell us your goals, pain points, and where you're at right now.</p></div>
+      <div class="process-step"><h3>2. Plan</h3><p>We map out exactly what systems you need and build a clear roadmap — no fluff.</p></div>
+      <div class="process-step"><h3>3. Build</h3><p>We design and connect everything: website, automations, CRM, and lead pipeline.</p></div>
+      <div class="process-step"><h3>4. Scale</h3><p>You launch, we optimise. Your system works around the clock — you focus on growth.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="features">
+  <div class="container">
+    <h2>Our Core Services</h2>
+    <div class="features-grid">
+      <div class="feature-card" tabindex="0">
+        <div class="feature-icon"><i class="fas fa-laptop-code" aria-hidden="true"></i></div>
+        <h3>Website Design</h3>
+        <p>Conversion-focused websites built to turn visitors into paying customers — from a single landing page to a full multi-page site.</p>
+        <ul>
+          <li>Custom design, no templates</li>
+          <li>Mobile-first &amp; blazing fast</li>
+          <li>SEO-ready from day one</li>
+          <li>Lead capture &amp; booking integration</li>
+          <li>Hosting setup included</li>
+        </ul>
+      </div>
+      <div class="feature-card" tabindex="0">
+        <div class="feature-icon"><i class="fas fa-robot" aria-hidden="true"></i></div>
+        <h3>Automation Systems</h3>
+        <p>We map and automate your workflows using Make.com, n8n, and Zapier — so your business runs without you.</p>
+        <ul>
+          <li>Lead capture → CRM → follow-up</li>
+          <li>Invoice &amp; contract automation</li>
+          <li>Team Slack / email alerts</li>
+          <li>Booking &amp; calendar sync</li>
+          <li>Reporting dashboards</li>
+        </ul>
+      </div>
+      <div class="feature-card" tabindex="0">
+        <div class="feature-icon"><i class="fas fa-bullseye" aria-hidden="true"></i></div>
+        <h3>Lead Generation</h3>
+        <p>Data-driven inbound and outbound systems that deliver qualified leads directly to your pipeline — daily.</p>
+        <ul>
+          <li>Outbound cold email sequences</li>
+          <li>LinkedIn &amp; social outreach</li>
+          <li>SEO content systems</li>
+          <li>Lead magnet creation</li>
+          <li>Pipeline tracking &amp; reporting</li>
+        </ul>
+      </div>
+      <div class="feature-card" tabindex="0">
+        <div class="feature-icon"><i class="fas fa-database" aria-hidden="true"></i></div>
+        <h3>CRM Setup &amp; Management</h3>
+        <p>We configure, connect, and manage your CRM so every lead is tracked, followed up, and converted.</p>
+        <ul>
+          <li>CRM selection &amp; full setup</li>
+          <li>Pipeline design &amp; stages</li>
+          <li>Automated follow-up sequences</li>
+          <li>Team onboarding &amp; training</li>
+          <li>Ongoing management available</li>
+        </ul>
+      </div>
+      <div class="feature-card" tabindex="0">
+        <div class="feature-icon"><i class="fas fa-shopping-bag" aria-hidden="true"></i></div>
+        <h3>Digital Products &amp; Templates</h3>
+        <p>Browse our Gumroad store for ready-made automation templates, workflow blueprints and done-for-you systems you can deploy today.</p>
+        <ul>
+          <li>Automation workflow packs</li>
+          <li>CRM setup templates</li>
+          <li>Lead gen campaign blueprints</li>
+          <li>Instant download, ready to use</li>
+          <li>Lifetime access &amp; updates</li>
+        </ul>
+      </div>
+      <div class="feature-card" tabindex="0">
+        <div class="feature-icon"><i class="fas fa-handshake" aria-hidden="true"></i></div>
+        <h3>Done-For-You Retainer</h3>
+        <p>We manage and own your entire growth stack on an ongoing basis. You focus on running the business — we run the systems.</p>
+        <ul>
+          <li>Monthly strategy &amp; optimisation</li>
+          <li>Unlimited automation flows</li>
+          <li>Dedicated account manager</li>
+          <li>Priority support (same-day)</li>
+          <li>Quarterly system audits</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS TICKER -->
+<div class="ss-ticker-wrap" id="ss-stats" aria-label="TheSaaSsin stats">
+  <div class="ss-ticker-track">
+    <div class="ss-ticker-item"><span class="ss-ticker-num">8</span><span class="ss-ticker-label">Systems Launched</span><span class="ss-ticker-sep">●</span></div>
+    <div class="ss-ticker-item"><span class="ss-ticker-num">£40K+</span><span class="ss-ticker-label">Client Revenue Driven</span><span class="ss-ticker-sep">●</span></div>
+    <div class="ss-ticker-item"><span class="ss-ticker-num">500+</span><span class="ss-ticker-label">Hours Automated</span><span class="ss-ticker-sep">●</span></div>
+    <div class="ss-ticker-item"><span class="ss-ticker-num">100%</span><span class="ss-ticker-label">Client Satisfaction</span><span class="ss-ticker-sep">●</span></div>
+    <div class="ss-ticker-item"><span class="ss-ticker-num">Est. 2026</span><span class="ss-ticker-label">Fresh. Fast. Focused.</span><span class="ss-ticker-sep">●</span></div>
+    <div class="ss-ticker-item"><span class="ss-ticker-num">14 Days</span><span class="ss-ticker-label">Avg. Delivery Time</span><span class="ss-ticker-sep">●</span></div>
+    <div class="ss-ticker-item"><span class="ss-ticker-num">8</span><span class="ss-ticker-label">Systems Launched</span><span class="ss-ticker-sep">●</span></div>
+    <div class="ss-ticker-item"><span class="ss-ticker-num">£40K+</span><span class="ss-ticker-label">Client Revenue Driven</span><span class="ss-ticker-sep">●</span></div>
+    <div class="ss-ticker-item"><span class="ss-ticker-num">500+</span><span class="ss-ticker-label">Hours Automated</span><span class="ss-ticker-sep">●</span></div>
+    <div class="ss-ticker-item"><span class="ss-ticker-num">100%</span><span class="ss-ticker-label">Client Satisfaction</span><span class="ss-ticker-sep">●</span></div>
+    <div class="ss-ticker-item"><span class="ss-ticker-num">Est. 2026</span><span class="ss-ticker-label">Fresh. Fast. Focused.</span><span class="ss-ticker-sep">●</span></div>
+    <div class="ss-ticker-item"><span class="ss-ticker-num">14 Days</span><span class="ss-ticker-label">Avg. Delivery Time</span><span class="ss-ticker-sep">●</span></div>
+  </div>
+</div>
+
+<!-- SHOWCASE -->
+<section id="ss-showcase" class="ss-showcase">
+  <div class="container">
+    <h2>See It Working</h2>
+    <div class="ss-demo-grid">
+      <div class="ss-demo-card">
+        <div class="ss-demo-title"><i class="fas fa-laptop-code"></i> Website System</div>
+        <div class="ss-demo-screen" id="ss-type-screen" aria-label="Live website typing demo">
+          <span id="ss-type-text"></span><span class="ss-type-cursor"></span>
+        </div>
+        <a href="https://calendly.com/thesaassin/build-your-system" target="_blank" rel="noopener noreferrer" class="ss-demo-cta">See How We Do This →</a>
+      </div>
+      <div class="ss-demo-card">
+        <div class="ss-demo-title"><i class="fas fa-robot"></i> Automation Flow</div>
+        <div class="ss-demo-screen" aria-label="Live automation flow demo">
+          <div class="ss-flow-step" id="ss-f1"><div class="ss-flow-dot"></div>Lead captured via form</div>
+          <div class="ss-flow-step" id="ss-f2"><div class="ss-flow-dot"></div>CRM record auto-created</div>
+          <div class="ss-flow-step" id="ss-f3"><div class="ss-flow-dot"></div>Welcome sequence triggered</div>
+          <div class="ss-flow-step" id="ss-f4"><div class="ss-flow-dot"></div>Slack alert sent to team</div>
+          <div class="ss-flow-step" id="ss-f5"><div class="ss-flow-dot"></div>Follow-up scheduled</div>
+        </div>
+        <a href="https://calendly.com/thesaassin/build-your-system" target="_blank" rel="noopener noreferrer" class="ss-demo-cta">See How We Do This →</a>
+      </div>
+      <div class="ss-demo-card">
+        <div class="ss-demo-title"><i class="fas fa-bullseye"></i> Lead System</div>
+        <div class="ss-demo-screen" aria-label="Live lead counter demo">
+          <div class="ss-counter-display">
+            <div class="ss-counter-num" id="ss-lead-count">0</div>
+            <div class="ss-counter-label">Inbound leads this month</div>
+          </div>
+        </div>
+        <a href="https://calendly.com/thesaassin/build-your-system" target="_blank" rel="noopener noreferrer" class="ss-demo-cta">See How We Do This →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="ss-pricing" class="ss-pricing">
+  <div class="container">
+    <h2>Simple, Transparent Pricing</h2>
+    <p class="pricing-intro">Whether you're just starting out or want the full stack — there's a plan built for where you are right now. All plans include a free strategy call first.</p>
+    <div class="ss-price-grid">
+
+      <div class="ss-price-card">
+        <div class="ss-price-name">Kickstart</div>
+        <div class="ss-price-amount">£97<span> one-off</span></div>
+        <div class="ss-price-desc">Just need to get online? We get you a clean, professional presence fast.</div>
+        <ul class="ss-price-list">
+          <li>1-page landing site</li>
+          <li>Contact / enquiry form</li>
+          <li>Mobile optimised</li>
+          <li>Basic SEO setup</li>
+          <li>14-day support</li>
+          <li class="dimmed">Automation flows</li>
+          <li class="dimmed">CRM connection</li>
+          <li class="dimmed">Lead generation</li>
+        </ul>
+        <a href="https://calendly.com/thesaassin/build-your-system" class="btn btn-outline" target="_blank" rel="noopener noreferrer" style="width:100%;text-align:center">Get Started</a>
+      </div>
+
+      <div class="ss-price-card">
+        <div class="ss-price-name">Starter</div>
+        <div class="ss-price-amount">£247<span> one-off</span></div>
+        <div class="ss-price-desc">Your first proper system — site, CRM and automation all connected and live.</div>
+        <ul class="ss-price-list">
+          <li>1-page high-converting site</li>
+          <li>Lead capture form + email hook</li>
+          <li>CRM connection &amp; setup</li>
+          <li>1 automation flow</li>
+          <li>Mobile optimised</li>
+          <li>30-day support</li>
+          <li class="dimmed">Lead generation system</li>
+          <li class="dimmed">Monthly calls</li>
+        </ul>
+        <a href="https://calendly.com/thesaassin/build-your-system" class="btn btn-outline" target="_blank" rel="noopener noreferrer" style="width:100%;text-align:center">Get Started</a>
+      </div>
+
+      <div class="ss-price-card ss-featured">
+        <div class="ss-price-badge">Most Popular</div>
+        <div class="ss-price-name">Growth</div>
+        <div class="ss-price-amount">£597<span>/mo</span></div>
+        <div class="ss-price-desc">Full-stack system for businesses ready to grow consistently and stop relying on referrals.</div>
+        <ul class="ss-price-list">
+          <li>Multi-page website build + hosting</li>
+          <li>Full CRM setup &amp; pipeline design</li>
+          <li>3 custom automation flows</li>
+          <li>Lead generation system (inbound)</li>
+          <li>Monthly optimisation call</li>
+          <li>Onboarding &amp; team training</li>
+          <li>Priority support (48hr)</li>
+          <li>Monthly performance report</li>
+        </ul>
+        <a href="https://calendly.com/thesaassin/build-your-system" class="btn" target="_blank" rel="noopener noreferrer" style="width:100%;text-align:center">Build My System</a>
+      </div>
+
+      <div class="ss-price-card">
+        <div class="ss-price-name">Scale</div>
+        <div class="ss-price-amount">£1,197<span>/mo</span></div>
+        <div class="ss-price-desc">Fully managed, hands-free growth stack for businesses serious about scaling.</div>
+        <ul class="ss-price-list">
+          <li>Everything in Growth</li>
+          <li>Unlimited automation flows</li>
+          <li>Outbound lead gen + cold outreach</li>
+          <li>Dedicated account manager</li>
+          <li>Custom API integrations</li>
+          <li>Priority same-day support</li>
+          <li>Weekly check-in calls</li>
+          <li>Quarterly system audits</li>
+        </ul>
+        <a href="https://calendly.com/thesaassin/build-your-system" class="btn btn-outline" target="_blank" rel="noopener noreferrer" style="width:100%;text-align:center">Let's Talk</a>
+      </div>
+
+      <div class="ss-price-card" style="grid-column:1/-1;max-width:520px;margin:0 auto">
+        <div class="ss-price-name">Digital Products</div>
+        <div class="ss-price-amount">From £9<span> one-off</span></div>
+        <div class="ss-price-desc">Ready-made automation templates, CRM blueprints and workflow packs — instant download from our Gumroad store. Deploy today, no waiting.</div>
+        <ul class="ss-price-list">
+          <li>Automation workflow templates</li>
+          <li>CRM setup guides &amp; blueprints</li>
+          <li>Lead gen campaign templates</li>
+          <li>Instant access, no waiting</li>
+        </ul>
+        <a href="https://thesaassin.gumroad.com/" class="btn btn-outline" target="_blank" rel="noopener noreferrer" style="width:100%;text-align:center">Visit Gumroad Store</a>
+      </div>
+
+    </div>
+    <p class="price-cta-note">Not sure which plan is right? <a href="https://calendly.com/thesaassin/build-your-system" target="_blank" rel="noopener noreferrer">Book a free call</a> — we'll figure it out together.</p>
+  </div>
+</section>
+
+<!-- CASE STUDIES -->
+<section id="ss-cases" class="ss-cases">
+  <div class="container">
+    <h2>Real Results</h2>
+    <div class="ss-cases-grid">
+      <div class="ss-case-card">
+        <div class="ss-case-label">Case Study 01</div>
+        <div class="ss-case-client">Local Trade Business — 2 Staff</div>
+        <div class="ss-case-ba">
+          <div class="ss-case-col">
+            <div class="ss-case-col-label">Before</div>
+            <p>No website. Getting jobs through word of mouth only. Quoting manually via WhatsApp.</p>
+          </div>
+          <div class="ss-case-col ss-after">
+            <div class="ss-case-col-label">After</div>
+            <p>Fully booked 3 weeks out. Automated quotes, online booking, and a steady flow of new enquiries.</p>
+          </div>
+        </div>
+        <div class="ss-case-metric">
+          <div class="ss-case-metric-num">3x</div>
+          <div class="ss-case-metric-label">increase in monthly enquiries</div>
+        </div>
+      </div>
+      <div class="ss-case-card">
+        <div class="ss-case-label">Case Study 02</div>
+        <div class="ss-case-client">Freelance Consultant — Solo Op</div>
+        <div class="ss-case-ba">
+          <div class="ss-case-col">
+            <div class="ss-case-col-label">Before</div>
+            <p>Spending 15hrs/week on admin, follow-ups, invoicing, and scheduling clients manually.</p>
+          </div>
+          <div class="ss-case-col ss-after">
+            <div class="ss-case-col-label">After</div>
+            <p>Under 3hrs/week on admin. Everything automated. Took on 2 additional retainer clients.</p>
+          </div>
+        </div>
+        <div class="ss-case-metric">
+          <div class="ss-case-metric-num">5x</div>
+          <div class="ss-case-metric-label">reduction in admin hours</div>
+        </div>
+      </div>
+      <div class="ss-case-card">
+        <div class="ss-case-label">Case Study 03</div>
+        <div class="ss-case-client">New Startup — 0 to Launch</div>
+        <div class="ss-case-ba">
+          <div class="ss-case-col">
+            <div class="ss-case-col-label">Before</div>
+            <p>Brand new — no website, no systems, no idea where to start. Just an idea and ambition.</p>
+          </div>
+          <div class="ss-case-col ss-after">
+            <div class="ss-case-col-label">After</div>
+            <p>Live in 14 days. Website, CRM, lead gen and automation all set up and running from day one.</p>
+          </div>
+        </div>
+        <div class="ss-case-metric">
+          <div class="ss-case-metric-num">14</div>
+          <div class="ss-case-metric-label">days from zero to fully operational</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="faq-section">
+  <div class="container">
+    <h2>Frequently Asked Questions</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">I'm brand new — can you help me even if I have nothing set up? <i class="fas fa-chevron-down"></i></button>
+        <div class="faq-a"><div class="faq-a-inner">Absolutely — that's exactly who we love working with. We'll start from scratch, figure out what you need, and build the whole foundation for you. No jargon, no overwhelm. Just clear steps and a system that works.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">What tools and platforms do you use? <i class="fas fa-chevron-down"></i></button>
+        <div class="faq-a"><div class="faq-a-inner">We work with Make.com, n8n, Zapier, and custom-built integrations for automation. For websites we build custom HTML/CSS or WordPress depending on your needs. For CRMs we work with HubSpot, GoHighLevel, Notion, and others — we'll recommend the right fit for your business.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">How long does it take to get set up? <i class="fas fa-chevron-down"></i></button>
+        <div class="faq-a"><div class="faq-a-inner">Starter builds typically go live within 5–7 days. Growth and Scale packages are usually live within 10–14 days depending on complexity. We move fast — no 6-week agency timelines here.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">What's the free strategy call? Is there a catch? <i class="fas fa-chevron-down"></i></button>
+        <div class="faq-a"><div class="faq-a-inner">No catch — it's a genuine 30-minute call where we learn about your business and tell you exactly what systems would help most. If we're a good fit, great. If not, you leave with a clearer picture anyway. Zero pressure.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Do I need to be tech-savvy to use what you build? <i class="fas fa-chevron-down"></i></button>
+        <div class="faq-a"><div class="faq-a-inner">Not at all. We build everything to be as simple to manage as possible, and we train you on anything you need to know. Most clients barely have to touch anything once it's live — that's the whole point.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">What if I already have a website or CRM? <i class="fas fa-chevron-down"></i></button>
+        <div class="faq-a"><div class="faq-a-inner">We can work with what you have, improve it, or replace it — depending on what makes sense. We'll give you an honest assessment on the strategy call and only rebuild things if it genuinely needs it.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">What's the difference between the monthly plans and digital products? <i class="fas fa-chevron-down"></i></button>
+        <div class="faq-a"><div class="faq-a-inner">Digital products on our Gumroad store are ready-made templates and blueprints you can download and implement yourself. The monthly plans are fully done-for-you services where we build, manage, and optimise everything on your behalf.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="contact" class="cta">
+  <div class="container">
+    <h2>Ready to Build Your System?</h2>
+    <p>Start with a free 30-minute strategy call. We'll map out exactly what you need and give you a clear plan — whether you're just starting or ready to scale. No obligation, just clarity.</p>
+    <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap">
+      <a href="https://calendly.com/thesaassin/build-your-system" class="btn" target="_blank" rel="noopener noreferrer">Book Free Strategy Call</a>
+      <a href="https://thesaassin.gumroad.com/" class="btn btn-outline" target="_blank" rel="noopener noreferrer">Browse Digital Products</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <a href="#" class="logo footer-logo" aria-label="TheSaaSsin Home">
+      <span class="logo-part logo-the">The</span><span class="logo-part logo-saas">SaaS</span><span class="logo-part logo-sin">sin</span>
+    </a>
+    <p>Automate. Eliminate. Dominate.</p>
+    <div class="established">Established 2026 — Built Fresh, Built Right</div>
+    <div class="social-links">
+      <a href="https://thesaassin.gumroad.com/" target="_blank" aria-label="Gumroad" rel="noopener noreferrer">
+        <svg width="22" height="22" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="currentColor"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="56" font-weight="700" font-family="Arial" fill="var(--darker-bg)">G</text></svg>
+      </a>
+      <a href="https://x.com/TheSaaSsin" target="_blank" aria-label="Twitter" rel="noopener noreferrer"><i class="fab fa-twitter"></i></a>
+      <a href="https://www.reddit.com/user/TheSaaSsin/" target="_blank" aria-label="Reddit" rel="noopener noreferrer"><i class="fab fa-reddit"></i></a>
+    </div>
+    <div class="footer-links">
+      <a href="#who-section">Who We Help</a>
+      <a href="#features">Services</a>
+      <a href="#ss-pricing">Pricing</a>
+      <a href="#ss-cases">Results</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://thesaassin.gumroad.com/" target="_blank" rel="noopener noreferrer">Store</a>
+      <a href="https://calendly.com/thesaassin/build-your-system" target="_blank" rel="noopener noreferrer">Book a Call</a>
+    </div>
+    <div class="copyright">&copy; 2026 TheSaaSsin. All rights reserved.</div>
+  </div>
+</footer>
+
+<a href="https://calendly.com/thesaassin/build-your-system" class="floating-tab" target="_blank" rel="noopener noreferrer">Book Call</a>
+
+<!-- CHATBOT -->
+<div id="ss-chatbot" aria-label="TheSaaSsin chat assistant">
+  <div class="ss-chat-panel" id="ss-chat-panel" role="dialog" aria-modal="true" aria-label="Chat with TheSaaSsin">
+    <div class="ss-chat-header">
+      <div class="ss-chat-avatar">
+        <svg width="32" height="32" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="20" cy="20" r="20" fill="#1a0505"/>
+          <!-- headband -->
+          <path d="M7 15 Q20 3 33 15" fill="#110808" stroke="#ff2a2a" stroke-width="1.2"/>
+          <!-- headband knot tails -->
+          <path d="M33 15 Q36 18 35 22 M7 15 Q4 18 5 22" fill="none" stroke="#ff2a2a" stroke-width="1"/>
+          <!-- face wrap / mask -->
+          <rect x="6" y="15" width="28" height="14" rx="4" fill="#110808" stroke="#ff2a2a" stroke-width="0.8"/>
+          <!-- eyes glowing red -->
+          <ellipse cx="14.5" cy="22" rx="3.2" ry="3" fill="#080505"/>
+          <ellipse cx="25.5" cy="22" rx="3.2" ry="3" fill="#080505"/>
+          <ellipse cx="14.5" cy="22" rx="1.6" ry="1.8" fill="#ff2a2a" opacity="0.95"/>
+          <ellipse cx="25.5" cy="22" rx="1.6" ry="1.8" fill="#ff2a2a" opacity="0.95"/>
+          <!-- eye shine -->
+          <circle cx="15.3" cy="21.2" r=".5" fill="rgba(255,255,255,0.5)"/>
+          <circle cx="26.3" cy="21.2" r=".5" fill="rgba(255,255,255,0.5)"/>
+          <!-- chin wrap -->
+          <path d="M6 29 Q13 37 20 38 Q27 37 34 29" fill="#110808" stroke="#ff2a2a" stroke-width="0.8"/>
+          <!-- body arms suggestion -->
+          <path d="M9 28 L7 36 M31 28 L33 36" stroke="#ff2a2a" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="ss-chat-header-info">
+        <div class="ss-chat-header-name">TheSaaSsin</div>
+        <div class="ss-chat-header-status">🔴 Online — no system is safe from us</div>
+      </div>
+      <button class="ss-chat-close" id="ss-chat-close" aria-label="Close chat">&times;</button>
+    </div>
+    <div class="ss-chat-msgs" id="ss-chat-msgs" role="log" aria-live="polite"></div>
+    <div class="ss-chat-foot">
+      <input class="ss-chat-input" id="ss-chat-input" type="text" placeholder="Type a message..." aria-label="Chat message" autocomplete="off" maxlength="500">
+      <button class="ss-chat-send" id="ss-chat-send" aria-label="Send message"><i class="fas fa-paper-plane"></i></button>
+    </div>
+    <div class="ss-chat-powered">Ask me anything about our services</div>
+  </div>
+  <button class="ss-chat-toggle" id="ss-chat-toggle" aria-label="Open chat" aria-expanded="false">
+    <svg width="26" height="26" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="20" cy="20" r="20" fill="rgba(255,255,255,0.1)"/>
+      <path d="M7 15 Q20 3 33 15" fill="none" stroke="#fff" stroke-width="1.2"/>
+      <rect x="6" y="15" width="28" height="14" rx="4" fill="rgba(255,255,255,0.12)" stroke="#fff" stroke-width="0.8"/>
+      <ellipse cx="14.5" cy="22" rx="2.8" ry="2.6" fill="#fff" opacity="0.9"/>
+      <ellipse cx="25.5" cy="22" rx="2.8" ry="2.6" fill="#fff" opacity="0.9"/>
+      <path d="M6 29 Q13 37 20 38 Q27 37 34 29" fill="none" stroke="#fff" stroke-width="0.8"/>
+      <path d="M9 28 L7 36 M31 28 L33 36" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+  </button>
+</div>
+
+<!-- LASER DOT (desktop only, injected via JS) -->
+<div class="laser-dot" id="laser" aria-hidden="true"></div>
+
+<script>
+// ===================== MATRIX CANVAS =====================
+(function(){
+  var canvas = document.getElementById('matrixCanvas');
+  var ctx = canvas.getContext('2d');
+  function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+  resize();
+  var cols, drops;
+  function initDrops(){
+    cols = Math.floor(canvas.width/16);
+    drops=[];
+    for(var i=0;i<cols;i++) drops[i]=Math.floor(Math.random()*canvas.height/16);
+  }
+  initDrops();
+  function draw(){
+    ctx.fillStyle='rgba(0,0,0,0.04)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.font='16px monospace';
+    for(var i=0;i<drops.length;i++){
+      var t=Math.random()<0.5?'0':'1';
+      ctx.fillStyle='#ff2a2a';
+      ctx.fillText(t,i*16,drops[i]*16);
+      if(drops[i]*16>canvas.height&&Math.random()>0.975) drops[i]=0;
+      drops[i]++;
+    }
+  }
+  setInterval(draw,60);
+  var resizeT;
+  window.addEventListener('resize',function(){
+    clearTimeout(resizeT);
+    resizeT=setTimeout(function(){resize();initDrops();},150);
+  });
+})();
+
+// ===================== SECTION REVEAL =====================
+(function(){
+  var sections=document.querySelectorAll('section');
+  var obs=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add('visible');});
+  },{threshold:0.08});
+  sections.forEach(function(s){obs.observe(s);});
+})();
+
+// ===================== MEGA MENU =====================
+(function(){
+  // On page load, ensure every mega-menu has its first item + panel active
+  document.querySelectorAll('.mega-dropdown').forEach(function(dropdown){
+    var firstItem=dropdown.querySelector('.menu-item');
+    var firstContent=firstItem&&document.getElementById(firstItem.dataset.target);
+    if(firstItem) firstItem.classList.add('active');
+    if(firstContent) firstContent.classList.add('active');
+
+    // When user enters the dropdown wrapper, reset to first item so it's never blank
+    dropdown.addEventListener('mouseenter',function(){
+      var allItems=dropdown.querySelectorAll('.menu-item');
+      var allContents=dropdown.querySelectorAll('.menu-content');
+      var hasActive=false;
+      allItems.forEach(function(i){if(i.classList.contains('active'))hasActive=true;});
+      if(!hasActive){
+        allItems.forEach(function(i){i.classList.remove('active');});
+        allContents.forEach(function(c){c.classList.remove('active');});
+        if(allItems[0]) allItems[0].classList.add('active');
+        var t=allItems[0]&&document.getElementById(allItems[0].dataset.target);
+        if(t) t.classList.add('active');
+      }
+    });
+  });
+
+  var items=document.querySelectorAll('.menu-item');
+  var contents=document.querySelectorAll('.menu-content');
+  items.forEach(function(item){
+    item.addEventListener('mouseenter',function(){
+      // Only deactivate items within the same dropdown
+      var parent=item.closest('.mega-dropdown');
+      parent.querySelectorAll('.menu-item').forEach(function(i){i.classList.remove('active');});
+      parent.querySelectorAll('.menu-content').forEach(function(c){c.classList.remove('active');});
+      item.classList.add('active');
+      var t=document.getElementById(item.dataset.target);
+      if(t) t.classList.add('active');
+    });
+    item.addEventListener('keydown',function(e){
+      if(e.key==='Enter'||e.key===' '){
+        e.preventDefault();
+        var parent=item.closest('.mega-dropdown');
+        parent.querySelectorAll('.menu-item').forEach(function(i){i.classList.remove('active');});
+        parent.querySelectorAll('.menu-content').forEach(function(c){c.classList.remove('active');});
+        item.classList.add('active');
+        var t=document.getElementById(item.dataset.target);
+        if(t) t.classList.add('active');
+      }
+    });
+  });
+})();
+
+// ===================== MOBILE NAV =====================
+(function(){
+  var ham=document.getElementById('hamburger');
+  var nav=document.getElementById('mobileNav');
+  var close=document.getElementById('mobileNavClose');
+  function open(){nav.classList.add('open');ham.classList.add('open');ham.setAttribute('aria-expanded','true');document.body.style.overflow='hidden';}
+  function shut(){nav.classList.remove('open');ham.classList.remove('open');ham.setAttribute('aria-expanded','false');document.body.style.overflow='';}
+  if(ham) ham.addEventListener('click',function(){nav.classList.contains('open')?shut():open();});
+  if(close) close.addEventListener('click',shut);
+  nav.querySelectorAll('a').forEach(function(a){a.addEventListener('click',shut);});
+})();
+
+// ===================== FAQ =====================
+(function(){
+  document.querySelectorAll('.faq-q').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var item=btn.closest('.faq-item');
+      var isOpen=item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(function(i){i.classList.remove('open');i.querySelector('.faq-q').setAttribute('aria-expanded','false');});
+      if(!isOpen){item.classList.add('open');btn.setAttribute('aria-expanded','true');}
+    });
+  });
+})();
+
+// ===================== LASER CURSOR (desktop only) =====================
+(function(){
+  var isMobile=window.innerWidth<768||('ontouchstart' in window);
+  if(isMobile) return;
+  var laser=document.getElementById('laser');
+  if(!laser) return;
+  document.body.classList.add('cursor-ready');
+  var mx=0,my=0;
+  document.addEventListener('mousemove',function(e){
+    mx=e.clientX; my=e.clientY;
+    laser.style.left=mx+'px';
+    laser.style.top=my+'px';
+  });
+  document.querySelectorAll('a,button').forEach(function(el){
+    el.addEventListener('mouseenter',function(){laser.style.transform='translate(-50%,-50%) scale(1.5)';});
+    el.addEventListener('mouseleave',function(){laser.style.transform='translate(-50%,-50%) scale(1)';});
+  });
+  document.addEventListener('click',function(e){
+    var shot=document.createElement('div');
+    shot.className='laser-shot';
+    shot.style.left=e.clientX+'px';
+    shot.style.top=e.clientY+'px';
+    document.body.appendChild(shot);
+    setTimeout(function(){shot.remove();},350);
+  });
+})();
+
+// ===================== TYPING DEMO =====================
+(function(){
+  var lines=['Stop losing clients to slow websites.','Built to convert. Built to scale.','Your system works while you sleep.','From startup to scaling — we build it all.','→ Book a free strategy call today.'];
+  var tIdx=0,cIdx=0,deleting=false;
+  var el=document.getElementById('ss-type-text');
+  function step(){
+    if(!el) return;
+    var cur=lines[tIdx];
+    if(!deleting){
+      el.textContent=cur.slice(0,cIdx+1);
+      cIdx++;
+      if(cIdx===cur.length){deleting=true;setTimeout(step,1800);return;}
+    } else {
+      el.textContent=cur.slice(0,cIdx-1);
+      cIdx--;
+      if(cIdx===0){deleting=false;tIdx=(tIdx+1)%lines.length;}
+    }
+    setTimeout(step,deleting?45:80);
+  }
+  setTimeout(step,600);
+})();
+
+// ===================== FLOW LIGHTS =====================
+(function(){
+  var ids=['ss-f1','ss-f2','ss-f3','ss-f4','ss-f5'];
+  var idx=0;
+  function light(){
+    ids.forEach(function(id){var e=document.getElementById(id);if(e)e.classList.remove('ss-lit');});
+    var e=document.getElementById(ids[idx]);
+    if(e) e.classList.add('ss-lit');
+    idx=(idx+1)%ids.length;
+  }
+  light();
+  setInterval(light,900);
+})();
+
+// ===================== LEAD COUNTER =====================
+(function(){
+  var target=47,current=0;
+  var el=document.getElementById('ss-lead-count');
+  function tick(){
+    if(!el) return;
+    if(current<target){
+      current+=Math.ceil((target-current)/12);
+      el.textContent=current;
+      setTimeout(tick,60);
+    } else {
+      el.textContent=target;
+      setTimeout(function(){el.textContent=target+1;target++;},3200);
+    }
+  }
+  setTimeout(tick,800);
+})();
+
+// ===================== CHATBOT (Free — no API key needed) =====================
+(function(){
+  'use strict';
+
+  // Knowledge base — keyword → response map
+  var KB = [
+    { keys:['price','pricing','cost','how much','£','fee','charge','afford','cheap','expensive','rates'],
+      reply:"Our plans start from just £97 (Kickstart one-off) up to £1,197/mo for our fully managed Scale package. We also have a Starter at £247 one-off and a Growth plan at £597/mo. Digital templates on our Gumroad store start from £9. Not sure which fits you? Book a free 30-min call → https://calendly.com/thesaassin/build-your-system" },
+    { keys:['kickstart','97','landing page','just a website','simple site','just online','get online'],
+      reply:"The Kickstart (£97 one-off) is perfect for getting a clean, professional 1-page site live fast — contact form, mobile optimised and SEO-ready. Ideal if you're just starting out and need something up quickly. Book a call and we can get it sorted: https://calendly.com/thesaassin/build-your-system" },
+    { keys:['starter','247','first system','first step','beginning','new to this'],
+      reply:"The Starter (£247 one-off) gives you a full first system — high-converting 1-page site, lead capture, CRM hook and your first automation flow. A solid foundation to start winning clients. Book a free call to get started: https://calendly.com/thesaassin/build-your-system" },
+    { keys:['growth','597','monthly','recurring','full stack','full system'],
+      reply:"The Growth plan (£597/mo) is our most popular — full multi-page website, CRM setup, 3 automation flows, lead generation system and monthly optimisation calls. Everything you need to grow consistently. Book a call here: https://calendly.com/thesaassin/build-your-system" },
+    { keys:['scale','1197','managed','hands free','hands-free','agency level','dedicated'],
+      reply:"The Scale plan (£1,197/mo) is fully managed — unlimited automation flows, outbound lead gen, dedicated account manager, same-day support and weekly calls. We own and run your entire growth stack. Let's talk: https://calendly.com/thesaassin/build-your-system" },
+    { keys:['gumroad','store','template','templates','blueprint','download','digital product','diy','self'],
+      reply:"Our Gumroad store has ready-made automation templates, CRM blueprints and workflow packs from just £9 — instant download, deploy today. Perfect if you want to DIY it: https://thesaassin.gumroad.com/" },
+    { keys:['automat','workflow','make.com','n8n','zapier','zap','flow','trigger'],
+      reply:"We build automation flows using Make.com, n8n and Zapier — lead capture to CRM, invoicing, follow-ups, Slack alerts, booking sync, the lot. It all runs without you. Want to see what we'd build for you? Book a free call: https://calendly.com/thesaassin/build-your-system" },
+    { keys:['crm','hubspot','gohighlevel','notion','pipeline','contact','follow up','follow-up'],
+      reply:"We set up and manage CRMs (HubSpot, GoHighLevel, Notion and others) — full pipeline design, automated follow-up sequences and team training. We'll recommend the right one for your business on a free call: https://calendly.com/thesaassin/build-your-system" },
+    { keys:['lead','leads','lead gen','lead generation','outreach','cold email','linkedin','prospect'],
+      reply:"We build both inbound (SEO, lead magnets) and outbound (cold email, LinkedIn) lead generation systems. Your pipeline gets filled daily — automatically. Let's map it out on a free call: https://calendly.com/thesaassin/build-your-system" },
+    { keys:['website','web design','site','landing','page','design','build site','build a site'],
+      reply:"We build custom conversion-focused websites — from a single landing page to full multi-page sites. Mobile-first, SEO-ready and wired to capture leads. No templates, everything custom. Book a call to discuss yours: https://calendly.com/thesaassin/build-your-system" },
+    { keys:['new','start','startup','starting','beginning','scratch','nothing','no website','no system','no clue','no idea','just started','just starting'],
+      reply:"Starting from zero is absolutely fine — that's exactly who we love working with! We'll build your entire foundation from scratch: website, CRM, automation, lead gen. No jargon, no overwhelm. Book a free 30-min call and we'll map it all out: https://calendly.com/thesaassin/build-your-system" },
+    { keys:['trade','builder','plumber','electrician','contractor','construction','tradesperson','tradesman'],
+      reply:"We work with lots of tradespeople! We automate quotes, follow-ups, booking and invoicing so you spend time on the tools, not the admin. A website + booking system + automation can transform a trades business fast. Book a free call: https://calendly.com/thesaassin/build-your-system" },
+    { keys:['freelance','freelancer','consultant','solo','self-employed','one person'],
+      reply:"Perfect — we've helped freelancers and consultants cut admin from 15+ hours/week to under 3. Automated invoicing, scheduling, follow-ups and client onboarding. Want to see how? Book a free call: https://calendly.com/thesaassin/build-your-system" },
+    { keys:['how long','time','fast','quick','turnaround','deadline','timeline'],
+      reply:"Kickstart and Starter builds go live in 3–7 days. Growth and Scale packages are usually live within 10–14 days. No 6-week agency waits here. Book a free call to get a precise timeline for your project: https://calendly.com/thesaassin/build-your-system" },
+    { keys:['tech','technical','not tech','no tech','not technical','complicated','complex','difficult'],
+      reply:"Not tech-savvy at all? No problem — most of our clients aren't. We build everything to be dead simple to manage and walk you through anything you need. Most clients barely touch the system once it's live. That's the point. Book a call: https://calendly.com/thesaassin/build-your-system" },
+    { keys:['call','book','calendly','schedule','chat','speak','talk','meet','strategy','free call'],
+      reply:"Great — book your free 30-min strategy call here: https://calendly.com/thesaassin/build-your-system — no obligation, zero hard sell. We'll map out exactly what you need and give you a clear plan." },
+    { keys:['twitter','x.com','reddit','social','follow','contact','reach','dm','message','email','touch'],
+      reply:"You can reach us on Twitter/X @TheSaaSsin → https://x.com/TheSaaSsin, Reddit → https://www.reddit.com/user/TheSaaSsin/, or just book a call directly → https://calendly.com/thesaassin/build-your-system" },
+    { keys:['who are you','what do you do','what is thesaassin','about','tell me about','what you do'],
+      reply:"TheSaaSsin builds websites, automation systems, CRM setups and lead generation for all types of businesses — from brand new startups to tradespeople to scaling agencies. We're based in the UK, established 2026. Want to explore what we'd build for you? Book a free call: https://calendly.com/thesaassin/build-your-system" },
+    { keys:['hi','hello','hey','hiya','sup','yo','morning','evening','afternoon'],
+      reply:"Hey! I'm the TheSaaSsin bot 👋 Whether you're starting from scratch or looking to scale — I'm here to help point you in the right direction. What kind of business do you run?" }
+  ];
+
+  var FALLBACK = "Good question! I'd recommend booking a free 30-min strategy call where we can answer that properly and map out the right system for your business: https://calendly.com/thesaassin/build-your-system — zero obligation.";
+
+  function getReply(text) {
+    var t = text.toLowerCase();
+    for (var i = 0; i < KB.length; i++) {
+      for (var j = 0; j < KB[i].keys.length; j++) {
+        if (t.indexOf(KB[i].keys[j]) !== -1) return KB[i].reply;
+      }
+    }
+    return FALLBACK;
+  }
+
+  var panelEl = document.getElementById('ss-chat-panel');
+  var toggleBtn = document.getElementById('ss-chat-toggle');
+  var closeBtn = document.getElementById('ss-chat-close');
+  var msgsEl = document.getElementById('ss-chat-msgs');
+  var inputEl = document.getElementById('ss-chat-input');
+  var sendBtn = document.getElementById('ss-chat-send');
+  var chatOpen = false, chatStarted = false;
+
+  function addMsg(text, type) {
+    var d = document.createElement('div');
+    d.className = 'ss-msg ss-' + type;
+    // linkify URLs
+    d.innerHTML = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#fff;text-decoration:underline;opacity:.9">$1</a>');
+    msgsEl.appendChild(d);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+
+  function showTyping() {
+    var d = document.createElement('div');
+    d.className = 'ss-msg ss-bot ss-typing';
+    d.id = 'ss-typing-ind';
+    d.innerHTML = '<div class="ss-typing-dot"></div><div class="ss-typing-dot"></div><div class="ss-typing-dot"></div>';
+    msgsEl.appendChild(d);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+  function hideTyping() { var t = document.getElementById('ss-typing-ind'); if (t) t.remove(); }
+
+  function send(text) {
+    if (!text.trim()) return;
+    inputEl.value = '';
+    addMsg(text, 'user');
+    showTyping();
+    // Simulate a natural typing delay
+    setTimeout(function() {
+      hideTyping();
+      addMsg(getReply(text), 'bot');
+    }, 600 + Math.random() * 400);
+  }
+
+  function openChat() {
+    chatOpen = true;
+    panelEl.classList.add('ss-open');
+    toggleBtn.setAttribute('aria-expanded', 'true');
+    if (!chatStarted) {
+      chatStarted = true;
+      setTimeout(function() {
+        addMsg("👁️ You found us. Whether you're starting from scratch or ready to scale — tell me about your business and I'll point you to exactly what you need.", 'bot');
+      }, 300);
+    }
+    inputEl.focus();
+  }
+  function closeChat() {
+    chatOpen = false;
+    panelEl.classList.remove('ss-open');
+    toggleBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  if (toggleBtn) toggleBtn.addEventListener('click', function() { chatOpen ? closeChat() : openChat(); });
+  if (closeBtn) closeBtn.addEventListener('click', closeChat);
+  if (sendBtn) sendBtn.addEventListener('click', function() { send(inputEl.value); });
+  if (inputEl) inputEl.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(inputEl.value); } });
+})();
+</script>
+
+<script>
+(function(){
+  var v = document.getElementById('hvVid');
+  var bar = document.getElementById('hvBar');
+  var playBtn = document.getElementById('hvPlay');
+  var playIco = document.getElementById('hvPlayIco');
+  var muteBtn = document.getElementById('hvMute');
+  var muteIco = document.getElementById('hvMuteIco');
+  var fill = document.getElementById('hvFill');
+  var prog = document.getElementById('hvProg');
+  var wrap = document.getElementById('hvWrap');
+  if(!v) return;
+
+  // Autoplay with audio - unmuted by default
+  v.muted = false;
+  v.play().catch(function(){
+    // Browser blocked autoplay with audio - try muted
+    v.muted = true;
+    v.play().catch(function(){});
+    if(muteIco){ muteIco.className='fas fa-volume-mute'; }
+  });
+
+  // Show bar on hover
+  wrap.addEventListener('mouseenter',function(){ bar.style.opacity='1'; });
+  wrap.addEventListener('mouseleave',function(){ bar.style.opacity='0'; });
+
+  // Play/pause toggle (click video or button)
+  function togglePlay(){
+    if(v.paused){ v.play(); playIco.className='fas fa-pause'; }
+    else{ v.pause(); playIco.className='fas fa-play'; }
+  }
+  v.addEventListener('click', togglePlay);
+  playBtn.addEventListener('click', function(e){ e.stopPropagation(); togglePlay(); });
+
+  // Mute toggle
+  muteBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    v.muted = !v.muted;
+    muteIco.className = v.muted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+  });
+
+  // Progress bar
+  v.addEventListener('timeupdate',function(){
+    if(v.duration){ fill.style.width=((v.currentTime/v.duration)*100)+'%'; }
+  });
+  prog.addEventListener('click',function(e){
+    var rect=prog.getBoundingClientRect();
+    var pct=(e.clientX-rect.left)/rect.width;
+    v.currentTime=pct*v.duration;
+  });
+})();
+</script>
+
+</body>
+</html>
+<!-- v2 PATCH: spacing · mobile · CTA visibility -->
+<style>
+/* ── v2: Improved mobile spacing ── */
+@media(max-width:768px){
+  section{padding:60px 0;}
+  .container{padding:0 16px;}
+  .hero{padding:120px 0 60px;}
+  .hero p{font-size:1.1rem;}
+  .who-grid,.features-grid,.process-grid,.ss-demo-grid,.ss-price-grid,.ss-cases-grid{gap:20px;}
+  .who-card,.feature-card,.process-step,.ss-demo-card,.ss-price-card,.ss-case-card{padding:24px 18px;}
+  .faq-q{padding:16px 18px;font-size:.95rem;}
+  .faq-a-inner{padding:0 18px 16px;}
+  h2{font-size:1.6rem;margin-bottom:36px;}
+  h2:after{bottom:-10px;}
+}
+@media(max-width:576px){
+  .hero-headline{font-size:1.75rem;line-height:1.25;}
+  .btn{padding:14px 28px;font-size:.9rem;min-height:48px;min-width:200px;}
+  .hero-btns{gap:14px;}
+  .hero-btns .btn{width:100%;max-width:280px;}
+  .ss-price-amount{font-size:2.1rem;}
+  .ss-case-metric-num{font-size:2.8rem;}
+  .social-links a{width:44px;height:44px;font-size:1.3rem;}
+}
+/* ── v2: Thumb-friendly touch targets ── */
+.btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}
+nav ul li a{min-height:44px;display:inline-flex;align-items:center;}
+.faq-q{min-height:52px;}
+/* ── v2: CTA visibility boost ── */
+.cta .btn:first-child{
+  font-size:1.05rem;
+  padding:18px 44px;
+  box-shadow:0 8px 30px rgba(255,42,42,0.4);
+}
+.hero-btns .btn:first-child{
+  box-shadow:0 8px 30px rgba(255,42,42,0.4);
+}
+/* ── v2: Fix horizontal overflow ── */
+body{overflow-x:hidden;}
+.ss-ticker-wrap{overflow:hidden;}
+.mega-menu{max-width:calc(100vw - 40px);}
+</style>

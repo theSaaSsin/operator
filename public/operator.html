@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<title>TheSaaSsin — Operator Panel</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="operator.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sidebar-logo">
+      <div class="s-logo">The<span>SaaS</span>sin</div>
+      <div class="s-tag">Operator Panel</div>
+    </div>
+    <nav>
+      <div class="nav-section">Build</div>
+      <div class="nav-item active" data-panel="client">
+        <i class="fas fa-user-plus"></i> Client Creator
+      </div>
+      <div class="nav-section">Manage</div>
+      <div class="nav-item" data-panel="crm">
+        <i class="fas fa-chart-line"></i> CRM / Leads
+      </div>
+      <div class="nav-item" data-panel="outreach">
+        <i class="fas fa-paper-plane"></i> Outreach Queue
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="status-dot"></span>System Online
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="topbar">
+      <div id="topbar-title">Client Creator</div>
+      <div id="topbar-meta" id="topbar-meta">TheSaaSsin Operator &nbsp;·&nbsp; <span id="clock"></span></div>
+    </div>
+
+    <div id="content">
+
+      <!-- ── PANEL: CLIENT CREATOR ── -->
+      <div class="panel active" id="panel-client">
+
+        <!-- LEFT: form + client list -->
+        <div class="client-left">
+          <div class="panel-header">
+            <h2>New Client</h2>
+            <button class="btn btn-secondary btn-sm" id="btn-clear-form">Clear</button>
+          </div>
+          <div class="form-body">
+            <div class="field">
+              <label>Business Name</label>
+              <input type="text" id="f-name" placeholder="e.g. Apex Plumbing">
+            </div>
+            <div class="field">
+              <label>Niche</label>
+              <input type="text" id="f-niche" placeholder="e.g. Local Trade, SaaS, Consulting">
+            </div>
+            <div class="field">
+              <label>Core Offer</label>
+              <input type="text" id="f-offer" placeholder="e.g. Emergency plumbing 24/7">
+            </div>
+            <div class="field">
+              <label>Primary Goal</label>
+              <select id="f-goal">
+                <option value="leads">More Leads</option>
+                <option value="bookings">More Bookings</option>
+                <option value="awareness">Brand Awareness</option>
+                <option value="revenue">Increase Revenue</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Tone</label>
+              <div class="tone-btns">
+                <button class="tone-btn" data-tone="aggressive">Aggressive</button>
+                <button class="tone-btn active" data-tone="professional">Professional</button>
+                <button class="tone-btn" data-tone="friendly">Friendly</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Location / Market</label>
+              <input type="text" id="f-location" placeholder="e.g. London, UK">
+            </div>
+            <div class="field">
+              <label>Notes (optional)</label>
+              <textarea id="f-notes" placeholder="Any extra context for system generation..."></textarea>
+            </div>
+            <div class="field">
+              <label>System Components</label>
+              <div class="sys-checks">
+                <label class="sys-check"><input type="checkbox" id="sys-landing" checked><span>Landing Page</span></label>
+                <label class="sys-check"><input type="checkbox" id="sys-crm" checked><span>CRM Pipeline</span></label>
+                <label class="sys-check"><input type="checkbox" id="sys-outreach" checked><span>Outreach Sequence</span></label>
+                <label class="sys-check"><input type="checkbox" id="sys-followup" checked><span>Follow-up System</span></label>
+                <label class="sys-check"><input type="checkbox" id="sys-booking"><span>Booking System</span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── STYLE CONTROLS ── -->
+          <div class="style-section">
+            <div class="style-header" id="style-toggle">
+              <span><i class="fas fa-palette"></i> Style Controls</span>
+              <i class="fas fa-chevron-down" id="style-chevron"></i>
+            </div>
+            <div class="style-body" id="style-body">
+              <div class="style-row">
+                <label>Primary Colour</label>
+                <div class="color-row">
+                  <input type="color" id="s-primary" value="#ff2a2a">
+                  <input type="text"  id="s-primary-hex" value="#ff2a2a" maxlength="7" placeholder="#ff2a2a">
+                </div>
+              </div>
+              <div class="style-row">
+                <label>Accent / Text</label>
+                <div class="color-row">
+                  <input type="color" id="s-accent" value="#ffffff">
+                  <input type="text"  id="s-accent-hex" value="#ffffff" maxlength="7" placeholder="#ffffff">
+                </div>
+              </div>
+              <div class="style-row">
+                <label>Theme</label>
+                <div class="theme-btns">
+                  <button class="theme-btn active" data-theme="dark">Dark</button>
+                  <button class="theme-btn" data-theme="light">Light</button>
+                  <button class="theme-btn" data-theme="contrast">Contrast</button>
+                </div>
+              </div>
+              <div class="style-row">
+                <label>Image Style</label>
+                <select id="s-imgstyle">
+                  <option value="auto">Auto (niche-matched)</option>
+                  <option value="industrial">Industrial / Trade</option>
+                  <option value="fitness">Fitness / Active</option>
+                  <option value="corporate">Corporate / Business</option>
+                  <option value="tech">Tech / Digital</option>
+                  <option value="neutral">Clean / Minimal</option>
+                </select>
+              </div>
+              <div class="style-row">
+                <label>Hero Image URL <span class="opt-label">(optional override)</span></label>
+                <input type="text" id="s-imgurl" placeholder="https://... or leave blank for auto">
+              </div>
+            </div>
+          </div>
+
+          <div class="generate-bar">
+            <button class="btn btn-primary" id="btn-save-client" style="flex:1">
+              <i class="fas fa-save"></i> Save Client
+            </button>
+            <button class="btn btn-secondary" id="btn-generate" title="Generate system for selected client">
+              <i class="fas fa-bolt"></i> Generate
+            </button>
+          </div>
+
+          <!-- Saved clients list -->
+          <div class="panel-header" style="margin-top:8px">
+            <h2>Saved Clients</h2>
+            <span id="client-count" style="font-size:.72rem;color:var(--muted)">0</span>
+          </div>
+          <div class="client-list" id="client-list">
+            <div class="empty-state">
+              <i class="fas fa-users"></i>
+              <p>No clients yet</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: live preview -->
+        <div class="client-right">
+          <div class="panel-header">
+            <h2>Live Preview</h2>
+            <div style="display:flex;gap:8px" id="preview-actions" style="display:none">
+              <button class="btn btn-secondary btn-sm" id="btn-download" style="display:none">
+                <i class="fas fa-download"></i> Download HTML
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btn-copy-html" style="display:none">
+                <i class="fas fa-copy"></i> Copy HTML
+              </button>
+            </div>
+          </div>
+          <div class="pkg-bar" id="pkg-bar"></div>
+          <div class="preview-wrap">
+            <div class="preview-placeholder" id="preview-placeholder">
+              <i class="fas fa-eye-slash"></i>
+              <p>Fill in the form and click Generate System</p>
+            </div>
+            <iframe id="preview-frame" style="display:none"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: CRM ── -->
+      <div class="panel" id="panel-crm">
+        <div class="crm-topbar">
+          <h2>CRM / Lead Pipeline</h2>
+          <div class="spacer"></div>
+          <button class="btn btn-secondary btn-sm" id="btn-add-lead">
+            <i class="fas fa-plus"></i> Add Lead
+          </button>
+          <button class="btn btn-secondary btn-sm" id="btn-export-csv" style="margin-left:8px">
+            <i class="fas fa-file-csv"></i> Export CSV
+          </button>
+        </div>
+        <div class="stats-row" id="crm-stats">
+          <div class="stat-box"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Total Leads</div></div>
+          <div class="stat-box"><div class="stat-num" id="stat-new">0</div><div class="stat-label">New</div></div>
+          <div class="stat-box"><div class="stat-num" id="stat-contacted">0</div><div class="stat-label">Contacted</div></div>
+          <div class="stat-box"><div class="stat-num" id="stat-closed">0</div><div class="stat-label">Closed</div></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Business</th>
+                <th>Status</th>
+                <th>Score</th>
+                <th>Added</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="leads-tbody">
+              <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted);font-size:.8rem">No leads yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── PANEL: OUTREACH ── -->
+      <div class="panel" id="panel-outreach">
+        <div class="out-tabs">
+          <div class="out-tab active" data-status="pending">Pending <span id="count-pending" class="badge badge-new" style="margin-left:4px">0</span></div>
+          <div class="out-tab" data-status="approved">Approved <span id="count-approved" class="badge badge-active" style="margin-left:4px">0</span></div>
+          <div class="out-tab" data-status="sent">Sent <span id="count-sent" class="badge badge-pending" style="margin-left:4px">0</span></div>
+        </div>
+        <div class="out-list" id="out-list"></div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ADD LEAD MODAL (inline) -->
+<div id="modal-lead" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9998;align-items:center;justify-content:center;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px;width:380px;display:flex;flex-direction:column;gap:14px;">
+    <h3 style="font-size:.9rem;font-weight:700">Add Lead</h3>
+    <div class="field"><label>Name</label><input type="text" id="lead-name" placeholder="Contact name"></div>
+    <div class="field"><label>Business</label><input type="text" id="lead-biz" placeholder="Company / business"></div>
+    <div class="field"><label>Status</label>
+      <select id="lead-status">
+        <option value="new">New</option>
+        <option value="contacted">Contacted</option>
+        <option value="qualified">Qualified</option>
+        <option value="closed">Closed</option>
+      </select>
+    </div>
+    <div class="field"><label>Score (0–100)</label><input type="number" id="lead-score" min="0" max="100" value="50"></div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn btn-primary" style="flex:1" id="btn-save-lead">Save Lead</button>
+      <button class="btn btn-secondary" id="btn-cancel-lead">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="operator.js"></script>
+</body>
+</html>
