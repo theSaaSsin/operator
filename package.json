@@ -1,0 +1,8 @@
+{
+  "name": "thesaassin-operator",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node server.js",
+    "tunnel": "npx ngrok http 4000"
+  }
+}

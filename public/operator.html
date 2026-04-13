@@ -22,6 +22,10 @@
       <div class="nav-item active" data-panel="client">
         <i class="fas fa-user-plus"></i> Client Creator
       </div>
+      <div class="nav-section">Acquire</div>
+      <div class="nav-item" data-panel="feed">
+        <i class="fas fa-satellite-dish"></i> Lead Feed
+      </div>
       <div class="nav-section">Manage</div>
       <div class="nav-item" data-panel="crm">
         <i class="fas fa-chart-line"></i> CRM / Leads
@@ -192,6 +196,35 @@
               <p>Fill in the form and click Generate System</p>
             </div>
             <iframe id="preview-frame" style="display:none"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: LEAD FEED ── -->
+      <div class="panel" id="panel-feed">
+        <div class="feed-topbar">
+          <div class="feed-topbar-row">
+            <div class="feed-keywords" id="feed-keywords">
+              <button class="kw-btn active" data-kw="need clients">need clients</button>
+              <button class="kw-btn" data-kw="struggling to get clients">struggling to get clients</button>
+              <button class="kw-btn" data-kw="no leads">no leads</button>
+              <button class="kw-btn" data-kw="business is slow">business is slow</button>
+              <button class="kw-btn" data-kw="how to get customers">how to get customers</button>
+              <button class="kw-btn" data-kw="need more bookings">need more bookings</button>
+            </div>
+          </div>
+          <div class="feed-topbar-row">
+            <input type="text" id="feed-custom-kw" placeholder="Custom keyword..." style="padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.8rem;flex:1;font-family:inherit;outline:none;">
+            <button class="btn btn-secondary btn-sm" id="btn-feed-refresh" style="flex-shrink:0">
+              <i class="fas fa-rotate-right"></i> Fetch Leads
+            </button>
+          </div>
+        </div>
+        <div class="feed-meta" id="feed-meta"></div>
+        <div class="feed-grid" id="feed-grid">
+          <div class="feed-empty">
+            <i class="fas fa-satellite-dish"></i>
+            <p>Select a keyword and click Fetch Leads</p>
           </div>
         </div>
       </div>
