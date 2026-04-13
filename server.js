@@ -29,6 +29,57 @@ function body(req) {
 }
 
 const ROUTES = {
+  'GET /api/feed': async (req, res) => {
+    const qs  = req.url.includes('?') ? req.url.split('?')[1] : '';
+    const kw  = decodeURIComponent((qs.match(/q=([^&]*)/) || [])[1] || 'need clients');
+    const H   = { 'User-Agent': 'TheSaaSsin-Operator/1.0 (lead discovery)' };
+
+    // Restrict to high-signal business subreddits only
+    const subs = 'smallbusiness+Entrepreneur+sidehustle+freelance+sales+startups+sweatystartup+EntrepreneurRideAlong';
+    const url  = `https://www.reddit.com/r/${subs}/search.json?q=${encodeURIComponent(kw)}&restrict_sr=1&sort=new&t=week&limit=25`;
+
+    try {
+      const r    = await fetch(url, { headers: H });
+      const data = await r.json();
+      const posts = (data.data?.children || []).map(c => {
+        const p = c.data;
+        return {
+          id:        p.id,
+          title:     p.title || '',
+          text:      (p.selftext || p.title || '').substring(0, 500),
+          author:    p.author || 'unknown',
+          subreddit: p.subreddit || '',
+          url:       `https://reddit.com${p.permalink}`,
+          permalink: p.permalink,
+          created:   p.created_utc,
+          score:     p.score || 0,
+          platform:  'reddit',
+          comments:  []
+        };
+      });
+
+      // Fetch comments for top 6 posts in parallel (pain is often in comments)
+      await Promise.all(posts.slice(0, 6).map(async post => {
+        try {
+          const cr = await fetch(
+            `https://www.reddit.com/r/${post.subreddit}/comments/${post.id}.json?limit=10&sort=top&depth=1`,
+            { headers: H }
+          );
+          const cd = await cr.json();
+          post.comments = ((cd[1]?.data?.children) || [])
+            .filter(c => c.kind === 't1')
+            .map(c => (c.data.body || '').substring(0, 300))
+            .filter(b => b.length > 30 && b !== '[deleted]' && b !== '[removed]')
+            .slice(0, 5);
+        } catch { post.comments = []; }
+      }));
+
+      res.end(JSON.stringify({ ok: true, posts, keyword: kw }));
+    } catch (e) {
+      res.end(JSON.stringify({ ok: false, posts: [], error: e.message }));
+    }
+  },
+
   'GET /api/clients':  (_, res) => { res.end(JSON.stringify(readJSON('clients.json'))); },
   'GET /api/leads':    (_, res) => { res.end(JSON.stringify(readJSON('leads.json'))); },
   'GET /api/outreach': (_, res) => { res.end(JSON.stringify(readJSON('outreach_queue.json'))); },

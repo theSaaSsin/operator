@@ -25,7 +25,7 @@ function toast(msg, type) {
 const panels = document.querySelectorAll('.panel');
 const navItems = document.querySelectorAll('.nav-item');
 const topbarTitle = document.getElementById('topbar-title');
-const TITLES = { client: 'Client Creator', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue' };
+const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue' };
 
 navItems.forEach(item => {
   item.addEventListener('click', () => {
@@ -1153,6 +1153,281 @@ async function updateOutreach(id, status) {
 /* ── HELPERS ── */
 function esc(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ══════════════════════════════════
+   LEAD FEED
+══════════════════════════════════ */
+
+/* ── LEAD QUALITY FILTERS ── */
+const REAL_INTENT = [
+  'no clients','no customers','not getting clients','not getting leads',
+  'no sales','no bookings','dead','nothing working','tried everything',
+  'still not','can\'t get clients','cant get clients','zero clients',
+  'struggling to find','can\'t find clients','no one is buying',
+  'nothing is working','no enquiries','no response','nobody is',
+  'how do i get','how can i get','need more clients','need clients',
+  'any advice on getting','slow','quiet','dead month','any tips',
+  'no work','where do i find','how to find clients','not working',
+  'can\'t seem to','cant seem to','what am i doing wrong'
+];
+
+const BUYER_SIGNALS = [
+  'clients','customers','leads','bookings','sales','revenue',
+  'enquiries','appointments','contracts','jobs','business','freelance'
+];
+
+const BUSINESS_SIGNALS = [
+  'business','freelance','self-employed','self employed','service','offer',
+  'charge','rate','pricing','invoice','contract','client','customer',
+  'revenue','income','money','pay','work','project'
+];
+
+const HARD_EXCLUDE = [
+  'google ads','seo agency','hiring','looking for a job','job posting',
+  'career advice','agency advice','employee','salary','interview',
+  'apply for','resume','cv','job offer','therapist','therapy','mental health',
+  'anxiety','depression','just got hired','got a job','i got a client',
+  'landed a client','just closed','i closed','signed a client','won a client',
+  'sharing my journey','my story','how i went from','here\'s what worked',
+  'i made it','6 figures','i earn','passive income','dropship','amazon fba',
+  'print on demand','crypto','nft','affiliate'
+];
+
+function hasBusinessContext(t) {
+  return BUSINESS_SIGNALS.some(k => t.includes(k));
+}
+
+function scorePost(title, text, isComment = false) {
+  const raw = (title + ' ' + text).toLowerCase();
+
+  // Hard excludes — return 0 immediately
+  if (HARD_EXCLUDE.some(k => raw.includes(k))) return 0;
+
+  // Must have business context (comments are already business-context-adjacent)
+  if (!isComment && !hasBusinessContext(raw)) return 0;
+
+  let score = 0;
+
+  // Real intent signal — core requirement
+  if (REAL_INTENT.some(k => raw.includes(k))) score += 50;
+  else if (!isComment) return 0; // posts must have clear intent phrase
+
+  // Buyer context
+  if (BUYER_SIGNALS.some(k => raw.includes(k))) score += 20;
+
+  // Active question
+  if (title.includes('?') || raw.includes('?')) score += 20;
+
+  // Urgency
+  if (/now|today|this week|this month|currently|right now/.test(raw)) score += 10;
+  if (/desperate|urgent|asap|really struggling|at a loss|nothing works/.test(raw)) score += 15;
+
+  return Math.max(0, Math.min(score, 100));
+}
+
+/* ── ANALYSIS ENGINE ── */
+function analyzePost(title, text, preScore) {
+  const t = (title + ' ' + text).toLowerCase();
+  const urgency = preScore !== undefined ? preScore : scorePost(title, text);
+
+  // Niche detection
+  const niche = /plumb|pipe|boiler|heating|gas safe/.test(t)       ? 'Plumber'
+    : /electrician|wiring|fuse|eicr|niceic/.test(t)                ? 'Electrician'
+    : /builder|construction|renovation|extension|loft/.test(t)     ? 'Builder'
+    : /pt |personal train|fitness coach|gym|fat loss|body/.test(t) ? 'PT / Fitness'
+    : /consultant|freelanc|strateg|advisor|coach|mentor/.test(t)   ? 'Consultant'
+    : /marketing|agency|seo|ads|social media|lead gen/.test(t)     ? 'Marketing Agency'
+    : /saas|software|app |platform|startup|founder/.test(t)        ? 'SaaS / Tech'
+    : 'Business Owner';
+
+  // Approach
+  const approach = urgency >= 70 ? 'Direct offer — they need help now, lead with a result'
+    : urgency >= 40              ? 'Empathy first — acknowledge the problem, then offer'
+    :                              'Question first — qualify before pitching';
+
+  // Opener
+  const opener = urgency >= 70
+    ? `Saw your post — I help ${niche.toLowerCase()} businesses fix exactly this. Built a quick preview for you. Worth a 15-min look?`
+    : `Saw this and it resonated — most ${niche.toLowerCase()} businesses I work with hit the same wall. Happy to show you what changed for them?`;
+
+  // Tip
+  const tip = urgency >= 70 ? 'Message within the hour — high-intent window closes fast'
+    : urgency >= 40          ? 'Start with empathy, not a pitch — ask one question first'
+    :                          'Low signal — qualify harder before investing time here';
+
+  const urgencyLabel = urgency >= 70 ? 'High' : urgency >= 40 ? 'Medium' : 'Low';
+  const urgencyColor = urgency >= 70 ? '#22c55e' : urgency >= 40 ? '#f59e0b' : '#8888a0';
+
+  return { urgency, urgencyLabel, urgencyColor, niche, approach, opener, tip };
+}
+
+/* ── KEYWORD PILLS ── */
+let activeFeedKw = 'need clients';
+
+document.querySelectorAll('.kw-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.kw-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFeedKw = btn.dataset.kw;
+  });
+});
+
+document.getElementById('btn-feed-refresh').addEventListener('click', () => {
+  const custom = document.getElementById('feed-custom-kw').value.trim();
+  const kw = custom || activeFeedKw;
+  fetchFeed(kw);
+});
+
+/* ── FETCH + RENDER ── */
+async function fetchFeed(keyword) {
+  const grid = document.getElementById('feed-grid');
+  const meta = document.getElementById('feed-meta');
+  grid.innerHTML = '<div class="feed-loading"><i class="fas fa-circle-notch"></i>Scanning Reddit for leads...</div>';
+  meta.textContent = '';
+  try {
+    const res  = await fetch(API.replace('/api','') + '/api/feed?q=' + encodeURIComponent(keyword));
+    const data = await res.json();
+    if (!data.ok || !data.posts.length) {
+      grid.innerHTML = '<div class="feed-empty"><i class="fas fa-inbox"></i><p>No posts found — try a different keyword</p></div>';
+      return;
+    }
+
+    // Score posts
+    const scoredPosts = data.posts
+      .map(p => ({ ...p, _score: scorePost(p.title, p.text), _source: 'post' }))
+      .filter(p => p._score >= 40);
+
+    // Extract high-signal comments as additional lead candidates
+    const commentLeads = [];
+    for (const post of data.posts) {
+      if (!post.comments || !post.comments.length) continue;
+      for (const comment of post.comments) {
+        const cs = scorePost('', comment, true);
+        if (cs >= 40) {
+          commentLeads.push({
+            id:        post.id + '_c' + commentLeads.length,
+            title:     post.title,
+            text:      comment,
+            author:    post.author,
+            subreddit: post.subreddit,
+            url:       post.url,
+            permalink: post.permalink,
+            created:   post.created,
+            score:     post.score,
+            platform:  'reddit',
+            _score:    cs,
+            _source:   'comment'
+          });
+        }
+      }
+    }
+
+    // Merge, deduplicate by post id (keep highest scorer), sort desc
+    const seen = new Set();
+    const allLeads = [...scoredPosts, ...commentLeads]
+      .sort((a, b) => b._score - a._score)
+      .filter(l => {
+        const key = l.id.split('_c')[0];
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+    if (!allLeads.length) {
+      grid.innerHTML = '<div class="feed-empty"><i class="fas fa-filter"></i><p>No high-intent leads in this batch — try "no clients" or "need more bookings"</p></div>';
+      meta.textContent = `${data.posts.length} posts scanned · 0 passed quality filter · try a different keyword`;
+      return;
+    }
+
+    const commentCount = allLeads.filter(l => l._source === 'comment').length;
+    meta.textContent = `${allLeads.length} quality leads from ${data.posts.length} posts${commentCount ? ` (${commentCount} from comments)` : ''} · "${keyword}"`;
+    grid.innerHTML = allLeads.map(p => renderFeedCard(p)).join('');
+  } catch (e) {
+    grid.innerHTML = '<div class="feed-empty"><i class="fas fa-triangle-exclamation"></i><p>Could not fetch — check server is running</p></div>';
+  }
+}
+
+function timeAgo(utc) {
+  const diff = Math.floor(Date.now() / 1000) - utc;
+  if (diff < 3600)   return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400)  return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+function renderFeedCard(post) {
+  const isComment = post._source === 'comment';
+  const a   = analyzePost(post.title, post.text, post._score);
+  const ago = timeAgo(post.created);
+  const fillW = Math.max(4, a.urgency);
+  const sourceTag = isComment
+    ? `<span style="font-size:.65rem;background:rgba(255,42,42,.15);color:var(--accent);padding:2px 6px;border-radius:4px;margin-left:4px">comment</span>`
+    : '';
+
+  return `<div class="feed-card" id="fc-${esc(post.id)}">
+    <div class="feed-card-top">
+      <span class="feed-platform">r/${esc(post.subreddit)}</span>
+      <span class="feed-title">${esc(post.title)}${sourceTag}</span>
+      <span class="feed-time">${ago}</span>
+    </div>
+    ${post.text && post.text !== post.title ? `<div class="feed-snippet">${isComment ? '<i class="fas fa-comment" style="color:var(--accent);margin-right:4px;font-size:.7rem"></i>' : ''}${esc(post.text)}</div>` : ''}
+    <div class="feed-analysis">
+      <div class="feed-analysis-row">
+        <span class="analysis-label">Urgency</span>
+        <div class="urgency-bar"><div class="urgency-fill" style="width:${fillW}%;background:${a.urgencyColor}"></div></div>
+        <span class="analysis-val" style="color:${a.urgencyColor};font-weight:700">${a.urgencyLabel} (${a.urgency})</span>
+      </div>
+      <div class="feed-analysis-row">
+        <span class="analysis-label">Niche</span>
+        <span class="analysis-val">${esc(a.niche)}</span>
+      </div>
+      <div class="feed-analysis-row">
+        <span class="analysis-label">Approach</span>
+        <span class="analysis-val">${esc(a.approach)}</span>
+      </div>
+      <div class="feed-tip">💡 ${esc(a.tip)}</div>
+    </div>
+    <div class="feed-analysis" style="margin-top:-4px;border-color:rgba(255,42,42,.15)">
+      <div class="feed-analysis-row" style="align-items:flex-start">
+        <span class="analysis-label" style="color:var(--accent)">Opener</span>
+        <span class="analysis-val" style="font-style:italic;color:var(--text)">"${esc(a.opener)}"</span>
+      </div>
+    </div>
+    <div class="feed-actions">
+      <button class="btn btn-secondary btn-sm" onclick="saveFeedLead('${esc(post.id)}','${esc(post.author)}','${esc(a.niche)}','${esc(post.url)}','${esc(post.title).replace(/'/g,'')}',${a.urgency})">
+        <i class="fas fa-user-plus"></i> Save Lead
+      </button>
+      <a class="btn btn-secondary btn-sm" href="${esc(post.url)}" target="_blank" rel="noopener">
+        <i class="fas fa-arrow-up-right-from-square"></i> Open Post
+      </a>
+    </div>
+  </div>`;
+}
+
+async function saveFeedLead(id, author, niche, url, title, score) {
+  try {
+    await fetch(API + '/leads', {
+      method: 'POST',
+      body: JSON.stringify({
+        name:     'u/' + author,
+        business: niche + ' (Reddit)',
+        status:   'new',
+        score:    score,
+        source:   url,
+        notes:    title,
+        niche:    niche
+      })
+    });
+    // Visual feedback — grey out the saved card
+    const card = document.getElementById('fc-' + id);
+    if (card) {
+      card.style.opacity = '0.45';
+      card.style.pointerEvents = 'none';
+      const btn = card.querySelector('.btn');
+      if (btn) btn.innerHTML = '<i class="fas fa-check"></i> Saved';
+    }
+    toast('Lead saved to CRM', 'ok');
+  } catch { toast('Could not save lead', 'err'); }
 }
 
 /* ── INIT ── */
