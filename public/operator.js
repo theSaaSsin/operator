@@ -1198,6 +1198,16 @@ function hasBusinessContext(t) {
   return BUSINESS_SIGNALS.some(k => t.includes(k));
 }
 
+// Softer intent phrases — still relevant, just less explicit pain
+const SOFT_INTENT = [
+  'how do i','how can i','any advice','struggling','not getting',
+  'need help','what should i do','why am i not','anyone else',
+  'how to get','help me','where do i','getting nowhere',
+  'slow month','quiet period','any tips','looking for clients',
+  'find clients','get customers','grow my','build my client',
+  'generate leads','attract clients','market my','promote my'
+];
+
 function scorePost(title, text, isComment = false) {
   const raw = (title + ' ' + text).toLowerCase();
 
@@ -1208,13 +1218,20 @@ function scorePost(title, text, isComment = false) {
   if (!isComment && !hasBusinessContext(raw)) return 0;
 
   let score = 0;
+  const hasBuyer = BUYER_SIGNALS.some(k => raw.includes(k));
 
-  // Real intent signal — core requirement
-  if (REAL_INTENT.some(k => raw.includes(k))) score += 50;
-  else if (!isComment) return 0; // posts must have clear intent phrase
+  // Strong pain signal — high confidence lead (passes alone)
+  if (REAL_INTENT.some(k => raw.includes(k))) {
+    score += 50;
+  } else if (SOFT_INTENT.some(k => raw.includes(k)) && hasBuyer) {
+    // Softer intent only counts when combined with a specific buyer keyword
+    score += 25;
+  } else {
+    return 0; // no clear intent + buyer combo → not a lead
+  }
 
-  // Buyer context
-  if (BUYER_SIGNALS.some(k => raw.includes(k))) score += 20;
+  // Buyer context bonus (on top of base)
+  if (hasBuyer) score += 20;
 
   // Active question
   if (title.includes('?') || raw.includes('?')) score += 20;
@@ -1293,14 +1310,23 @@ async function fetchFeed(keyword) {
       return;
     }
 
+    // Whitelist — only accept posts from target business subs
+    const TARGET_SUBS = new Set([
+      'smallbusiness','entrepreneur','sidehustle','freelance','sales',
+      'startups','sweatystartup','entrepreneurridealong','forhire',
+      'entrepreneur_ride_along','businessowners','growmybusiness',
+      'digital_marketing','marketinghelp','agency'
+    ]);
+    const businessPosts = data.posts.filter(p => TARGET_SUBS.has(p.subreddit.toLowerCase()));
+
     // Score posts
-    const scoredPosts = data.posts
+    const scoredPosts = businessPosts
       .map(p => ({ ...p, _score: scorePost(p.title, p.text), _source: 'post' }))
       .filter(p => p._score >= 40);
 
     // Extract high-signal comments as additional lead candidates
     const commentLeads = [];
-    for (const post of data.posts) {
+    for (const post of businessPosts) {
       if (!post.comments || !post.comments.length) continue;
       for (const comment of post.comments) {
         const cs = scorePost('', comment, true);
@@ -1336,12 +1362,12 @@ async function fetchFeed(keyword) {
 
     if (!allLeads.length) {
       grid.innerHTML = '<div class="feed-empty"><i class="fas fa-filter"></i><p>No high-intent leads in this batch — try "no clients" or "need more bookings"</p></div>';
-      meta.textContent = `${data.posts.length} posts scanned · 0 passed quality filter · try a different keyword`;
+      meta.textContent = `${data.posts.length} posts fetched · ${businessPosts.length} from target subs · 0 passed quality filter`;
       return;
     }
 
     const commentCount = allLeads.filter(l => l._source === 'comment').length;
-    meta.textContent = `${allLeads.length} quality leads from ${data.posts.length} posts${commentCount ? ` (${commentCount} from comments)` : ''} · "${keyword}"`;
+    meta.textContent = `${allLeads.length} quality leads · ${businessPosts.length}/${data.posts.length} from target subs${commentCount ? ` · ${commentCount} from comments` : ''} · "${keyword}"`;
     grid.innerHTML = allLeads.map(p => renderFeedCard(p)).join('');
   } catch (e) {
     grid.innerHTML = '<div class="feed-empty"><i class="fas fa-triangle-exclamation"></i><p>Could not fetch — check server is running</p></div>';

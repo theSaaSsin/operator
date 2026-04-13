@@ -34,28 +34,45 @@ const ROUTES = {
     const kw  = decodeURIComponent((qs.match(/q=([^&]*)/) || [])[1] || 'need clients');
     const H   = { 'User-Agent': 'TheSaaSsin-Operator/1.0 (lead discovery)' };
 
-    // Restrict to high-signal business subreddits only
-    const subs = 'smallbusiness+Entrepreneur+sidehustle+freelance+sales+startups+sweatystartup+EntrepreneurRideAlong';
-    const url  = `https://www.reddit.com/r/${subs}/search.json?q=${encodeURIComponent(kw)}&restrict_sr=1&sort=new&t=week&limit=25`;
+    // Search each high-signal sub individually — Reddit ignores restrict_sr on multi-sub URLs
+    const TARGET_SUBS = [
+      'smallbusiness', 'Entrepreneur', 'freelance', 'sidehustle',
+      'sweatystartup', 'EntrepreneurRideAlong', 'startups', 'sales'
+    ];
+
+    function parsePost(p) {
+      return {
+        id:        p.id,
+        title:     p.title || '',
+        text:      (p.selftext || p.title || '').substring(0, 500),
+        author:    p.author || 'unknown',
+        subreddit: p.subreddit || '',
+        url:       `https://reddit.com${p.permalink}`,
+        permalink: p.permalink,
+        created:   p.created_utc,
+        score:     p.score || 0,
+        platform:  'reddit',
+        comments:  []
+      };
+    }
 
     try {
-      const r    = await fetch(url, { headers: H });
-      const data = await r.json();
-      const posts = (data.data?.children || []).map(c => {
-        const p = c.data;
-        return {
-          id:        p.id,
-          title:     p.title || '',
-          text:      (p.selftext || p.title || '').substring(0, 500),
-          author:    p.author || 'unknown',
-          subreddit: p.subreddit || '',
-          url:       `https://reddit.com${p.permalink}`,
-          permalink: p.permalink,
-          created:   p.created_utc,
-          score:     p.score || 0,
-          platform:  'reddit',
-          comments:  []
-        };
+      // Fetch all subs in parallel, 8 results each = up to 64 candidates
+      const subResults = await Promise.all(TARGET_SUBS.map(async sub => {
+        try {
+          const url = `https://www.reddit.com/r/${sub}/search.json?q=${encodeURIComponent(kw)}&restrict_sr=1&sort=new&t=month&limit=8`;
+          const r   = await fetch(url, { headers: H });
+          const d   = await r.json();
+          return (d.data?.children || []).map(c => parsePost(c.data));
+        } catch { return []; }
+      }));
+
+      // Merge, deduplicate by id
+      const seen = new Set();
+      const posts = subResults.flat().filter(p => {
+        if (seen.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
       });
 
       // Fetch comments for top 6 posts in parallel (pain is often in comments)
