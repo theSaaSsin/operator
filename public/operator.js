@@ -1,7 +1,8 @@
 /* ── TheSaaSsin Operator Panel — operator.js ── */
 'use strict';
 
-const API = 'http://localhost:4000/api';
+// Use relative path so API calls work on both localhost AND mobile via ngrok
+const API = window.location.origin + '/api';
 
 /* ── CLOCK ── */
 (function clock() {
@@ -21,23 +22,294 @@ function toast(msg, type) {
   t._timer = setTimeout(() => { t.className = ''; }, 3000);
 }
 
+/* ══════════════════════════════════════════════════
+   MODULE SYSTEM — THE FULL 70-MODULE MAP
+══════════════════════════════════════════════════ */
+const MODULE_MAP = [
+  {
+    id: 'core', name: 'Core Layer', desc: 'Operator Brain — always present',
+    icon: 'fa-microchip', color: '#ff2a2a',
+    modules: [
+      { n:1,  name:'Lead Feed Engine',           icon:'fa-satellite-dish',   status:'active', panel:'feed' },
+      { n:2,  name:'Lead Classification System',  icon:'fa-tags',            status:'active', panel:'feed' },
+      { n:3,  name:'Lead Scoring System',          icon:'fa-star-half-stroke',status:'active', panel:'crm' },
+      { n:4,  name:'Lead Filtering System',        icon:'fa-filter',          status:'active', panel:'feed' },
+      { n:5,  name:'CRM Pipeline',                 icon:'fa-chart-line',      status:'active', panel:'crm' },
+      { n:6,  name:'Outreach Queue Manager',       icon:'fa-paper-plane',     status:'active', panel:'outreach' },
+      { n:7,  name:'System Matcher Engine',         icon:'fa-puzzle-piece',    status:'building' },
+      { n:8,  name:'Demo Builder Engine',           icon:'fa-wand-magic-sparkles', status:'active', panel:'client' },
+      { n:9,  name:'Analytics Dashboard',           icon:'fa-chart-bar',       status:'active', panel:'analytics' },
+      { n:10, name:'User Dashboard',                icon:'fa-gauge-high',      status:'active', panel:'dashboard' },
+    ]
+  },
+  {
+    id: 'acquisition', name: 'Acquisition', desc: 'Get clients — scraping, outreach, booking',
+    icon: 'fa-bullseye', color: '#22c55e',
+    modules: [
+      { n:11, name:'Social Media Lead Scraper',     icon:'fa-hashtag',         status:'active', panel:'feed' },
+      { n:12, name:'Keyword Detection Engine',      icon:'fa-crosshairs',      status:'building' },
+      { n:13, name:'Lead Intent Analyzer',          icon:'fa-brain',           status:'building' },
+      { n:14, name:'Competitor Lead Hijack',        icon:'fa-user-secret',     status:'planned' },
+      { n:15, name:'Local Business Lead Finder',    icon:'fa-map-pin',         status:'planned' },
+      { n:16, name:'Cold Outreach Msg Generator',   icon:'fa-comment-dots',    status:'active', panel:'feed' },
+      { n:17, name:'Multi-Platform Outreach Sender', icon:'fa-share-nodes',    status:'planned' },
+      { n:18, name:'Follow-Up Automation',          icon:'fa-clock-rotate-left', status:'planned' },
+      { n:19, name:'Reply Detection + Routing',     icon:'fa-reply',           status:'planned' },
+      { n:20, name:'Appointment Booking Integration', icon:'fa-calendar-check', status:'planned' },
+    ]
+  },
+  {
+    id: 'sales', name: 'Sales / Conversion', desc: 'Landing pages, funnels, proposals, closing',
+    icon: 'fa-hand-holding-dollar', color: '#f59e0b',
+    modules: [
+      { n:21, name:'Landing Page Generator',        icon:'fa-file-code',       status:'active', panel:'client' },
+      { n:22, name:'Funnel Builder',                icon:'fa-filter',          status:'planned' },
+      { n:23, name:'Offer Generator',               icon:'fa-gift',            status:'planned' },
+      { n:24, name:'Proposal Builder',              icon:'fa-file-invoice',    status:'planned' },
+      { n:25, name:'Demo System Visualizer',        icon:'fa-eye',             status:'planned' },
+      { n:26, name:'Testimonial / Proof Generator', icon:'fa-quote-left',      status:'planned' },
+      { n:27, name:'Call Script Generator',         icon:'fa-phone',           status:'planned' },
+      { n:28, name:'Pricing Structure Builder',     icon:'fa-money-bill-wave', status:'planned' },
+      { n:29, name:'Objection Handling Scripts',    icon:'fa-shield-halved',   status:'planned' },
+      { n:30, name:'Close Tracking System',         icon:'fa-handshake',       status:'planned' },
+    ]
+  },
+  {
+    id: 'content', name: 'Content / Brand', desc: 'Content creation, scheduling, brand identity',
+    icon: 'fa-pen-nib', color: '#a855f7',
+    modules: [
+      { n:31, name:'Content Idea Generator',        icon:'fa-lightbulb',       status:'planned' },
+      { n:32, name:'Short-Form Content Generator',  icon:'fa-video',           status:'planned' },
+      { n:33, name:'Long-Form Content Generator',   icon:'fa-newspaper',       status:'planned' },
+      { n:34, name:'Social Media Post Generator',   icon:'fa-thumbs-up',       status:'planned' },
+      { n:35, name:'Content Scheduler',             icon:'fa-calendar-days',   status:'planned' },
+      { n:36, name:'Visual Asset Generator',        icon:'fa-image',           status:'planned' },
+      { n:37, name:'Brand Identity Builder',        icon:'fa-palette',         status:'planned' },
+      { n:38, name:'Profile Optimizer',             icon:'fa-user-pen',        status:'planned' },
+      { n:39, name:'Engagement Booster System',     icon:'fa-comments',        status:'planned' },
+      { n:40, name:'Content Performance Tracker',   icon:'fa-chart-simple',    status:'planned' },
+    ]
+  },
+  {
+    id: 'automation', name: 'Automation / Operations', desc: 'Workflows, CRM automation, templates',
+    icon: 'fa-gears', color: '#3b82f6',
+    modules: [
+      { n:41, name:'Workflow Automation Builder',   icon:'fa-diagram-project', status:'planned' },
+      { n:42, name:'CRM Automation',                icon:'fa-robot',           status:'planned' },
+      { n:43, name:'Email Automation',              icon:'fa-envelope-open-text', status:'planned' },
+      { n:44, name:'Notification System',           icon:'fa-bell',            status:'planned' },
+      { n:45, name:'Internal Task Manager',         icon:'fa-list-check',      status:'planned' },
+      { n:46, name:'Client Onboarding Automation',  icon:'fa-user-check',      status:'planned' },
+      { n:47, name:'Data Sync System',              icon:'fa-arrows-rotate',   status:'planned' },
+      { n:48, name:'File / Asset Management',       icon:'fa-folder-open',     status:'planned' },
+      { n:49, name:'Template Library',              icon:'fa-clone',           status:'planned' },
+      { n:50, name:'System Cloning Tool',           icon:'fa-copy',            status:'planned' },
+    ]
+  },
+  {
+    id: 'delivery', name: 'Client Delivery', desc: 'Client dashboards, training, handoff',
+    icon: 'fa-truck-fast', color: '#06b6d4',
+    modules: [
+      { n:51, name:'Client Dashboard',              icon:'fa-gauge-high',      status:'planned' },
+      { n:52, name:'System Overview Visual',        icon:'fa-sitemap',         status:'planned' },
+      { n:53, name:'Training / Tutorial Generator', icon:'fa-graduation-cap',  status:'planned' },
+      { n:54, name:'Progress Tracker',              icon:'fa-bars-progress',   status:'planned' },
+      { n:55, name:'Performance Dashboard',         icon:'fa-chart-pie',       status:'planned' },
+      { n:56, name:'Support / Messaging System',    icon:'fa-headset',         status:'planned' },
+      { n:57, name:'Update / Change Request System',icon:'fa-code-pull-request', status:'planned' },
+      { n:58, name:'Client Access Control',         icon:'fa-lock',            status:'planned' },
+      { n:59, name:'System Export / Handoff',       icon:'fa-file-export',     status:'planned' },
+      { n:60, name:'White-Label Option',            icon:'fa-tag',             status:'planned' },
+    ]
+  },
+  {
+    id: 'expansion', name: 'Expansion', desc: 'Later — partners, marketplace, billing, teams',
+    icon: 'fa-rocket', color: '#ec4899',
+    modules: [
+      { n:61, name:'Partner Management System',     icon:'fa-handshake',       status:'later' },
+      { n:62, name:'Reseller Dashboard',            icon:'fa-store',           status:'later' },
+      { n:63, name:'Marketplace Integration',       icon:'fa-cart-shopping',   status:'later' },
+      { n:64, name:'API Access Layer',              icon:'fa-plug',            status:'later' },
+      { n:65, name:'Plugin / Extension System',     icon:'fa-puzzle-piece',    status:'later' },
+      { n:66, name:'Revenue Tracking System',       icon:'fa-sack-dollar',     status:'later' },
+      { n:67, name:'Subscription / Billing System', icon:'fa-credit-card',     status:'later' },
+      { n:68, name:'Affiliate System',              icon:'fa-people-arrows',   status:'later' },
+      { n:69, name:'Multi-User Team System',        icon:'fa-users',           status:'later' },
+      { n:70, name:'Global Analytics',              icon:'fa-earth-americas',  status:'later' },
+    ]
+  }
+];
+
+const STATUS_META = {
+  active:   { label:'Live',     cls:'mod-active'  },
+  building: { label:'Building', cls:'mod-building' },
+  planned:  { label:'Planned',  cls:'mod-planned'  },
+  later:    { label:'Later',    cls:'mod-later'    },
+};
+const STATUS_CYCLE = { planned: 'building', building: 'active', active: 'later', later: 'planned' };
+
+function findModuleByNumber(moduleNumber) {
+  for (const cat of MODULE_MAP) {
+    const mod = cat.modules.find(m => m.n === moduleNumber);
+    if (mod) return mod;
+  }
+  return null;
+}
+
+function updateSidebarModuleCounts() {
+  MODULE_MAP.forEach(cat => {
+    const active = cat.modules.filter(m => m.status === 'active').length;
+    const countEl = document.getElementById('cat-count-' + cat.id);
+    if (countEl) countEl.textContent = `${active}/${cat.modules.length}`;
+  });
+  const totalActive = MODULE_MAP.reduce((sum, cat) => sum + cat.modules.filter(m => m.status === 'active').length, 0);
+  const versionEl = document.querySelector('.sidebar-version');
+  if (versionEl) versionEl.textContent = `v0.2 — ${totalActive} / 70 modules`;
+}
+
+function renderDashboard() {
+  const grid = document.getElementById('dash-grid');
+  const statsEl = document.getElementById('dash-hero-stats');
+  if (!grid) return;
+
+  const totalActive   = MODULE_MAP.reduce((s, c) => s + c.modules.filter(m => m.status === 'active').length, 0);
+  const totalBuilding = MODULE_MAP.reduce((s, c) => s + c.modules.filter(m => m.status === 'building').length, 0);
+  const totalPlanned  = MODULE_MAP.reduce((s, c) => s + c.modules.filter(m => m.status === 'planned').length, 0);
+  const totalLater    = MODULE_MAP.reduce((s, c) => s + c.modules.filter(m => m.status === 'later').length, 0);
+
+  statsEl.innerHTML = `
+    <div class="dash-stat"><div class="dash-stat-val" style="color:var(--success)">${totalActive}</div><div class="dash-stat-label">Live</div></div>
+    <div class="dash-stat"><div class="dash-stat-val" style="color:var(--warn)">${totalBuilding}</div><div class="dash-stat-label">Building</div></div>
+    <div class="dash-stat"><div class="dash-stat-val" style="color:var(--muted)">${totalPlanned + totalLater}</div><div class="dash-stat-label">Planned</div></div>
+    <div class="dash-stat"><div class="dash-stat-val">70</div><div class="dash-stat-label">Total</div></div>`;
+
+  grid.innerHTML = MODULE_MAP.map(cat => {
+    const active = cat.modules.filter(m => m.status === 'active').length;
+    const total  = cat.modules.length;
+    const pct    = Math.round((active / total) * 100);
+
+    const modsHTML = cat.modules.map(m => {
+      const sm = STATUS_META[m.status];
+      const clickable = m.panel ? `onclick="switchPanel('${m.panel}')"` : '';
+      const safeNote = esc(m.note || '');
+      const safeName = esc(m.name);
+      return `<div class="dash-mod ${sm.cls}" ${clickable}>
+        <span class="dash-mod-num">${m.n}</span>
+        <i class="fas ${m.icon} dash-mod-icon"></i>
+        <div class="dash-mod-info">
+          <div class="dash-mod-name" title="${safeNote || safeName}">${safeName}</div>
+        </div>
+        <span class="dash-mod-status" onclick="event.stopPropagation();cycleModuleStatus(${m.n})" title="Click to cycle status">${sm.label}</span>
+      </div>`;
+    }).join('');
+
+    return `<div class="dash-cat${cat.id === 'core' ? ' open' : ''}" data-cat="${cat.id}">
+      <div class="dash-cat-header" onclick="toggleDashCat('${cat.id}')">
+        <div class="dash-cat-icon" style="background:${cat.color}15;color:${cat.color}"><i class="fas ${cat.icon}"></i></div>
+        <div class="dash-cat-info">
+          <div class="dash-cat-name">${cat.name}</div>
+          <div class="dash-cat-desc">${cat.desc}</div>
+        </div>
+        <div class="dash-cat-progress">
+          <div class="dash-cat-bar"><div class="dash-cat-bar-fill" style="width:${pct}%;background:${cat.color}"></div></div>
+          <div class="dash-cat-count">${active}/${total}</div>
+        </div>
+        <i class="fas fa-chevron-down dash-cat-chevron"></i>
+      </div>
+      <div class="dash-cat-body"><div class="dash-mod-grid">${modsHTML}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDashCat(catId) {
+  const el = document.querySelector(`.dash-cat[data-cat="${catId}"]`);
+  if (el) el.classList.toggle('open');
+}
+
+async function loadModuleState() {
+  try {
+    const res = await fetch(API + '/modules');
+    const data = await res.json();
+    if (!data || !data.modules) return;
+    Object.values(data.modules).forEach(row => {
+      const mod = findModuleByNumber(Number(row.n));
+      if (!mod) return;
+      if (STATUS_META[row.status]) mod.status = row.status;
+      mod.note = typeof row.note === 'string' ? row.note : '';
+    });
+    renderDashboard();
+    updateSidebarModuleCounts();
+  } catch {
+    // Keep local defaults if module registry API is unavailable
+  }
+}
+
+async function cycleModuleStatus(moduleNumber) {
+  const mod = findModuleByNumber(Number(moduleNumber));
+  if (!mod) return;
+  const prev = mod.status;
+  const next = STATUS_CYCLE[prev] || 'planned';
+  mod.status = next;
+  renderDashboard();
+  updateSidebarModuleCounts();
+  try {
+    await fetch(API + '/modules', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ n: moduleNumber, status: next })
+    });
+    toast(`Module #${moduleNumber} → ${STATUS_META[next].label}`, 'ok');
+  } catch {
+    mod.status = prev;
+    renderDashboard();
+    updateSidebarModuleCounts();
+    toast('Could not update module status', 'err');
+  }
+}
+
+renderDashboard();
+updateSidebarModuleCounts();
+loadModuleState();
+
 /* ── NAV ── */
 const panels = document.querySelectorAll('.panel');
 const navItems = document.querySelectorAll('.nav-item');
 const topbarTitle = document.getElementById('topbar-title');
-const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue' };
+const TITLES = {
+  dashboard: 'Dashboard',
+  client: 'Client Creator',
+  feed: 'Lead Feed',
+  crm: 'CRM / Lead Pipeline',
+  outreach: 'Outreach Queue',
+  analytics: 'Outreach Analytics'
+};
+
+function switchPanel(target) {
+  if (target && target.startsWith('mod-')) {
+    toast('Module coming soon', 'err');
+    return;
+  }
+  navItems.forEach(n => n.classList.remove('active'));
+  panels.forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
+  const navItem = document.querySelector(`.nav-item[data-panel="${target}"]`);
+  if (navItem) navItem.classList.add('active');
+  const mobBtn = document.querySelector(`.mob-nav-btn[data-panel="${target}"]`);
+  if (mobBtn) mobBtn.classList.add('active');
+  const panel = document.getElementById('panel-' + target);
+  if (panel) panel.classList.add('active');
+  topbarTitle.textContent = TITLES[target] || target;
+  if (target === 'crm') loadLeads();
+  if (target === 'outreach') loadOutreach();
+  if (target === 'analytics') loadAnalytics();
+}
 
 navItems.forEach(item => {
-  item.addEventListener('click', () => {
-    const target = item.dataset.panel;
-    navItems.forEach(n => n.classList.remove('active'));
-    panels.forEach(p => p.classList.remove('active'));
-    item.classList.add('active');
-    document.getElementById('panel-' + target).classList.add('active');
-    topbarTitle.textContent = TITLES[target];
-    if (target === 'crm') loadLeads();
-    if (target === 'outreach') loadOutreach();
-  });
+  item.addEventListener('click', () => switchPanel(item.dataset.panel));
+});
+
+document.querySelectorAll('.mob-nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchPanel(btn.dataset.panel));
 });
 
 /* ══════════════════════════════════
@@ -86,10 +358,26 @@ function selectClient(id) {
     document.getElementById('f-location').value = c.location     || '';
     document.getElementById('f-notes').value    = c.notes        || '';
 
+    // Restore new fields
+    document.getElementById('f-target').value = c.target || '';
+    document.getElementById('f-usp').value    = c.usp    || '';
+
     // Restore tone
     if (c.tone) {
-      document.querySelectorAll('.tone-btn').forEach(b => {
+      document.querySelectorAll('[data-tone]').forEach(b => {
         b.classList.toggle('active', b.dataset.tone === c.tone);
+      });
+    }
+    // Restore price point
+    if (c.price) {
+      document.querySelectorAll('[data-price]').forEach(b => {
+        b.classList.toggle('active', b.dataset.price === c.price);
+      });
+    }
+    // Restore stage
+    if (c.stage) {
+      document.querySelectorAll('[data-stage]').forEach(b => {
+        b.classList.toggle('active', b.dataset.stage === c.stage);
       });
     }
 
@@ -126,19 +414,25 @@ function selectClient(id) {
 }
 
 document.getElementById('btn-clear-form').addEventListener('click', () => {
-  ['f-name','f-niche','f-offer','f-location','f-notes'].forEach(id => {
+  ['f-name','f-niche','f-offer','f-target','f-usp','f-location','f-notes'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('f-goal').value = 'leads';
   selectedClient = null;
-  document.getElementById('preview-frame').style.display = 'none';
+  document.getElementById('variant-shell').style.display = 'none';
   document.getElementById('preview-placeholder').style.display = 'flex';
   document.getElementById('btn-download').style.display  = 'none';
   document.getElementById('btn-copy-html').style.display = 'none';
+  _variantHTMLs = ['', '', '']; _activeVariant = 0;
   const pkgBar = document.getElementById('pkg-bar');
   if (pkgBar) { pkgBar.innerHTML = ''; pkgBar.classList.remove('visible'); }
   generatedHTML = '';
 });
+
+function getActiveBtn(attr) {
+  const el = document.querySelector(`[data-${attr}].active`);
+  return el ? el.dataset[attr] : null;
+}
 
 function getFormPayload() {
   const style = getStyle();
@@ -146,6 +440,10 @@ function getFormPayload() {
     businessName: document.getElementById('f-name').value.trim(),
     niche:        document.getElementById('f-niche').value.trim(),
     offer:        document.getElementById('f-offer').value.trim(),
+    target:       document.getElementById('f-target').value.trim(),
+    usp:          document.getElementById('f-usp').value.trim(),
+    price:        getActiveBtn('price') || 'mid',
+    stage:        getActiveBtn('stage') || 'growing',
     goal:         document.getElementById('f-goal').value,
     location:     document.getElementById('f-location').value.trim(),
     notes:        document.getElementById('f-notes').value.trim(),
@@ -204,11 +502,13 @@ document.getElementById('btn-save-client').addEventListener('click', async () =>
     });
   });
 
-  // Tone button toggle
-  document.querySelectorAll('.tone-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+  // Button group toggles — each group is isolated by data attribute
+  ['tone', 'price', 'stage'].forEach(attr => {
+    document.querySelectorAll(`[data-${attr}]`).forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll(`[data-${attr}]`).forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
     });
   });
 
@@ -245,23 +545,158 @@ function getStyle() {
   };
 }
 
+/* ── Derive 3 style variants from the client's chosen colours ── */
+function buildVariantStyles(base) {
+  // V1 — Bold/Contrast: client colours, darkest theme, aggressive punch
+  const v1 = { ...base, theme: 'contrast', tone: 'aggressive' };
+
+  // V2 — Dark/Professional: slightly shift accent to complement, dark theme
+  const v2 = { ...base, theme: 'dark', tone: 'professional',
+    accent: base.accent === '#ffffff' ? '#cccccc' : base.accent };
+
+  // V3 — Light/Friendly: client primary on a light background
+  const v3 = { ...base, theme: 'light', tone: 'friendly',
+    accent: base.primary || base.accent };
+
+  return [v1, v2, v3];
+}
+
+let _variantHTMLs   = ['', '', ''];
+let _activeVariant  = 0;
+
+function setActiveVariant(idx) {
+  _activeVariant = idx;
+  document.querySelectorAll('.variant-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+  document.querySelectorAll('.variant-frame-wrap').forEach((w, i) => w.classList.toggle('active-frame', i === idx));
+  generatedHTML = _variantHTMLs[idx];
+  const useBtn = document.getElementById('btn-use-variant');
+  if (useBtn) { useBtn.textContent = '✓ Use This'; useBtn.classList.remove('saved'); }
+}
+
+function useActiveVariant() {
+  generatedHTML = _variantHTMLs[_activeVariant];
+  const useBtn = document.getElementById('btn-use-variant');
+  if (useBtn) { useBtn.textContent = '✓ Saved'; useBtn.classList.add('saved'); }
+  if (selectedClient) {
+    fetch(API + '/clients', {
+      method: 'PATCH',
+      body: JSON.stringify({ id: selectedClient.id, systems: { ...selectedClient.systems, landingPage: generatedHTML }, lastUpdated: new Date().toISOString() })
+    }).then(r => r.json()).then(d => { if (d.client) selectedClient = d.client; }).catch(() => {});
+  }
+  toast('V' + (_activeVariant + 1) + ' set as active page', 'ok');
+}
+
+/* ── VARIANT EDITOR ── */
+function toggleVariantEdit() {
+  const panel = document.getElementById('variant-edit-panel');
+  const btn   = document.getElementById('btn-variant-edit');
+  const open  = panel.style.display !== 'none' && panel.style.display !== '';
+  panel.style.display = open ? 'none' : 'flex';
+  btn.classList.toggle('active', !open);
+}
+
+function reRenderActiveVariant() {
+  const frame = document.getElementById('variant-frame-' + _activeVariant);
+  if (!frame) return;
+  // Reset height so it remeasures after re-write
+  frame.style.height = '100%';
+  writeToFrame(frame, _variantHTMLs[_activeVariant]);
+  generatedHTML = _variantHTMLs[_activeVariant];
+}
+
+/* Patch the .btn{…} CSS block inside the variant HTML */
+function patchBtnCSS(html, fn) {
+  return html.replace(/(\.btn\{)([^}]+)(\})/, (_, open, props, close) => open + fn(props) + close);
+}
+
+function applyBtnShape(shape, clickedEl) {
+  const radii = { pill: '28px', rounded: '8px', sharp: '3px', square: '0' };
+  const r = radii[shape] || '28px';
+  _variantHTMLs[_activeVariant] = patchBtnCSS(
+    _variantHTMLs[_activeVariant],
+    p => p.replace(/border-radius:[\w.]+/, 'border-radius:' + r)
+  );
+  reRenderActiveVariant();
+  if (clickedEl) {
+    clickedEl.closest('.vep-btns').querySelectorAll('.vep-btn').forEach(b => b.classList.remove('active'));
+    clickedEl.classList.add('active');
+  }
+}
+
+function applyBtnStyle(style, clickedEl) {
+  _variantHTMLs[_activeVariant] = patchBtnCSS(
+    _variantHTMLs[_activeVariant],
+    p => {
+      // Reset to neutral first, then apply
+      p = p.replace(/background:[^;]+/, 'background:var(--accent)');
+      p = p.replace(/border:[^;]+/, 'border:none');
+      // Remove existing box-shadow entry to re-add or omit
+      p = p.replace(/box-shadow:[^;]+;?/, '');
+
+      if (style === 'filled') {
+        // Restore box-shadow
+        p = p.replace(/transition:/, 'box-shadow:0 6px 24px color-mix(in srgb,var(--accent) 40%,transparent);transition:');
+      } else if (style === 'outline') {
+        p = p.replace(/background:var\(--accent\)/, 'background:transparent');
+        p = p.replace(/border:none/, 'border:2px solid var(--accent)');
+      } else if (style === 'ghost') {
+        p = p.replace(/background:var\(--accent\)/, 'background:rgba(255,255,255,.07)');
+        p = p.replace(/border:none/, 'border:1px solid rgba(255,255,255,.18)');
+      }
+      return p;
+    }
+  );
+  reRenderActiveVariant();
+  if (clickedEl) {
+    clickedEl.closest('.vep-btns').querySelectorAll('.vep-btn').forEach(b => b.classList.remove('active'));
+    clickedEl.classList.add('active');
+  }
+}
+
+function applyTextReplace() {
+  const find    = document.getElementById('vep-find').value;
+  const replace = document.getElementById('vep-replace-val').value;
+  if (!find.trim()) { toast('Enter text to find', 'err'); return; }
+  const before = _variantHTMLs[_activeVariant];
+  _variantHTMLs[_activeVariant] = before.split(find).join(replace);
+  if (_variantHTMLs[_activeVariant] === before) { toast('Not found', 'err'); return; }
+  reRenderActiveVariant();
+  document.getElementById('vep-find').value = '';
+  document.getElementById('vep-replace-val').value = '';
+  toast('Done', 'ok');
+}
+
 document.getElementById('btn-generate').addEventListener('click', () => {
-  const name  = document.getElementById('f-name').value.trim()    || 'Your Business';
-  const niche = document.getElementById('f-niche').value.trim()   || 'your industry';
-  const offer = document.getElementById('f-offer').value.trim()   || 'our service';
-  const goal  = document.getElementById('f-goal').value;
-  const loc   = document.getElementById('f-location').value.trim();
-  const notes = document.getElementById('f-notes').value.trim();
-  const style = getStyle();
+  const name   = document.getElementById('f-name').value.trim()    || 'Your Business';
+  const niche  = document.getElementById('f-niche').value.trim()   || 'your industry';
+  const offer  = document.getElementById('f-offer').value.trim()   || 'our service';
+  const target = document.getElementById('f-target').value.trim();
+  const usp    = document.getElementById('f-usp').value.trim();
+  const price  = getActiveBtn('price') || 'mid';
+  const stage  = getActiveBtn('stage') || 'growing';
+  const goal   = document.getElementById('f-goal').value;
+  const loc    = document.getElementById('f-location').value.trim();
+  const notes  = document.getElementById('f-notes').value.trim();
+  const style  = getStyle();
 
   /* Resolve niche profile — drives ALL output */
   const profile = getNicheProfile(niche, offer, goal, loc);
 
-  /* 1. Landing page */
-  generatedHTML = buildLandingPage({ name, niche, offer, goal, loc, profile, style });
-  showPreview(generatedHTML);
+  /* 1. Build all 3 landing page variants */
+  const variantStyles = buildVariantStyles(style);
+  const LABELS = [
+    { label: 'V1', name: 'Bold' },
+    { label: 'V2', name: 'Clean' },
+    { label: 'V3', name: 'Light' }
+  ];
+  _variantHTMLs = variantStyles.map(vs =>
+    buildLandingPage({ name, niche, offer, goal, loc, profile, style: vs, target, usp, price, stage })
+  );
+  _activeVariant = 0;
+  generatedHTML = _variantHTMLs[0];
+  showVariants(_variantHTMLs);
 
-  /* 2. Full outreach sequence → outreach queue (only if system component enabled) */
+  /* 2. Full outreach sequence → outreach queue */
   const sequence = buildOutreachSequence({ name, niche, offer, loc, profile, style });
   if (style.systems.outreach) {
     sequence.forEach((msg) => {
@@ -272,18 +707,14 @@ document.getElementById('btn-generate').addEventListener('click', () => {
     });
   }
 
-  /* 3. CRM structure → logged */
-  const crm = buildCRMStructure({ name, niche, offer, goal, profile });
-  console.log('[TheSaaSsin] CRM Structure for', name, JSON.stringify(crm, null, 2));
+  /* 3. CRM + Offer → logged */
+  console.log('[TheSaaSsin] CRM:', JSON.stringify(buildCRMStructure({ name, niche, offer, goal, profile }), null, 2));
+  console.log('[TheSaaSsin] Offer:', JSON.stringify(buildOfferDefinition({ name, niche, offer, goal, loc, profile }), null, 2));
 
-  /* 4. Offer definition → logged */
-  const offerDef = buildOfferDefinition({ name, niche, offer, goal, loc, profile });
-  console.log('[TheSaaSsin] Offer Definition:', JSON.stringify(offerDef, null, 2));
-
-  /* 5. Package summary → show in right panel */
+  /* 4. Package summary */
   showPackageSummary(buildPackageSummary({ name, profile, style }));
 
-  /* 6. Auto-save generated system back to client record */
+  /* 5. Auto-save V1 (Bold) to client — they can switch and re-save with Use This */
   if (selectedClient) {
     const updatedSystems = {
       landingPage: generatedHTML,
@@ -297,7 +728,7 @@ document.getElementById('btn-generate').addEventListener('click', () => {
     }).then(r => r.json()).then(d => { if (d.client) selectedClient = d.client; }).catch(() => {});
   }
 
-  toast('System generated for ' + name, 'ok');
+  toast('3 variants generated for ' + name, 'ok');
 });
 
 document.getElementById('btn-download').addEventListener('click', () => {
@@ -315,15 +746,48 @@ document.getElementById('btn-copy-html').addEventListener('click', () => {
   navigator.clipboard.writeText(generatedHTML).then(() => toast('HTML copied to clipboard', 'ok'));
 });
 
-function showPreview(html) {
-  const frame = document.getElementById('preview-frame');
-  const placeholder = document.getElementById('preview-placeholder');
-  frame.style.display = 'block';
-  placeholder.style.display = 'none';
-  document.getElementById('btn-download').style.display  = 'inline-flex';
-  document.getElementById('btn-copy-html').style.display = 'inline-flex';
+function writeToFrame(frame, html) {
   const doc = frame.contentDocument || frame.contentWindow.document;
   doc.open(); doc.write(html); doc.close();
+  // After content loads, expand iframe to full content height so wrapper div handles scroll
+  frame.onload = () => {
+    try {
+      const h = frame.contentDocument.documentElement.scrollHeight;
+      if (h > 200) frame.style.height = h + 'px';
+    } catch {}
+  };
+  // Fallback: set height after short delay (handles srcdoc timing)
+  setTimeout(() => {
+    try {
+      const h = frame.contentDocument.documentElement.scrollHeight;
+      if (h > 200) frame.style.height = h + 'px';
+    } catch {}
+  }, 300);
+}
+
+function showVariants(htmls) {
+  document.getElementById('preview-placeholder').style.display = 'none';
+  document.getElementById('variant-shell').style.display = 'flex';
+  document.getElementById('btn-download').style.display  = 'inline-flex';
+  document.getElementById('btn-copy-html').style.display = 'inline-flex';
+  htmls.forEach((html, i) => {
+    const frame = document.getElementById('variant-frame-' + i);
+    if (!frame) return;
+    writeToFrame(frame, html);
+  });
+  // Reset to V1 active
+  document.querySelectorAll('.variant-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+  document.querySelectorAll('.variant-frame-wrap').forEach((w, i) => w.classList.toggle('active-frame', i === 0));
+  const useBtn = document.getElementById('btn-use-variant');
+  if (useBtn) { useBtn.textContent = '✓ Use This'; useBtn.classList.remove('saved'); }
+}
+
+// Keep showPreview as fallback (used by buildFromLead)
+function showPreview(html) {
+  _variantHTMLs = [html, '', ''];
+  _activeVariant = 0;
+  generatedHTML  = html;
+  showVariants([html, html, html]);
 }
 
 /* ══════════════════════════════════
@@ -634,19 +1098,76 @@ function applyTone(profile, tone) {
 }
 
 /* ── LANDING PAGE GENERATOR ── */
-function buildLandingPage({ name, niche, offer, goal, loc, profile, style }) {
+function buildLandingPage({ name, niche, offer, goal, loc, profile, style, target, usp, price, stage }) {
   const p  = applyTone(profile, (style && style.tone) || 'professional');
   const st = style || { primary:'#ff2a2a', accent:'#ffffff', theme:'dark', tone:'professional', imgStyle:'auto', imgUrl:'' };
+
+  // ── Lead context injection — consume & clear so next manual generate is clean ──
+  const lc = window.currentLeadContext || null;
+  window.currentLeadContext = null;
+
+  // Defaults — may be overridden by lead context below
+  let overrideHeadline = p.headline;
+  let overrideEyebrow  = usp || p.eyebrow || niche;
+  let overrideSubline  = null; // null = use profile subline
+  let overrideCta      = p.cta;
+  let overrideCtaLow   = p.ctaLow;
+  let overrideScenariosLabel = 'Sound familiar?';
+  let leadScenarios    = p.scenarios || [];
+
+  if (lc && lc.ctx) {
+    const ctx = lc.ctx;
+    // 1. Headline — from context engine (specific to their situation)
+    overrideHeadline = ctx.headline;
+    // 2. Eyebrow — short positioning angle
+    overrideEyebrow  = ctx.angle;
+    // 3. Subline — context-aware subtext (override p.subline)
+    overrideSubline  = ctx.subtext;
+    // 4. Scenarios — generated from their actual problem/emotion (replaces niche defaults)
+    leadScenarios    = ctx.scenarios;
+    overrideScenariosLabel = 'Does this sound like you?';
+    // 5. CTA — personal, built-for-them
+    overrideCta    = lc.forcedCta
+      || (lc.demoFocus
+        ? `I mocked up a ${lc.demoFocus} for this — want to see it?`
+        : 'I built this based on your post — want to see it?');
+    overrideCtaLow = lc.forcedCtaLow
+      || 'Want to see how this would work for your specific situation?';
+  } else if (lc) {
+    // Legacy fallback (pre-context-engine)
+    if (lc.angle) overrideHeadline = lc.angle;
+    if (lc.problem) overrideEyebrow = `Solving: ${lc.problem}`;
+    if (lc.pain) { leadScenarios = [lc.pain, ...leadScenarios].slice(0, 4); overrideScenariosLabel = 'Does this sound like you?'; }
+    overrideCta = lc.forcedCta || (lc.demoFocus ? `I mocked up a ${lc.demoFocus} for this — want to see it?` : 'I built this based on your post — want to see it?');
+    overrideCtaLow = lc.forcedCtaLow || 'Want to see how this would work for your specific situation?';
+  }
+
+  // Build tailored copy from new fields
+  const targetLine  = target ? `Built for ${target}` : '';
+  const uspBadge    = usp    ? usp : '';
+  const priceLabel  = { budget:'Affordable Pricing', mid:'Professional Service', premium:'Premium Service' }[price] || 'Professional Service';
+  const stageLine   = { new:'New & Already Delivering Results', growing:'Trusted & Growing Fast', established:'Established. Proven. Trusted.' }[stage] || '';
+  const heroUsp     = `<div class="eyebrow">${esc(overrideEyebrow)}</div>`;
+  const targetBadge = target ? `<div class="proof-item"><span class="proof-dot">●</span>Serving ${esc(target)}</div>` : '';
+  const stageBadge  = stageLine ? `<div class="proof-item"><span class="proof-dot">●</span>${esc(stageLine)}</div>` : '';
+  const priceBadge  = `<div class="proof-item"><span class="proof-dot">●</span>${esc(priceLabel)}</div>`;
   const th = THEMES[st.theme] || THEMES.dark;
   const imgSrc = getNicheImage(niche, offer, st.imgStyle, st.imgUrl, profile.type);
 
-  const painHTML  = p.painPoints.map(pt =>
+  // When lead context exists — use context engine for ALL content blocks
+  const ctx            = lc && lc.ctx;
+  const activePain     = ctx ? ctx.painPoints : p.painPoints;
+  const activeOutcomes = ctx ? ctx.outcomes   : p.outcomes;
+  const activeProof    = ctx ? ctx.proof      : p.proof;
+  const activeForm     = ctx ? ctx.formQs     : p.form;
+
+  const painHTML  = activePain.map(pt =>
     `<li><span class="x">✕</span> ${esc(pt)}</li>`).join('');
-  const outHTML   = p.outcomes.map(ot =>
+  const outHTML   = activeOutcomes.map(ot =>
     `<li><span class="chk">✓</span> ${esc(ot)}</li>`).join('');
-  const proofHTML = p.proof.map(pr =>
+  const proofHTML = activeProof.map(pr =>
     `<div class="proof-item"><span class="proof-dot">●</span>${esc(pr)}</div>`).join('');
-  const scenariosHTML = (p.scenarios || []).map(s =>
+  const scenariosHTML = leadScenarios.map(s =>
     `<div class="scenario"><span class="sc-q">"</span>${esc(s)}<span class="sc-q">"</span></div>`).join('');
 
   return `<!DOCTYPE html>
@@ -719,6 +1240,10 @@ header{padding:18px 6%;display:flex;justify-content:space-between;align-items:ce
 .scenario{background:var(--card);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:18px 22px;margin-bottom:14px;font-size:.95rem;color:var(--muted);line-height:1.6;font-style:italic}
 .scenario:last-child{margin-bottom:0}
 .sc-q{color:var(--accent);font-style:normal;font-size:1.2rem;line-height:1}
+/* LEAD ORIGIN QUOTE */
+.lead-origin{text-align:center;padding:28px 6% 0;display:flex;flex-direction:column;align-items:center;gap:8px}
+.lead-origin-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--accent);opacity:.8}
+.lead-origin-quote{font-size:.95rem;color:var(--muted);font-style:italic;max-width:640px;line-height:1.6;opacity:.85}
 footer{text-align:center;padding:28px 6%;color:var(--muted);font-size:.8rem;border-top:1px solid rgba(255,255,255,.05)}
 @media(max-width:640px){.two-col{grid-template-columns:1fr}.hero{padding:76px 5% 56px}.scenarios{padding:48px 5%}}
 </style>
@@ -726,33 +1251,44 @@ footer{text-align:center;padding:28px 6%;color:var(--muted);font-size:.8rem;bord
 <body>
 <header>
   <a class="logo" href="#"><em>${esc(name)}</em></a>
-  <a class="btn" href="#capture" style="padding:10px 20px;font-size:.82rem">${esc(p.cta)}</a>
+  <a class="btn" href="#capture" style="padding:10px 20px;font-size:.82rem">${esc(overrideCta)}</a>
 </header>
 
 <section class="hero">
   <div class="hero-bg"></div>
   <div class="hero-overlay"></div>
   <div class="hero-content">
-    <div class="eyebrow">For ${esc(p.audience)}</div>
-    <h1>${esc(p.headline)}</h1>
-    <p class="sub">${esc(p.subline)}</p>
-    <a class="btn" href="#capture">${esc(p.cta)}</a>
-    <div class="proof-row">${proofHTML}</div>
+    ${heroUsp}
+    <h1>${esc(overrideHeadline)}</h1>
+    <p class="sub">${esc(overrideSubline || (target ? `For ${target}. ` : '') + p.subline)}</p>
+    <a class="btn" href="#capture">${esc(overrideCta)}</a>
+    <div class="proof-row">
+      ${proofHTML}
+      ${targetBadge}
+      ${stageBadge}
+      ${priceBadge}
+    </div>
   </div>
 </section>
 
-${scenariosHTML ? `<section class="scenarios"><div class="scenarios-inner"><h2>Sound familiar?</h2>${scenariosHTML}</div></section>` : ''}
+${lc && lc.rawTitle ? `
+<div class="lead-origin">
+  <span class="lead-origin-label">Based on what you said</span>
+  <span class="lead-origin-quote">"${esc(lc.rawTitle.substring(0, 160))}"</span>
+</div>` : ''}
+
+${scenariosHTML ? `<section class="scenarios"><div class="scenarios-inner"><h2>${esc(overrideScenariosLabel)}</h2>${scenariosHTML}</div></section>` : ''}
 
 <section class="section" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
   <div class="section-inner">
-    <h2>What's broken — and what changes</h2>
+    <h2>${ctx ? 'Here\'s what\'s happening — and what changes' : 'What\'s broken — and what changes'}</h2>
     <div class="two-col">
       <div class="box pain">
         <h3>Right now</h3>
         <ul>${painHTML}</ul>
       </div>
       <div class="box win">
-        <h3>After working with us</h3>
+        <h3>${ctx ? 'With the right system' : 'After working with us'}</h3>
         <ul>${outHTML}</ul>
       </div>
     </div>
@@ -760,22 +1296,22 @@ ${scenariosHTML ? `<section class="scenarios"><div class="scenarios-inner"><h2>S
 </section>
 
 <section class="form-section" id="capture">
-  <h2>${esc(p.ctaLow || 'Let\'s map it out.')}</h2>
+  <h2>${esc(overrideCtaLow || 'Let\'s map it out.')}</h2>
   <p>Two quick questions. Then a free 30-minute call where we build the plan — specific to your business, not a template.</p>
   <div class="form-wrap">
     <div>
-      <label>${esc(p.form.q1)}</label>
+      <label>${esc(activeForm.q1)}</label>
       <textarea placeholder="Your answer..."></textarea>
     </div>
     <div>
-      <label>${esc(p.form.q2)}</label>
+      <label>${esc(activeForm.q2)}</label>
       <textarea placeholder="Your answer..."></textarea>
     </div>
     <div>
       <label>Your name &amp; best contact number</label>
       <input type="text" placeholder="Name · Phone / WhatsApp">
     </div>
-    <a class="btn" href="https://calendly.com/thesaassin/build-your-system" target="_blank" rel="noopener">${esc(p.cta)}</a>
+    <a class="btn" href="https://calendly.com/thesaassin/build-your-system" target="_blank" rel="noopener">${esc(overrideCta)}</a>
     <p class="form-note">No spam. No hard sell. Just a 30-minute call with a clear plan.</p>
   </div>
 </section>
@@ -929,15 +1465,31 @@ function showPackageSummary({ name, components, outcome, expectedResult, tone, t
       <i class="fas ${c.icon}"></i> ${c.label}
     </div>`).join('');
 
+  const wasCollapsed = bar.classList.contains('pkg-collapsed');
   bar.innerHTML = `
-    <div class="pkg-label">System Package</div>
-    <div class="pkg-name"><i class="fas fa-bolt"></i> ${esc(name)} — ${countOn} component${countOn !== 1 ? 's' : ''}</div>
-    <div class="pkg-grid">${compHTML}</div>
-    <div class="pkg-result">
-      Expected: <strong>${expectedResult}</strong>
-      <div class="pkg-meta">Tone: ${toneLabel} &nbsp;·&nbsp; Outcome: ${esc(outcome)}</div>
+    <div class="pkg-header" onclick="togglePkgBar()">
+      <span class="pkg-label">System Package</span>
+      <span class="pkg-toggle-hint" id="pkg-toggle-hint">${wasCollapsed ? '▶ Show' : '▼ Hide'}</span>
+    </div>
+    <div class="pkg-body" id="pkg-body">
+      <div class="pkg-name"><i class="fas fa-bolt"></i> ${esc(name)} — ${countOn} component${countOn !== 1 ? 's' : ''}</div>
+      <div class="pkg-grid">${compHTML}</div>
+      <div class="pkg-result">
+        Expected: <strong>${expectedResult}</strong>
+        <div class="pkg-meta">Tone: ${toneLabel} &nbsp;·&nbsp; Outcome: ${esc(outcome)}</div>
+      </div>
     </div>`;
   bar.classList.add('visible');
+  if (wasCollapsed) bar.classList.add('pkg-collapsed');
+}
+
+function togglePkgBar() {
+  const bar  = document.getElementById('pkg-bar');
+  const body = document.getElementById('pkg-body');
+  const hint = document.getElementById('pkg-toggle-hint');
+  if (!bar) return;
+  const collapsed = bar.classList.toggle('pkg-collapsed');
+  if (hint) hint.textContent = collapsed ? '▶ Show' : '▼ Hide';
 }
 
 /* ── CRM STRUCTURE GENERATOR ── */
@@ -1161,15 +1713,29 @@ function esc(str) {
 
 /* ── LEAD QUALITY FILTERS ── */
 const REAL_INTENT = [
-  'no clients','no customers','not getting clients','not getting leads',
-  'no sales','no bookings','dead','nothing working','tried everything',
-  'still not','can\'t get clients','cant get clients','zero clients',
-  'struggling to find','can\'t find clients','no one is buying',
-  'nothing is working','no enquiries','no response','nobody is',
-  'how do i get','how can i get','need more clients','need clients',
-  'any advice on getting','slow','quiet','dead month','any tips',
-  'no work','where do i find','how to find clients','not working',
-  'can\'t seem to','cant seem to','what am i doing wrong'
+  // Direct no-client pain
+  'no clients','zero clients','no customers','no work','no jobs',
+  'no enquiries','no leads','no sales','no bookings','no response',
+  'no one is buying','nobody is contacting','nobody is enquiring',
+  // Tried and failed
+  'tried everything','nothing is working','nothing working','nothing converting',
+  'still not getting','not getting any','not getting clients','not getting leads',
+  'ads not working','ads aren\'t working','ads not converting',
+  'cold outreach not working','cold outreach no response','no replies',
+  'website not converting','website not getting','social media not working',
+  'posting every day','posting content','posting but',
+  // Feast or famine / slow
+  'dead month','slow month','quiet month','dead period','quiet period',
+  'feast or famine','famine phase','dried up','referrals dried up',
+  'business is slow','business has slowed','things are slow',
+  // Seeking help
+  'how do i get','how can i get','where do i find','how to find clients',
+  'how to get my first client','first client','can\'t get clients',
+  'cant get clients','struggling to find clients','can\'t find clients',
+  'what am i doing wrong','any advice on getting','any tips on getting',
+  // Losing / at risk
+  'losing clients','lost clients','losing customers','clients leaving',
+  'churn','client cancelled','client left'
 ];
 
 const BUYER_SIGNALS = [
@@ -1184,14 +1750,23 @@ const BUSINESS_SIGNALS = [
 ];
 
 const HARD_EXCLUDE = [
-  'google ads','seo agency','hiring','looking for a job','job posting',
-  'career advice','agency advice','employee','salary','interview',
-  'apply for','resume','cv','job offer','therapist','therapy','mental health',
-  'anxiety','depression','just got hired','got a job','i got a client',
-  'landed a client','just closed','i closed','signed a client','won a client',
+  // Job hunting / employment
+  'looking for a job','job posting','job offer','hiring','apply for',
+  'resume','cv','career advice','employee','salary','interview',
+  // Mental health (use "client" in therapy context)
+  'therapist','therapy','mental health','anxiety','depression','counsell',
+  // Success posts — they already solved it
+  'i got a client','landed a client','just closed','i closed',
+  'signed a client','won a client','got my first client','finally got',
+  'i made it','hit my goal','reached my target','celebrating',
   'sharing my journey','my story','how i went from','here\'s what worked',
-  'i made it','6 figures','i earn','passive income','dropship','amazon fba',
-  'print on demand','crypto','nft','affiliate'
+  'case study','i scaled','6 figures','7 figures','i earn','i make',
+  // Unrelated business models
+  'passive income','dropship','amazon fba','print on demand',
+  'crypto','nft','affiliate','adsense','youtube channel',
+  // Offering services (they\'re a seller not a buyer)
+  'dm me','comment below','link in bio','i can help you','i offer',
+  'my service','check out my','visit my','free consultation for'
 ];
 
 function hasBusinessContext(t) {
@@ -1248,76 +1823,333 @@ function analyzePost(title, text, preScore) {
   const t = (title + ' ' + text).toLowerCase();
   const urgency = preScore !== undefined ? preScore : scorePost(title, text);
 
-  // Niche detection
-  const niche = /plumb|pipe|boiler|heating|gas safe/.test(t)       ? 'Plumber'
-    : /electrician|wiring|fuse|eicr|niceic/.test(t)                ? 'Electrician'
-    : /builder|construction|renovation|extension|loft/.test(t)     ? 'Builder'
-    : /pt |personal train|fitness coach|gym|fat loss|body/.test(t) ? 'PT / Fitness'
-    : /consultant|freelanc|strateg|advisor|coach|mentor/.test(t)   ? 'Consultant'
-    : /marketing|agency|seo|ads|social media|lead gen/.test(t)     ? 'Marketing Agency'
-    : /saas|software|app |platform|startup|founder/.test(t)        ? 'SaaS / Tech'
+  // ── Niche detection
+  const niche = /plumb|pipe|boiler|heating|gas safe/.test(t)        ? 'Plumber'
+    : /electrician|wiring|fuse|eicr|niceic/.test(t)                 ? 'Electrician'
+    : /builder|construction|renovation|extension|loft/.test(t)      ? 'Builder'
+    : /pt |personal train|fitness coach|gym|fat loss|body/.test(t)  ? 'PT / Fitness'
+    : /dentist|dental|teeth/.test(t)                                 ? 'Dentist'
+    : /solicitor|lawyer|legal|conveyancing/.test(t)                  ? 'Solicitor'
+    : /accountant|bookkeep|tax|vat/.test(t)                         ? 'Accountant'
+    : /cleaner|cleaning|domestic|commercial clean/.test(t)           ? 'Cleaning Business'
+    : /landscap|garden|lawn|groundswork/.test(t)                     ? 'Landscaper'
+    : /consultant|freelanc|strateg|advisor|coach|mentor/.test(t)    ? 'Consultant'
+    : /marketing|agency|seo|ads|social media|lead gen/.test(t)      ? 'Marketing Agency'
+    : /saas|software|app |platform|startup|founder/.test(t)         ? 'SaaS / Tech'
+    : /ecomm|shopify|store|product|dropship/.test(t)                 ? 'eCommerce'
+    : /photographer|videographer|photo|video|shoot/.test(t)         ? 'Photographer'
+    : /designer|graphic|brand|logo|web design/.test(t)              ? 'Designer'
     : 'Business Owner';
 
-  // Approach
-  const approach = urgency >= 70 ? 'Direct offer — they need help now, lead with a result'
-    : urgency >= 40              ? 'Empathy first — acknowledge the problem, then offer'
-    :                              'Question first — qualify before pitching';
+  // ── Problem type detection — specific language, not generic labels
+  const problem = /ads|paid|ppc|facebook ad|google ad|instagram ad/.test(t)
+    ? /spend|wast|burn|£|€|\$|money/.test(t)
+      ? 'Spending money on ads but not getting clients from it'
+      : 'Running ads but not seeing any results'
+    : /cold (email|outreach|dm|message)|no (reply|response|replies)/.test(t)
+    ? 'Reaching out to people but getting zero replies'
+    : /website|landing page|traffic but no/.test(t)
+    ? 'Getting visitors to the site but none of them convert'
+    : /social media|post(ing)?|content|instagram|tiktok/.test(t)
+    ? 'Posting content every day but it\'s not bringing in clients'
+    : /referral|word of mouth|dried up/.test(t)
+    ? 'Referrals have dried up — no consistent way to get new work'
+    : /proposal|quote|follow.?up|ghost/.test(t)
+    ? 'Sending quotes and proposals but prospects go cold'
+    : /no (clients|customers|work|bookings|enquiries|leads)/.test(t)
+    ? 'No consistent flow of new clients or enquiries'
+    : /slow|quiet|dead|dry/.test(t)
+    ? 'Things have gone quiet — not enough work coming in'
+    : /feast|famine|inconsistent/.test(t)
+    ? 'Boom and bust — great months followed by nothing'
+    : /tried|wasted|nothing work/.test(t)
+    ? 'Tried different things but nothing\'s actually working'
+    : 'Struggling to get a consistent flow of new clients';
 
-  // Opener
+  // ── Root cause
+  const cause = /ads|paid|ppc/.test(t)
+    ? 'Traffic without a conversion system — clicks disappear with nothing captured'
+    : /cold|outreach|dm/.test(t)
+    ? 'Generic messages with no personalisation or follow-up — easy to ignore'
+    : /website|landing|traffic/.test(t)
+    ? 'No clear offer, no trust signals, no way to capture interest'
+    : /social|content|post/.test(t)
+    ? 'Content builds an audience, not a pipeline — the bridge between them is missing'
+    : /referral/.test(t)
+    ? 'One channel means one point of failure — nothing to fall back on'
+    : /proposal|quote|ghost/.test(t)
+    ? 'No follow-up sequence — the decision window closes and they move on'
+    : 'No system — relying on luck, timing, and word of mouth';
+
+  // ── Pitch angle — direct, no wrapper quotes
+  const angle = /ads|paid/.test(t)
+    ? /spend|wast|burn|money/.test(t)
+      ? 'Spending money on ads without a system to convert them is just burning cash'
+      : 'You don\'t need more ad spend — you need a system that converts what you already have'
+    : /cold|outreach/.test(t)
+    ? 'Cold messaging doesn\'t convert anymore — here\'s what does'
+    : /website|landing/.test(t)
+    ? 'Getting traffic but losing every visitor — here\'s why and how to fix it'
+    : /social|content/.test(t)
+    ? 'Posting every day without a capture system is just content with no pipeline'
+    : /referral/.test(t)
+    ? 'Referrals drying up means you need a system that doesn\'t rely on luck'
+    : /no client|no work|no lead|no book/.test(t)
+    ? 'No clients usually means one thing — no system to attract and convert them'
+    : /slow|quiet|dry/.test(t)
+    ? 'A quiet month isn\'t bad luck — it\'s a gap in the system'
+    : 'The issue isn\'t your service — it\'s that the right people can\'t find and trust you yet';
+
+  // ── Demo focus — what to actually show them
+  const demoFocus = /ads|paid/.test(t)
+    ? 'lead capture page + follow-up sequence'
+    : /cold|outreach/.test(t)
+    ? 'landing page they can review before replying'
+    : /website|landing/.test(t)
+    ? 'rebuilt landing page with offer clarity and a real CTA'
+    : /social|content/.test(t)
+    ? 'lead magnet page + CRM to turn followers into enquiries'
+    : /referral/.test(t)
+    ? 'full inbound pipeline — page, outreach, and follow-up'
+    : 'client acquisition system — page, CRM, and outreach';
+
+  // ── Opener — personal, direct
   const opener = urgency >= 70
-    ? `Saw your post — I help ${niche.toLowerCase()} businesses fix exactly this. Built a quick preview for you. Worth a 15-min look?`
-    : `Saw this and it resonated — most ${niche.toLowerCase()} businesses I work with hit the same wall. Happy to show you what changed for them?`;
+    ? `Saw your post — I build acquisition systems for ${niche.toLowerCase()} businesses and this is exactly what I fix. I can have a preview built for your setup today. Want to see it?`
+    : `Saw this and recognised it immediately — the problem usually isn't the marketing, it's the system behind it. Happy to show you what that looks like?`;
 
-  // Tip
-  const tip = urgency >= 70 ? 'Message within the hour — high-intent window closes fast'
-    : urgency >= 40          ? 'Start with empathy, not a pitch — ask one question first'
-    :                          'Low signal — qualify harder before investing time here';
+  // ── Tip
+  const tip = urgency >= 70 ? '⚡ High intent — message within the hour, window closes fast'
+    : urgency >= 40          ? '💬 Empathy first — acknowledge the pain before any pitch'
+    :                          '🔍 Qualify first — ask one question before investing time';
 
   const urgencyLabel = urgency >= 70 ? 'High' : urgency >= 40 ? 'Medium' : 'Low';
   const urgencyColor = urgency >= 70 ? '#22c55e' : urgency >= 40 ? '#f59e0b' : '#8888a0';
 
-  return { urgency, urgencyLabel, urgencyColor, niche, approach, opener, tip };
+  // ── Lead Type — Direct / Operator / Partner ──
+  const leadType = detectLeadType(title, text, '', urgency);
+
+  return { urgency, urgencyLabel, urgencyColor, niche, problem, cause, angle, demoFocus, opener, tip, leadType };
 }
 
-/* ── KEYWORD PILLS ── */
-let activeFeedKw = 'need clients';
+/* ══════════════════════════════════
+   LEAD TYPE DETECTION
+   Direct Client | Operator/Agency | Strategic Partner
+══════════════════════════════════ */
+const LEAD_TYPES = {
+  direct: {
+    key:     'direct',
+    label:   'Direct Client',
+    badge:   '💰',
+    color:   '#22c55e',
+    bg:      'rgba(34,197,94,.12)',
+    tagline: 'Money Now',
+    pitch:   'Landing page · CRM · Outreach · Follow-up'
+  },
+  operator: {
+    key:     'operator',
+    label:   'Operator / Agency',
+    badge:   '⚡',
+    color:   '#f59e0b',
+    bg:      'rgba(245,158,11,.12)',
+    tagline: 'Money ×10',
+    pitch:   'White-label backend — you bring clients, I build the system'
+  },
+  partner: {
+    key:     'partner',
+    label:   'Strategic Partner',
+    badge:   '🚀',
+    color:   '#a855f7',
+    bg:      'rgba(168,85,247,.12)',
+    tagline: 'Big Play',
+    pitch:   'Integration · White-label · Scale layer'
+  }
+};
 
-document.querySelectorAll('.kw-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.kw-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeFeedKw = btn.dataset.kw;
+function detectLeadType(title, text, subreddit, urgency) {
+  const full = (title + ' ' + text).toLowerCase();
+  const sub  = (subreddit || '').toLowerCase();
+
+  // ── Partner signals ──
+  const partnerWords = [
+    'saas','software platform','marketplace','app for businesses','white.?label',
+    'integration','reseller','franchise','enterprise','b2b platform',
+    'niche community','membership platform','plugin','api partner',
+    'distribution channel','revenue share','affiliate program',
+    'thousands of users','scale fast','series a','raised funding'
+  ];
+  const partnerSubs = ['startups','indiehackers','saas','producthunt'];
+  let pScore = partnerWords.filter(w => new RegExp(w).test(full)).length * 3
+             + (partnerSubs.includes(sub) ? 4 : 0);
+
+  // ── Operator/Agency signals ──
+  const operatorWords = [
+    'web design','web designer','website designer','digital agency',
+    'marketing agency','seo agency','social media agency','ppc agency',
+    'branding agency','creative agency','freelance designer',
+    'i build websites','i design','i help businesses','i manage',
+    'my clients need','client work','client projects','outsource',
+    'subcontract','white label','resell services','retainer clients',
+    'i offer','my services include','i specialize in','i work with clients',
+    'my portfolio','i charge','per project','monthly retainer',
+    'graphic designer','copywriter for hire','content creator for business',
+    'email marketer','paid ads freelancer','seo consultant'
+  ];
+  const operatorSubs = [
+    'web_design','graphic_design','agency','digital_marketing','webdev',
+    'copywriting','socialmediamarketing','seo','ppc','workonline','hiring'
+  ];
+  let oScore = operatorWords.filter(w => new RegExp(w).test(full)).length * 2
+             + (operatorSubs.includes(sub) ? 4 : 0);
+
+  // LinkedIn posts skew heavily operator/partner
+  if (sub === '' && /linkedin/.test(full)) oScore += 3;
+
+  // ── Decide ──
+  if (pScore >= 5) return LEAD_TYPES.partner;
+  if (oScore >= 4) return LEAD_TYPES.operator;
+  if (oScore >= 2 && oScore > pScore) return LEAD_TYPES.operator;
+  return LEAD_TYPES.direct;
+}
+
+/* ── KEYWORD POOL ── */
+const KW_POOL = [
+  // ── Universal pain ──
+  'no clients','zero clients','no customers','no enquiries','no leads',
+  'no sales','no bookings','no work','no jobs','no revenue',
+  'dead month','slow month','quiet month','feast or famine',
+  'referrals dried up','business is slow','clients dried up','dry spell',
+  'no work coming in','losing clients','clients ghosting',
+  'about to give up','running out of money','burning through savings',
+  'desperate for clients','need clients urgently','business failing',
+  'considering quitting','cant pay myself',
+
+  // ── Marketing / ads not working ──
+  'ads not working','ads not converting','facebook ads not working',
+  'google ads wasting money','cold outreach no response',
+  'cold email not working','no replies to outreach',
+  'website not converting','getting traffic no leads',
+  'social media not working','posting every day no clients',
+  'content not converting','marketing not working',
+  'how to get clients','tried everything','what am i doing wrong',
+  'proposals not converting','no one is buying',
+
+  // ── Photography & videography ──
+  'need more photography clients','photography business slow',
+  'wedding photography clients','struggling photographer',
+  'how to price photography','photography marketing',
+  'get more wedding bookings','videographer clients','video business slow',
+
+  // ── Trades & home services ──
+  'plumber marketing','electrician getting clients','hvac marketing',
+  'landscaping clients','cleaning business clients','tradesman no work',
+  'builder slow','no plumbing jobs','how to get more jobs trades',
+  'painter decorator clients','how to get landscaping clients',
+
+  // ── Fitness & health ──
+  'personal trainer clients','gym clients','fitness coach marketing',
+  'no personal training clients','online fitness coaching',
+  'health coach clients','nutritionist clients',
+
+  // ── Marketing agencies & freelance ──
+  'freelance clients','agency clients','web design clients',
+  'graphic design clients','no design work','copywriting clients',
+  'social media agency clients','seo clients','ppc clients',
+  'marketing agency struggling','web developer clients','freelancer slow',
+
+  // ── Real estate ──
+  'real estate leads','realtor clients','estate agent marketing',
+  'property leads','real estate slow','landlord finding tenants',
+
+  // ── Ecommerce & retail ──
+  'shopify store no sales','ecommerce not selling','dropshipping no sales',
+  'amazon seller slow','online store no traffic','product not selling',
+
+  // ── Coaching & consulting ──
+  'business coach clients','life coach clients','consulting clients',
+  'coaching business slow','no consulting work','executive coach clients',
+
+  // ── Restaurants & food ──
+  'restaurant slow','cafe not busy','food business clients',
+  'catering no bookings','restaurant marketing',
+
+  // ── Tech / SaaS ──
+  'saas no customers','startup no users','app no downloads',
+  'no b2b clients','software company slow','mvp no signups',
+
+  // ── Ask / discussion ──
+  'how do i get clients','best way to find clients','where to find clients',
+  'outreach strategy that works','getting consistent leads',
+  'struggling to scale','how to grow my business',
+  'need more leads','lead generation help'
+];
+
+function shuffleKws() {
+  const pool    = [...KW_POOL].sort(() => Math.random() - 0.5);
+  const picked  = pool.slice(0, 12);
+  const container = document.getElementById('feed-keywords');
+  const refreshBtn = document.getElementById('btn-feed-shuffle');
+
+  // Remove all pills except the refresh button
+  [...container.querySelectorAll('.kw-btn:not(.kw-refresh)')].forEach(b => b.remove());
+
+  // Insert new pills before the refresh button
+  picked.forEach((kw, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'kw-btn' + (i === 0 ? ' active' : '');
+    btn.dataset.kw = kw;
+    btn.textContent = kw;
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.kw-btn:not(.kw-refresh)').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFeedKw = kw;
+      fetchFeed(kw);
+    });
+    container.insertBefore(btn, refreshBtn);
   });
-});
 
-document.getElementById('btn-feed-refresh').addEventListener('click', () => {
-  const custom = document.getElementById('feed-custom-kw').value.trim();
-  const kw = custom || activeFeedKw;
-  fetchFeed(kw);
+  if (picked.length) activeFeedKw = picked[0];
+}
+
+let activeFeedKw = KW_POOL[0];
+shuffleKws(); // init on load
+
+document.getElementById('btn-feed-shuffle').addEventListener('click', () => {
+  shuffleKws(); // rotate keywords — tap a pill to fetch
 });
 
 /* ── FETCH + RENDER ── */
 async function fetchFeed(keyword) {
-  const grid = document.getElementById('feed-grid');
-  const meta = document.getElementById('feed-meta');
-  grid.innerHTML = '<div class="feed-loading"><i class="fas fa-circle-notch"></i>Scanning Reddit for leads...</div>';
+  const grid    = document.getElementById('feed-grid');
+  const meta    = document.getElementById('feed-meta');
+  const refreshBtn = document.getElementById('btn-feed-refresh');
+  grid.innerHTML = '<div class="feed-loading"><i class="fas fa-circle-notch"></i>Scanning all platforms for leads...</div>';
   meta.textContent = '';
+  if (refreshBtn) refreshBtn.classList.add('spinning');
   try {
-    const res  = await fetch(API.replace('/api','') + '/api/feed?q=' + encodeURIComponent(keyword));
+    const res  = await fetch(API + '/feed?q=' + encodeURIComponent(keyword));
     const data = await res.json();
     if (!data.ok || !data.posts.length) {
       grid.innerHTML = '<div class="feed-empty"><i class="fas fa-inbox"></i><p>No posts found — try a different keyword</p></div>';
       return;
     }
 
-    // Whitelist — only accept posts from target business subs
-    const TARGET_SUBS = new Set([
+    // Pass all non-Reddit platforms through directly; filter Reddit to business subs only
+    const REDDIT_SUBS = new Set([
       'smallbusiness','entrepreneur','sidehustle','freelance','sales',
       'startups','sweatystartup','entrepreneurridealong','forhire',
       'entrepreneur_ride_along','businessowners','growmybusiness',
-      'digital_marketing','marketinghelp','agency'
+      'digital_marketing','marketinghelp','agency','solopreneur',
+      'web_design','webdev','photography','weddingphotography','videography',
+      'graphic_design','homeimprovement','plumbing','hvac','landscaping',
+      'cleaning_business','ecommerce','shopify','amazonseller',
+      'personaltraining','fitness','realestate','realtors',
+      'financialplanning','consulting','coaching','seo','ppc','copywriting',
+      'socialmediamarketing','workonline','hiring'
     ]);
-    const businessPosts = data.posts.filter(p => TARGET_SUBS.has(p.subreddit.toLowerCase()));
+    const businessPosts = data.posts.filter(p =>
+      p.platform !== 'reddit' || REDDIT_SUBS.has((p.subreddit || '').toLowerCase())
+    );
 
     // Score posts
     const scoredPosts = businessPosts
@@ -1349,9 +2181,14 @@ async function fetchFeed(keyword) {
       }
     }
 
+    // Score + include non-Reddit posts (HN, X, Facebook, etc.) — already keyword-filtered by their APIs
+    const externalLeads = businessPosts
+      .filter(p => p.platform !== 'reddit')
+      .map(p => ({ ...p, _score: Math.max(scorePost(p.title, p.text), 30), _source: 'external' }));
+
     // Merge, deduplicate by post id (keep highest scorer), sort desc
     const seen = new Set();
-    const allLeads = [...scoredPosts, ...commentLeads]
+    const allLeads = [...scoredPosts, ...commentLeads, ...externalLeads]
       .sort((a, b) => b._score - a._score)
       .filter(l => {
         const key = l.id.split('_c')[0];
@@ -1366,11 +2203,31 @@ async function fetchFeed(keyword) {
       return;
     }
 
-    const commentCount = allLeads.filter(l => l._source === 'comment').length;
-    meta.textContent = `${allLeads.length} quality leads · ${businessPosts.length}/${data.posts.length} from target subs${commentCount ? ` · ${commentCount} from comments` : ''} · "${keyword}"`;
+    const xCount  = allLeads.filter(l => l.platform === 'x').length;
+    const hnCount = allLeads.filter(l => l.platform === 'hn').length;
+    const fbCount = allLeads.filter(l => l.platform === 'facebook').length;
+    const liCount = allLeads.filter(l => l.platform === 'linkedin').length;
+    const xNote   = xCount  ? ` · ${xCount} 𝕏`  : (!data.xConfigured      ? ' · <a href="#" onclick="showXSetup()"      style="color:var(--accent);text-decoration:none">+ 𝕏</a>'      : '');
+    const gNote   = (fbCount||liCount) ? ` · ${fbCount+liCount} web` : (!data.googleConfigured ? ' · <a href="#" onclick="showGoogleSetup()" style="color:var(--accent);text-decoration:none">+ Facebook/LinkedIn</a>' : '');
+    const hnNote  = hnCount ? ` · ${hnCount} HN` : '';
+    const aiNote  = _aiEnabled ? ' · <span style="color:var(--accent);font-size:.72rem">⚡ AI</span>' : ' · <a href="#" onclick="showAISetup()" style="color:var(--muted);text-decoration:none;font-size:.72rem">+ AI Assist</a>';
+    const rdCount = allLeads.filter(l => l.platform === 'reddit').length;
+    // Lead type counts for meta
+    const directCount   = allLeads.filter(l => detectLeadType(l.title,l.text,l.subreddit||l.platform,l._score).key==='direct').length;
+    const operatorCount = allLeads.filter(l => detectLeadType(l.title,l.text,l.subreddit||l.platform,l._score).key==='operator').length;
+    const partnerCount  = allLeads.filter(l => detectLeadType(l.title,l.text,l.subreddit||l.platform,l._score).key==='partner').length;
+    const typeNote = ` · <span style="color:#22c55e">💰${directCount}</span> <span style="color:#f59e0b">⚡${operatorCount}</span> <span style="color:#a855f7">🚀${partnerCount}</span>`;
+
+    meta.innerHTML = `${allLeads.length} quality leads · ${rdCount} Reddit${xNote}${hnNote}${gNote}${typeNote}${aiNote} · "${keyword}"`;
     grid.innerHTML = allLeads.map(p => renderFeedCard(p)).join('');
+
+    // Show type filter bar
+    const filterBar = document.getElementById('lead-type-filters');
+    if (filterBar) filterBar.style.display = 'flex';
   } catch (e) {
     grid.innerHTML = '<div class="feed-empty"><i class="fas fa-triangle-exclamation"></i><p>Could not fetch — check server is running</p></div>';
+  } finally {
+    if (refreshBtn) refreshBtn.classList.remove('spinning');
   }
 }
 
@@ -1381,56 +2238,880 @@ function timeAgo(utc) {
   return Math.floor(diff/86400) + 'd ago';
 }
 
+// Global post data store — avoids all string-escaping issues in onclick attributes
+window._feedData = window._feedData || {};
+
 function renderFeedCard(post) {
   const isComment = post._source === 'comment';
   const a   = analyzePost(post.title, post.text, post._score);
+  // Re-run type detection with subreddit for accuracy
+  a.leadType = detectLeadType(post.title, post.text, post.subreddit || post.platform, a.urgency);
   const ago = timeAgo(post.created);
   const fillW = Math.max(4, a.urgency);
   const sourceTag = isComment
-    ? `<span style="font-size:.65rem;background:rgba(255,42,42,.15);color:var(--accent);padding:2px 6px;border-radius:4px;margin-left:4px">comment</span>`
-    : '';
+    ? `<span class="feed-source-tag">comment</span>` : '';
 
-  return `<div class="feed-card" id="fc-${esc(post.id)}">
+  // Store full data in global map — onclick just passes the ID
+  window._feedData[post.id] = { post, a };
+  const pid = post.id;
+
+  const platformBadge = post.platform === 'x'        ? `<span class="feed-platform feed-platform-x">𝕏</span>`
+    : post.platform === 'hn'       ? `<span class="feed-platform feed-platform-hn">HN</span>`
+    : post.platform === 'facebook' ? `<span class="feed-platform feed-platform-fb">FB</span>`
+    : post.platform === 'linkedin' ? `<span class="feed-platform feed-platform-li">in</span>`
+    : post.platform === 'quora'    ? `<span class="feed-platform feed-platform-q">Q</span>`
+    : post.platform === 'web'      ? `<span class="feed-platform feed-platform-web">Web</span>`
+    : `<span class="feed-platform">r/${esc(post.subreddit)}</span>`;
+
+  const lt = a.leadType;
+
+  return `<div class="feed-card" id="fc-${esc(post.id)}" data-lead-type="${lt.key}">
+
     <div class="feed-card-top">
-      <span class="feed-platform">r/${esc(post.subreddit)}</span>
+      ${platformBadge}
       <span class="feed-title">${esc(post.title)}${sourceTag}</span>
       <span class="feed-time">${ago}</span>
     </div>
-    ${post.text && post.text !== post.title ? `<div class="feed-snippet">${isComment ? '<i class="fas fa-comment" style="color:var(--accent);margin-right:4px;font-size:.7rem"></i>' : ''}${esc(post.text)}</div>` : ''}
-    <div class="feed-analysis">
-      <div class="feed-analysis-row">
-        <span class="analysis-label">Urgency</span>
-        <div class="urgency-bar"><div class="urgency-fill" style="width:${fillW}%;background:${a.urgencyColor}"></div></div>
-        <span class="analysis-val" style="color:${a.urgencyColor};font-weight:700">${a.urgencyLabel} (${a.urgency})</span>
-      </div>
-      <div class="feed-analysis-row">
-        <span class="analysis-label">Niche</span>
-        <span class="analysis-val">${esc(a.niche)}</span>
-      </div>
-      <div class="feed-analysis-row">
-        <span class="analysis-label">Approach</span>
-        <span class="analysis-val">${esc(a.approach)}</span>
-      </div>
-      <div class="feed-tip">💡 ${esc(a.tip)}</div>
+
+    ${post.text && post.text !== post.title
+      ? `<div class="feed-snippet">${isComment ? '<i class="fas fa-comment" style="color:var(--accent);margin-right:4px;font-size:.7rem"></i>' : ''}${esc(post.text)}</div>`
+      : ''}
+
+    <!-- LEAD TYPE BADGE -->
+    <div class="lead-type-badge" style="background:${lt.bg};border-color:${lt.color}20">
+      <span class="ltb-icon">${lt.badge}</span>
+      <span class="ltb-label" style="color:${lt.color}">${lt.label}</span>
+      <span class="ltb-tag">${lt.tagline}</span>
+      <span class="ltb-pitch">${lt.pitch}</span>
     </div>
-    <div class="feed-analysis" style="margin-top:-4px;border-color:rgba(255,42,42,.15)">
-      <div class="feed-analysis-row" style="align-items:flex-start">
-        <span class="analysis-label" style="color:var(--accent)">Opener</span>
-        <span class="analysis-val" style="font-style:italic;color:var(--text)">"${esc(a.opener)}"</span>
+
+    <!-- URGENCY BAR -->
+    <div class="feed-urgency-row">
+      <span class="analysis-label">Intent</span>
+      <div class="urgency-bar"><div class="urgency-fill" style="width:${fillW}%;background:${a.urgencyColor}"></div></div>
+      <span style="color:${a.urgencyColor};font-weight:700;font-size:.75rem">${a.urgencyLabel} · ${a.urgency}</span>
+      <span class="feed-niche-tag">${esc(a.niche)}</span>
+    </div>
+
+    <!-- INTEL PANEL -->
+    <div class="intel-panel">
+      <div class="intel-row">
+        <span class="intel-label">Problem</span>
+        <span class="intel-val">${esc(a.problem)}</span>
+      </div>
+      <div class="intel-row">
+        <span class="intel-label">Root cause</span>
+        <span class="intel-val">${esc(a.cause)}</span>
+      </div>
+      <div class="intel-row">
+        <span class="intel-label">Your angle</span>
+        <span class="intel-val intel-angle">${esc(a.angle)}</span>
+      </div>
+      <div class="intel-row">
+        <span class="intel-label">Approach</span>
+        <span class="intel-val" style="color:${lt.color}">${lt.key === 'direct' ? esc(a.demoFocus) : lt.pitch}</span>
       </div>
     </div>
+
+    <!-- OPENER -->
+    <div class="feed-opener">
+      <span class="intel-label" style="color:var(--accent);margin-bottom:4px;display:block">Send this</span>
+      <span class="feed-opener-text">"${esc(buildTypeOpener(lt.key, a, post))}"</span>
+    </div>
+
+    <div class="feed-tip">${esc(a.tip)}</div>
+
+    <!-- ACTIONS -->
     <div class="feed-actions">
-      <button class="btn btn-secondary btn-sm" onclick="saveFeedLead('${esc(post.id)}','${esc(post.author)}','${esc(a.niche)}','${esc(post.url)}','${esc(post.title).replace(/'/g,'')}',${a.urgency})">
-        <i class="fas fa-user-plus"></i> Save Lead
+      <button class="btn btn-primary btn-sm" onclick="buildFromLead('${pid}')" style="background:${lt.color}">
+        <i class="fas fa-bolt"></i> Build ${lt.key === 'direct' ? 'Demo' : lt.key === 'operator' ? 'Pitch' : 'Deck'}
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="saveFeedLead('${pid}')">
+        <i class="fas fa-user-plus"></i> Save
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="quickResearch('${pid}')">
+        <i class="fas fa-magnifying-glass"></i>
       </button>
       <a class="btn btn-secondary btn-sm" href="${esc(post.url)}" target="_blank" rel="noopener">
-        <i class="fas fa-arrow-up-right-from-square"></i> Open Post
+        <i class="fas fa-arrow-up-right-from-square"></i>
       </a>
     </div>
   </div>`;
 }
 
-async function saveFeedLead(id, author, niche, url, title, score) {
+/* ══════════════════════════════════
+   LEAD CONTEXT ENGINE
+   Converts raw post text → structured
+   page copy specific to this person
+══════════════════════════════════ */
+
+function extractLeadContext(title, text, niche) {
+  const full = (title + ' ' + text).toLowerCase();
+  return {
+    problem:    lcDetectProblem(full),
+    stage:      lcDetectStage(full),
+    funnelGap:  lcDetectFunnelGap(full),
+    emotion:    lcDetectEmotion(full),
+    angle:      lcGenerateAngle(full),
+    headline:   lcGenerateHeadline(full),
+    subtext:    lcGenerateSubtext(full),
+    scenarios:  lcGenerateScenarios(full),
+    painPoints: lcGeneratePainPoints(full),
+    outcomes:   lcGenerateOutcomes(full),
+    formQs:     lcGenerateFormQuestions(full),
+    proof:      lcGenerateProof(full, niche),
+    opener:     lcGenerateOpener(full, title)
+  };
+}
+
+function lcDetectProblem(t) {
+  if (/ads|paid|ppc|facebook ad|google ad/.test(t)) {
+    if (/dm|messag|enquir|interest|click/.test(t) && /no (client|book|sale|conver)/.test(t))
+      return 'getting attention and clicks but nobody is actually converting';
+    if (/spend|wast|burn|£|€|\$|money/.test(t))
+      return 'spending money on ads but getting no clients back from it';
+    return 'running ads that aren\'t producing paying clients';
+  }
+  if (/cold (email|outreach|dm|message)|no (reply|response|replies)/.test(t))
+    return 'reaching out to potential clients but getting ignored';
+  if (/website|landing page|traffic but no/.test(t))
+    return 'getting visitors to the site but none of them turn into enquiries';
+  if (/social media|post(ing)?|content|instagram|tiktok/.test(t))
+    return 'posting content every day but not seeing clients come from it';
+  if (/referral|word of mouth|dried up/.test(t))
+    return 'referrals drying up with nothing consistent to replace them';
+  if (/proposal|quote|follow.?up|ghost/.test(t))
+    return 'sending quotes and proposals but prospects go cold and never reply';
+  if (/no (clients|customers|work|bookings|enquiries|leads)/.test(t))
+    return 'no consistent flow of new clients or enquiries coming in';
+  if (/slow|quiet|dead|dry spell/.test(t))
+    return 'things going quiet — not enough new work coming in';
+  if (/feast|famine|inconsistent/.test(t))
+    return 'inconsistent months — good periods followed by nothing';
+  return 'struggling to get a reliable, consistent flow of new clients';
+}
+
+function lcDetectStage(t) {
+  if (/already.*(ads|run|spend|pay)|running ads|been running/.test(t))   return 'already investing in paid marketing';
+  if (/just start|new business|first client|starting out|beginner/.test(t)) return 'just getting started';
+  if (/year|established|been doing this|long time/.test(t))              return 'established business that\'s hit a plateau';
+  if (/grew|growing|scaling|expand|busy period/.test(t))                 return 'growing but with inconsistent peaks and troughs';
+  if (/tried (ads|everything|outreach|social|content)/.test(t))          return 'tried multiple approaches without consistent results';
+  return 'active business looking to grow more consistently';
+}
+
+function lcDetectFunnelGap(t) {
+  if (/dm|messag|enquir/.test(t) && /no (book|client|sale|conver)/.test(t))
+    return 'interest coming in but no system to convert it into paying clients';
+  if (/no follow.?up|follow up|ghost|go cold|go quiet/.test(t))
+    return 'no follow-up — leads go cold before they close';
+  if (/no reply|no response|ignor|left on read/.test(t))
+    return 'outreach not landing — message isn\'t connecting';
+  if ((/website|traffic|visit/).test(t) && /no (lead|enquir|conver|client)/.test(t))
+    return 'traffic arriving but no way to capture or convert it';
+  if (/ads|paid/.test(t) && /no (client|conver|sale|return)/.test(t))
+    return 'ad spend with no conversion system to turn clicks into clients';
+  if (/social|content|post/.test(t))
+    return 'building an audience but missing the bridge to turn them into clients';
+  if (/referral/.test(t))
+    return 'single referral channel with no backup when it dries up';
+  return 'no reliable system pulling enquiries through to closed clients';
+}
+
+function lcDetectEmotion(t) {
+  if (/desperate|give up|quit|failing|can\'?t keep|running out|rock bottom/.test(t)) return 'desperate';
+  if (/frustrated|frustrating|annoying|sick of|fed up|done with/.test(t)) return 'frustrated';
+  if (/confus|don\'?t know|no idea|not sure what|lost|nothing work/.test(t)) return 'confused and lost';
+  if (/wasted|burned|spent.*(and nothing|but no)|threw money/.test(t)) return 'burned — money wasted';
+  if (/stressed|anxious|worry|worried|scared/.test(t)) return 'stressed';
+  return 'frustrated';
+}
+
+function lcGenerateAngle(t) {
+  if (/ads|paid/.test(t)) {
+    if (/dm|messag|enquir|click/.test(t) && /no (book|client|sale)/.test(t))
+      return 'You\'re getting attention — you just don\'t have a system to convert it';
+    if (/spend|wast|burn/.test(t))
+      return 'More ad spend won\'t fix it — a conversion system will';
+    return 'Traffic isn\'t the problem — converting it into clients is';
+  }
+  if (/cold|outreach|dm/.test(t))
+    return 'Cold outreach works when people have somewhere to land — right now they don\'t';
+  if (/website|landing|traffic/.test(t))
+    return 'Getting traffic is the easy part — turning it into clients is the gap';
+  if (/social|content|post/.test(t))
+    return 'Content builds an audience — but without a pipeline it doesn\'t build a business';
+  if (/referral/.test(t))
+    return 'Referrals are great when they come — you need something that works without them';
+  if (/proposal|quote|ghost/.test(t))
+    return 'The sale doesn\'t happen at the proposal — it happens in the follow-up';
+  if (/no client|no work|no lead/.test(t))
+    return 'No clients usually means one thing — no system to attract and close them';
+  return 'The issue isn\'t your service — it\'s that the right people can\'t find and trust you yet';
+}
+
+function lcGenerateHeadline(t) {
+  if (/ads|paid/.test(t)) {
+    if (/dm|messag|enquir/.test(t) && /no (book|client|sale|conver)/.test(t))
+      return 'When you\'re getting messages but nobody actually becomes a client — this is why';
+    if (/spend|wast|burn|money/.test(t))
+      return 'When you\'re spending on ads and getting nothing back — here\'s where it\'s breaking';
+    return 'When ads are running but clients aren\'t coming — this is the missing piece';
+  }
+  if (/cold|outreach|dm/.test(t) && /no reply|ignor|ghost|read/.test(t))
+    return 'When you\'re reaching out but nobody replies — here\'s what\'s actually happening';
+  if (/website|traffic/.test(t))
+    return 'When people visit your site but never enquire — here\'s exactly why';
+  if (/social|content|post/.test(t))
+    return 'When you\'re posting every day and still not getting clients — this is the gap';
+  if (/referral|dried up/.test(t))
+    return 'When referrals stop coming in and there\'s nothing to replace them — let\'s fix that';
+  if (/proposal|quote|ghost/.test(t))
+    return 'When prospects ask for a quote then disappear — here\'s how to stop losing them';
+  if (/no client|no customer|no work|no booking/.test(t))
+    return 'When there\'s no consistent flow of new clients — this is why and how to fix it';
+  if (/slow|quiet|dead/.test(t))
+    return 'When things go quiet and you\'re not sure what to do — start here';
+  return 'When getting new clients feels harder than it should — here\'s what\'s missing';
+}
+
+function lcGenerateSubtext(t) {
+  if (/ads|paid/.test(t)) {
+    if (/dm|messag|enquir/.test(t) && /no (book|client|sale)/.test(t))
+      return 'You\'re already spending and getting interest — but interest without a system to convert it just disappears. Here\'s the part that\'s missing.';
+    if (/spend|wast|burn/.test(t))
+      return 'Running ads without a conversion system is like filling a leaking bucket. The traffic is there — but it\'s going nowhere. Here\'s how to fix that.';
+    return 'Ads can drive traffic — but without the right system on the other end, none of it turns into clients. That\'s the gap we close.';
+  }
+  if (/cold|outreach|dm/.test(t))
+    return 'Outreach works when people have somewhere to land that builds trust before they reply. Without that, even good messages get ignored. Here\'s what changes it.';
+  if (/website|traffic/.test(t))
+    return 'Most websites explain what you do. A high-converting one makes it obvious why someone should act today — and captures them when they\'re ready. That\'s what\'s missing.';
+  if (/social|content|post/.test(t))
+    return 'Posting builds visibility — but without a system to capture interest when it peaks, you\'re growing an audience not a client list. Here\'s the bridge.';
+  if (/referral/.test(t))
+    return 'Referrals are one of the best ways to get clients — but you can\'t control when they come. This is how you build something that doesn\'t rely on that.';
+  if (/proposal|quote|ghost/.test(t))
+    return 'Most deals are lost not because the proposal was wrong, but because there was no follow-up to close while the decision window was open. Here\'s how to fix that.';
+  return 'Most service businesses have a great service — they just don\'t have a reliable way to turn interest into consistent paying clients. That\'s what this fixes.';
+}
+
+function lcGenerateScenarios(t) {
+  if (/ads|paid/.test(t)) {
+    if (/dm|messag|enquir/.test(t) && /no (book|client|sale)/.test(t)) return [
+      'You get DMs and enquiries from the ads — but people ask one question, you reply, and then they go completely cold',
+      'You\'re spending money every month, getting clicks and some interest, but still don\'t have consistent clients booked',
+      'You\'ve tried adjusting the ads — the creative, the audience, the budget — but the real problem is what happens after someone clicks'
+    ];
+    return [
+      'Your ads are running, you\'re paying per click, but very few of those clicks turn into actual enquiries',
+      'The ad account looks active — but your calendar is still quiet and you\'re not sure what\'s wrong',
+      'You\'ve tweaked the ads repeatedly but the issue isn\'t the ad — it\'s the system on the other side of it'
+    ];
+  }
+  if (/cold|outreach|dm/.test(t)) return [
+    'You send outreach messages — some get seen, most get left on read, and you\'re not sure if it\'s the message or just bad luck',
+    'The few who do reply ask a question or two then disappear before you can book a call',
+    'You keep reaching out because you don\'t have anything else — but each ignored message makes it harder to stay consistent'
+  ];
+  if (/website|traffic/.test(t)) return [
+    'People visit your website — you can see the traffic — but the phone doesn\'t ring and no enquiries come through',
+    'You\'ve updated the site, added more info, maybe changed the design — but it still doesn\'t seem to convert',
+    'Visitors come, look around, and leave — and you have no idea what they were looking for or why they didn\'t get in touch'
+  ];
+  if (/social|content|post/.test(t)) return [
+    'You post consistently, get likes and some comments — but nobody actually reaches out to hire you',
+    'Your following is growing slowly but it\'s not translating into clients or bookings',
+    'You\'re spending hours creating content every week but it\'s not building your pipeline — just your follower count'
+  ];
+  if (/referral|dried up/.test(t)) return [
+    'You\'ve had good periods when referrals were coming regularly — but they\'re completely unpredictable',
+    'You never know when the next client is coming, so every quiet week feels like a crisis',
+    'There\'s no way to turn the referral tap on when you need work — you just have to wait and hope'
+  ];
+  if (/proposal|quote|ghost/.test(t)) return [
+    'You send a detailed quote, they say they\'ll think about it — and then you never hear from them again',
+    'You follow up once or twice but don\'t want to seem pushy, so you let it go and lose the deal',
+    'Good leads turn into nothing and you\'re not sure if it\'s the price, the timing, or something else'
+  ];
+  if (/slow|quiet|dead/.test(t)) return [
+    'This month has been slow — quieter than usual — and you\'re not sure if it\'s a blip or something to worry about',
+    'You don\'t have a clear way to generate new work when things go quiet — you just wait for something to come in',
+    'The busy periods are great but when it slows down there\'s nothing to fall back on'
+  ];
+  return [
+    'Some months are great, others are nearly empty — and you can\'t predict which it\'ll be',
+    'You know you need a more consistent flow of clients but you\'re not sure where to start fixing it',
+    'You\'ve tried a couple of things that didn\'t work, and now you\'re not sure what to trust or prioritise'
+  ];
+}
+
+function lcGenerateOpener(t, rawTitle) {
+  const angle = lcGenerateAngle(t);
+  if (/desperate|give up|quit|failing|running out/.test(t))
+    return `Saw your post and wanted to reach out — ${angle.charAt(0).toLowerCase() + angle.slice(1)}. I've built systems that fix exactly this and I can put a preview together for your setup today. Worth a look?`;
+  if (/ads|paid/.test(t))
+    return `Saw your post about the ads — ${angle.charAt(0).toLowerCase() + angle.slice(1)}. I build the conversion side of this for businesses like yours. I can mock something up based on your situation — want to see it?`;
+  return `Saw your post and it stood out — ${angle.charAt(0).toLowerCase() + angle.slice(1)}. I build systems that fix exactly this. Happy to put a quick preview together for your specific setup — want to take a look?`;
+}
+
+function lcGeneratePainPoints(t) {
+  if (/ads|paid/.test(t)) {
+    if (/dm|messag|enquir/.test(t) && /no (book|client|sale|conver)/.test(t)) return [
+      'You\'re getting DMs and clicks but they don\'t turn into actual bookings',
+      'Interest comes in and immediately goes cold — no system to follow it up',
+      'You\'re spending on ads every month with nothing consistent coming back',
+      'No way to tell which part of the process is losing them'
+    ];
+    return [
+      'Paying for clicks that never turn into enquiries or clients',
+      'Ad spend going out every month without clear return',
+      'No conversion system on the other side of the ads',
+      'Difficult to know if the problem is the ad, the page, or the follow-up'
+    ];
+  }
+  if (/cold|outreach|dm/.test(t)) return [
+    'Messages go out but most get ignored or left on read',
+    'The few who reply ask one question and disappear',
+    'Nothing to send people to that builds trust before they respond',
+    'Manual outreach is exhausting with no reliable return'
+  ];
+  if (/website|traffic/.test(t)) return [
+    'People visit the site but leave without getting in touch',
+    'No way to capture interest from visitors who aren\'t ready to call today',
+    'Can\'t tell what visitors are looking for or why they\'re not enquiring',
+    'Traffic exists but it doesn\'t translate into enquiries'
+  ];
+  if (/social|content|post/.test(t)) return [
+    'Posting consistently but it\'s not producing enquiries or clients',
+    'People engage with content but never reach out to hire you',
+    'No system to capture the interest that content generates',
+    'Hours spent creating content with no clear link to revenue'
+  ];
+  if (/referral|dried up/.test(t)) return [
+    'Referrals have slowed or stopped and nothing has replaced them',
+    'No control over when the next client comes — you just wait and hope',
+    'Good months exist but they rely on luck, not a repeatable system',
+    'Single source of clients means one point of failure'
+  ];
+  if (/proposal|quote|ghost/.test(t)) return [
+    'Proposals go out and leads go completely cold with no explanation',
+    'No follow-up system — you chase once then let it go',
+    'Time spent on detailed quotes for leads who never reply',
+    'No way to keep the decision window open after sending the quote'
+  ];
+  return [
+    'No consistent, predictable way to bring in new enquiries',
+    'Good months followed by quiet ones — feast or famine',
+    'Tried things that didn\'t work and not sure what to trust next',
+    'Growth relies on timing and luck rather than a system'
+  ];
+}
+
+function lcGenerateOutcomes(t) {
+  if (/ads|paid/.test(t)) {
+    if (/dm|messag|enquir/.test(t) && /no (book|client|sale|conver)/.test(t)) return [
+      'Every enquiry that comes in gets captured and followed up automatically within minutes',
+      'A conversion sequence turns interested DMs into booked clients',
+      'Clear visibility on which part of the funnel is producing results',
+      'Ad spend produces measurable, trackable new clients — not just clicks'
+    ];
+    return [
+      'Clicks land on a page built to convert them into real enquiries',
+      'Every lead gets an immediate automated follow-up before they go cold',
+      'Measurable return on ad spend — clients, not just impressions',
+      'Full pipeline: click → enquiry → booked client, tracked end to end'
+    ];
+  }
+  if (/cold|outreach|dm/.test(t)) return [
+    'Outreach links to a page that builds trust before they reply',
+    'Automated follow-up ensures no lead goes cold after first contact',
+    'Replies convert into booked calls with a clear simple path',
+    'Consistent inbound from outreach — not a numbers game'
+  ];
+  if (/website|traffic/.test(t)) return [
+    'Visitors have a clear reason to take action before they leave',
+    'Interest is captured from people who aren\'t ready to call today',
+    'Every page has a clear offer and a path to enquire',
+    'Consistent enquiries from people who are already warm to your service'
+  ];
+  if (/social|content|post/.test(t)) return [
+    'Content interest gets captured into a real pipeline automatically',
+    'A clear path from follower → lead → booked client',
+    'Engaged audience turns into consistent enquiries, not just likes',
+    'Content works as a lead generation engine, not just brand building'
+  ];
+  if (/referral|dried up/.test(t)) return [
+    'Consistent inbound pipeline that doesn\'t rely on referrals',
+    'New clients coming in predictably — you know where they\'re coming from',
+    'Quiet months become the exception, not the norm',
+    'Multiple channels working together so no single point of failure'
+  ];
+  if (/proposal|quote|ghost/.test(t)) return [
+    'Every quote is followed by an automated sequence that keeps the conversation alive',
+    'Warm leads get nurtured until they\'re ready to say yes',
+    'Higher conversion rate on the proposals you\'re already sending',
+    'Clear system from first enquiry → proposal → closed client'
+  ];
+  return [
+    'Consistent, predictable enquiries coming in every week',
+    'A clear system that works without relying on timing or luck',
+    'Full visibility on where clients come from and what converts them',
+    'Growth that\'s repeatable — not dependent on a single good month'
+  ];
+}
+
+function lcGenerateFormQuestions(t) {
+  if (/ads|paid/.test(t)) return {
+    q1: 'What are you currently running ads on — and what happens after someone clicks?',
+    q2: 'What does a good week look like vs where things are right now?'
+  };
+  if (/cold|outreach/.test(t)) return {
+    q1: 'What does your current outreach look like — and where does it tend to drop off?',
+    q2: 'When someone does reply, what usually happens next?'
+  };
+  if (/website|traffic/.test(t)) return {
+    q1: 'How are people currently finding your site — and what do you think they\'re looking for?',
+    q2: 'What would you want a visitor to do when they land on your page?'
+  };
+  if (/social|content/.test(t)) return {
+    q1: 'What kind of content are you posting and where does the engagement tend to stop?',
+    q2: 'Have you had anyone reach out from your content before — and what happened?'
+  };
+  return {
+    q1: 'What are you currently doing to get clients — and where do you think it\'s breaking down?',
+    q2: 'What would consistent new enquiries actually change for your business right now?'
+  };
+}
+
+function lcGenerateProof(t, niche) {
+  const nicheLabel = niche && niche !== 'Business Owner' ? niche.toLowerCase() + ' businesses' : 'service businesses';
+  if (/ads|paid/.test(t)) return [
+    `Built for ${nicheLabel} running paid traffic`,
+    'Average 3–5x improvement in enquiry conversion',
+    'Conversion system live within 14 days',
+    'Full pipeline tracking included'
+  ];
+  if (/cold|outreach/.test(t)) return [
+    `Trusted by ${nicheLabel} doing outreach`,
+    'Automated follow-up that runs without you',
+    'Higher reply rates from warmer outreach',
+    'System live within 14 days'
+  ];
+  if (/social|content/.test(t)) return [
+    `Built for ${nicheLabel} with an active audience`,
+    'Content to client pipeline — fully automated',
+    'Consistent enquiries from existing followers',
+    'Up and running within 14 days'
+  ];
+  return [
+    `Built specifically for ${nicheLabel}`,
+    'Consistent results within 14 days',
+    'No retainer — you own the system',
+    'Free 30-minute strategy call included'
+  ];
+}
+
+function inferOffer(niche, text) {
+  const t = text.toLowerCase();
+  if (/ads|paid|ppc|facebook|google/.test(t))       return 'Lead generation system that converts traffic into bookings';
+  if (/cold|outreach|dm|email/.test(t))              return 'Automated outreach system with follow-up sequence';
+  if (/website|landing|traffic/.test(t))             return 'High-converting website and lead capture system';
+  if (/social|content|instagram|tiktok/.test(t))    return 'Social media to lead pipeline system';
+  if (/referral|word of mouth/.test(t))              return 'Multi-channel lead pipeline replacing referral dependency';
+  if (/proposal|quote|follow.?up/.test(t))           return 'CRM and automated follow-up system';
+  return niche + ' client acquisition system';
+}
+
+function generateBusinessName(niche) {
+  const names = {
+    'Plumber': 'Local Plumbing Co', 'Electrician': 'Local Electrical Co',
+    'Builder': 'Local Build Co', 'PT / Fitness': 'Fitness Coaching',
+    'Consultant': 'Growth Consulting', 'Marketing Agency': 'Digital Growth Agency',
+    'SaaS / Tech': 'SaaS Growth', 'Cleaning Business': 'Clean Pro',
+    'Landscaper': 'Green Landscapes', 'Accountant': 'Smart Accounting',
+    'Solicitor': 'Legal Solutions', 'Designer': 'Creative Studio',
+    'Photographer': 'Studio Photography', 'eCommerce': 'Online Store'
+  };
+  return names[niche] || niche + ' Business';
+}
+
+/* ── AI ASSIST LAYER ── */
+async function enhanceWithAI(ctx, rawTitle) {
+  try {
+    const prompt = `You are refining a sales demo page for a service business prospect who posted on Reddit.
+
+Their post: "${rawTitle}"
+
+Detected context:
+- Problem: ${ctx.problem}
+- Stage: ${ctx.stage}
+- Funnel gap: ${ctx.funnelGap}
+- Emotion: ${ctx.emotion}
+
+Return ONLY a JSON object with exactly these 3 fields — no other text:
+{
+  "headline": "A punchy, specific H1 for their situation. Start with 'When' and reference their exact problem. Under 14 words.",
+  "subline": "One sentence explaining their situation and what changes. Specific, not generic. Under 25 words.",
+  "dm": "A short personal first DM referencing their exact post. Human and direct, no buzzwords. Under 35 words."
+}`;
+
+    const res  = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+    const data = await res.json();
+
+    if (!data.ok) return null;
+
+    // Confidence check — reject if any field is too short or suspiciously generic
+    const score =
+      (data.headline && data.headline.length > 20 ? 0.4 : 0) +
+      (data.subline  && data.subline.length  > 20 ? 0.3 : 0) +
+      (data.dm       && data.dm.length       > 20 ? 0.3 : 0);
+
+    if (score < 0.6) return null; // fall back to rule engine — not confident enough
+    return data;
+  } catch { return null; }
+}
+
+async function buildFromLead(postId) {
+  const d = window._feedData && window._feedData[postId];
+  if (!d) { toast('Lead data not found — try re-fetching', 'err'); return; }
+  const { post, a } = d;
+  const title     = post.title  || '';
+  const author    = post.author || 'unknown';
+  const niche     = a.niche;
+  const text      = post.text   || '';
+  const demoFocus = a.demoFocus;
+  const urgency   = a.urgency;
+
+  // 1. Rule engine — fast, deterministic backbone
+  const ctx   = extractLeadContext(title, text, niche);
+  const offer = inferOffer(niche, text);
+  const bizName = generateBusinessName(niche);
+
+  // 2. AI refine — sharpens headline, subline, DM (silent fallback if no key / fails)
+  toast('Analysing lead context…', 'ok');
+  const ai = await enhanceWithAI(ctx, title);
+  if (ai) {
+    if (ai.headline) ctx.headline = ai.headline;
+    if (ai.subline)  ctx.subtext  = ai.subline;
+    if (ai.dm)       ctx.opener   = ai.dm;
+  }
+
+  // Detect lead type now we have full context
+  const leadType = detectLeadType(title, text, post.subreddit || post.platform, ctx.urgency || 50);
+
+  // Store lead metadata for analytics logging
+  window._currentLeadMeta = {
+    author,
+    subreddit:  post.subreddit || '',
+    postTitle:  title,
+    postUrl:    post.url || '',
+    niche,
+    keyword:    window.activeFeedKw || '',
+    aiUsed:     !!ai,
+    leadType:   leadType.key
+  };
+
+  // Store rich context for buildLandingPage to consume
+  window.currentLeadContext = {
+    rawTitle:  title,
+    author,
+    demoFocus,
+    aiUsed:    !!ai,
+    ctx         // full structured context (possibly AI-refined)
+  };
+
+  // Pre-fill form from context engine
+  document.getElementById('f-name').value     = bizName;
+  document.getElementById('f-niche').value    = niche;
+  document.getElementById('f-offer').value    = offer;
+  document.getElementById('f-target').value   = 'Business owners ' + ctx.problem;
+  document.getElementById('f-usp').value      = ctx.angle;
+  document.getElementById('f-notes').value    = `Lead wrote: "${title}"\n\nProblem: ${ctx.problem}\nStage: ${ctx.stage}\nFunnel gap: ${ctx.funnelGap}\nEmotion: ${ctx.emotion}\nAngle: ${ctx.angle}`;
+  document.getElementById('f-location').value = '';
+  document.getElementById('f-goal').value     = 'leads';
+
+  // Tone from urgency
+  const tone = urgency >= 70 ? 'aggressive' : urgency >= 50 ? 'professional' : 'friendly';
+  document.querySelectorAll('[data-tone]').forEach(b => b.classList.toggle('active', b.dataset.tone === tone));
+  document.querySelectorAll('[data-stage]').forEach(b => b.classList.toggle('active', b.dataset.stage === 'growing'));
+  document.querySelectorAll('[data-price]').forEach(b => b.classList.toggle('active', b.dataset.price === 'mid'));
+
+  // Switch panel, scroll to top
+  switchPanel('client');
+  const formBody = document.querySelector('.form-body');
+  if (formBody) formBody.scrollTop = 0;
+
+  // Backup context for Edit Before Send regenerate
+  window._lastLeadContext = { ...window.currentLeadContext };
+
+  // Auto-generate then surface the edit panel + share link
+  setTimeout(() => {
+    document.getElementById('btn-generate').click();
+    toast(`Building demo for ${niche} lead…`, 'ok');
+
+    // After generate finishes — show edit panel + try to surface ngrok share URL
+    setTimeout(async () => {
+      showEditPanel(window._lastLeadContext, niche);
+
+      try {
+        const r = await fetch('http://localhost:4040/api/tunnels');
+        const d = await r.json();
+        const t = (d.tunnels || []).find(t => t.proto === 'https') || d.tunnels[0];
+        if (t && t.public_url) {
+          const lc      = window._lastLeadContext;
+          const ctx     = lc && lc.ctx;
+          const postUrl = post.url || '';
+          const dm      = generateReadyDM(ctx, author, t.public_url, (window._currentLeadMeta||{}).leadType);
+          // Auto-copy DM (more useful than just the URL)
+          navigator.clipboard.writeText(dm).catch(() => {});
+          showDemoShareBar(t.public_url, niche, dm, author, postUrl);
+        }
+      } catch { /* ngrok not running — silently skip */ }
+    }, 1800);
+  }, 200);
+}
+
+/* ── EDIT BEFORE SEND PANEL ── */
+function showEditPanel(lc, niche) {
+  const old = document.getElementById('edit-before-send');
+  if (old) old.remove();
+
+  const defaultHeadline = (lc && lc.ctx && lc.ctx.headline) || (lc && lc.angle) || '';
+  const defaultCta      = lc && lc.demoFocus
+    ? `I mocked up a ${lc.demoFocus} for this — want to see it?`
+    : 'I built this based on your post — want to see it?';
+  const defaultOpener   = (lc && lc.ctx && lc.ctx.opener) || (lc && lc.opener) || '';
+
+  const panel = document.createElement('div');
+  panel.id = 'edit-before-send';
+  panel.innerHTML = `
+    <div class="ebs-header">
+      <span><i class="fas fa-pen" style="color:var(--accent)"></i> Edit Before Send</span>
+      <button onclick="document.getElementById('edit-before-send').remove()" class="ebs-close">&times;</button>
+    </div>
+    <div class="ebs-fields">
+      <div class="ebs-field">
+        <label>Headline</label>
+        <input id="ebs-headline" type="text" value="${defaultHeadline.replace(/"/g, '&quot;')}">
+      </div>
+      <div class="ebs-field">
+        <label>CTA Button</label>
+        <input id="ebs-cta" type="text" value="${defaultCta.replace(/"/g, '&quot;')}">
+      </div>
+      <div class="ebs-field">
+        <label>Your Opening DM</label>
+        <textarea id="ebs-opener" rows="3">${defaultOpener.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-sm ebs-regen" onclick="regenerateWithEdits()">
+      <i class="fas fa-rotate-right"></i> Regenerate with Edits
+    </button>`;
+
+  const previewWrap = document.querySelector('.preview-wrap');
+  if (previewWrap) previewWrap.parentNode.insertBefore(panel, previewWrap);
+
+  // Mobile: tap header to expand/collapse
+  if (window.innerWidth <= 768) {
+    const header = panel.querySelector('.ebs-header');
+    if (header) header.addEventListener('click', () => panel.classList.toggle('expanded'));
+  }
+}
+
+function regenerateWithEdits() {
+  const lc = window._lastLeadContext;
+  if (!lc) { toast('No lead context — fetch a lead first', 'err'); return; }
+
+  const headline = document.getElementById('ebs-headline') ? document.getElementById('ebs-headline').value.trim() : '';
+  const cta      = document.getElementById('ebs-cta')      ? document.getElementById('ebs-cta').value.trim()      : '';
+  const openerEl = document.getElementById('ebs-opener');
+  if (openerEl) lc.opener = openerEl.value.trim(); // update opener for outreach
+
+  window.currentLeadContext = {
+    ...lc,
+    angle:      headline || lc.angle,
+    forcedCta:  cta      || null,
+    forcedCtaLow: cta ? 'Want to see how this would work for your specific situation?' : null
+  };
+
+  document.getElementById('btn-generate').click();
+  toast('Regenerating with your edits…', 'ok');
+}
+
+/* ── OPENER PER LEAD TYPE ── */
+function buildTypeOpener(typeKey, a, post) {
+  if (typeKey === 'operator') {
+    return `Noticed you're doing ${a.niche.toLowerCase()} work — I build the backend systems that agencies and freelancers white-label for their clients. Landing pages, CRM, follow-up sequences — all set up under your brand. Worth a look?`;
+  }
+  if (typeKey === 'partner') {
+    return `Saw what you're building — I've put together a complete client acquisition stack that could sit as a layer on top of your platform. Integration, white-label, or distribution play. Worth a quick conversation?`;
+  }
+  return a.opener;
+}
+
+/* ── READY DM GENERATOR ── */
+function generateReadyDM(ctx, author, demoUrl, leadType) {
+  const opener  = (ctx && ctx.opener)  || 'Looks like a system gap more than anything else.';
+  const problem = (ctx && ctx.problem) || 'getting consistent clients';
+  const name    = author && author !== 'unknown' ? author : null;
+  const greet   = name ? `Hey ${name} —` : 'Hey —';
+  const lt      = leadType || 'direct';
+
+  if (lt === 'operator') {
+    return [
+      greet,
+      `Saw your post — looks like you're running client work in this space.`,
+      '',
+      `I build the backend systems that agencies and freelancers like you can offer their own clients — landing pages, CRM pipelines, follow-up sequences, outreach. All white-labeled to your brand.`,
+      '',
+      `Instead of building it yourself, you'd just be adding it to what you already deliver.`,
+      '',
+      `Put together a quick look at how it works:`,
+      `→ ${demoUrl}`,
+      '',
+      `Worth 5 minutes?`
+    ].join('\n');
+  }
+
+  if (lt === 'partner') {
+    return [
+      greet,
+      `Came across what you're building — interesting.`,
+      '',
+      `I've built a full client acquisition system layer — landing pages, CRM, automated follow-up, outreach sequences. The kind of thing that could sit on top of your platform as an integration, white-label feature, or distribution channel.`,
+      '',
+      `Mocked up a quick look at what that would mean in practice:`,
+      `→ ${demoUrl}`,
+      '',
+      `If there's a fit I'd want to talk properly. Worth 15 minutes?`
+    ].join('\n');
+  }
+
+  return [
+    greet,
+    `Saw your post about ${problem}.`,
+    '',
+    opener,
+    '',
+    `I put together a quick preview based on what you said:`,
+    `→ ${demoUrl}`,
+    '',
+    `Worth 2 minutes to look at?`
+  ].join('\n');
+}
+
+/* ── ONE-CLICK SEND PACK — appears above preview after Build System ── */
+function showDemoShareBar(url, niche, dm, author, postUrl) {
+  const old = document.getElementById('demo-share-bar');
+  if (old) old.remove();
+
+  // Store for button callbacks
+  window._currentDemoUrl = url;
+  window._currentDemoDM  = dm  || '';
+  window._currentPostUrl = postUrl || '';
+
+  const safeNich = (niche || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const redditProfileUrl = author && author !== 'unknown'
+    ? `https://reddit.com/user/${author}`
+    : 'https://reddit.com';
+
+  const bar = document.createElement('div');
+  bar.id = 'demo-share-bar';
+  bar.innerHTML = `
+    <div class="dsb-header">
+      <i class="fas fa-bolt" style="color:var(--accent)"></i>
+      <span>Demo ready · <strong>${safeNich}</strong></span>
+      <span class="dsb-copied-badge" id="dsb-copied">DM copied</span>
+      <button onclick="document.getElementById('demo-share-bar').remove()" class="dsb-close">&times;</button>
+    </div>
+    <div class="dsb-actions">
+      <button class="dsb-btn dsb-primary" onclick="copyDemoUrl()">
+        <i class="fas fa-link"></i> Copy Link
+      </button>
+      <button class="dsb-btn dsb-primary" onclick="copyDemoDM()">
+        <i class="fas fa-paper-plane"></i> Copy DM
+      </button>
+      <a class="dsb-btn dsb-secondary" href="${redditProfileUrl}" target="_blank" rel="noopener">
+        <i class="fab fa-reddit-alien"></i> Profile
+      </a>
+      ${postUrl ? `<a class="dsb-btn dsb-secondary" href="${postUrl}" target="_blank" rel="noopener">
+        <i class="fas fa-arrow-up-right-from-square"></i> Post
+      </a>` : ''}
+    </div>
+    <div class="dsb-preview" id="dsb-dm-preview" onclick="copyDemoDM()" title="Click to copy">${(dm || '').replace(/\n/g, '<br>')}</div>`;
+
+  const previewWrap = document.querySelector('.preview-wrap');
+  if (previewWrap) previewWrap.parentNode.insertBefore(bar, previewWrap);
+
+  // Flash "DM copied" badge then fade
+  setTimeout(() => {
+    const badge = document.getElementById('dsb-copied');
+    if (badge) badge.style.opacity = '0';
+  }, 2500);
+
+  // Mobile: auto-scroll to send pack so it's immediately visible
+  if (window.innerWidth <= 768) {
+    setTimeout(() => {
+      bar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }
+}
+
+function copyDemoUrl() {
+  const url = window._currentDemoUrl || '';
+  if (!url) return;
+  navigator.clipboard.writeText(url).then(() => toast('Link copied!', 'ok'));
+}
+
+function copyDemoDM() {
+  const dm = window._currentDemoDM || '';
+  if (!dm) return;
+  navigator.clipboard.writeText(dm).then(() => {
+    toast('DM copied — paste into Reddit', 'ok');
+    logOutreachSent(dm);
+  });
+}
+
+function logOutreachSent(dm) {
+  const meta = window._currentLeadMeta || {};
+  fetch(API + '/analytics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      author:     meta.author    || 'unknown',
+      subreddit:  meta.subreddit || '',
+      postTitle:  meta.postTitle || '',
+      postUrl:    meta.postUrl   || '',
+      niche:      meta.niche     || '',
+      keyword:    meta.keyword   || '',
+      demoUrl:    window._currentDemoUrl || '',
+      dmPreview:  dm.substring(0, 200),
+      aiUsed:     meta.aiUsed   || false
+    })
+  }).catch(() => {});
+}
+
+function quickResearch(postId) {
+  const d = window._feedData && window._feedData[postId];
+  const author  = d ? d.post.author : 'unknown';
+  const postUrl = d ? d.post.url    : '#';
+  window.open(`https://reddit.com/user/${author}`, '_blank');
+  window.open(`https://www.google.com/search?q=${encodeURIComponent(author + ' business')}`, '_blank');
+}
+
+async function saveFeedLead(postId) {
+  const d = window._feedData && window._feedData[postId];
+  if (!d) { toast('Lead data not found', 'err'); return; }
+  const { post, a } = d;
+  const author = post.author || 'unknown';
+  const niche  = a.niche;
+  const url    = post.url;
+  const title  = post.title || '';
+  const score  = a.urgency;
   try {
     await fetch(API + '/leads', {
       method: 'POST',
@@ -1445,7 +3126,7 @@ async function saveFeedLead(id, author, niche, url, title, score) {
       })
     });
     // Visual feedback — grey out the saved card
-    const card = document.getElementById('fc-' + id);
+    const card = document.getElementById('fc-' + postId);
     if (card) {
       card.style.opacity = '0.45';
       card.style.pointerEvents = 'none';
@@ -1458,3 +3139,455 @@ async function saveFeedLead(id, author, niche, url, title, score) {
 
 /* ── INIT ── */
 loadClients();
+
+/* ── X SETUP ── */
+function showXSetup() {
+  const existing = document.getElementById('x-setup-modal');
+  if (existing) { existing.style.display = 'flex'; return; }
+
+  const modal = document.createElement('div');
+  modal.id = 'x-setup-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 24px;width:340px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:1rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px">
+        <span style="font-size:1.2rem">𝕏</span> Connect X / Twitter
+      </div>
+      <div style="font-size:.78rem;color:var(--muted);line-height:1.5">
+        X search requires a Bearer Token from the X Developer Portal.<br><br>
+        1. Go to <a href="https://developer.twitter.com" target="_blank" style="color:var(--accent)">developer.twitter.com</a><br>
+        2. Create a free developer account<br>
+        3. Create an App → copy the Bearer Token<br><br>
+        <strong style="color:var(--warn)">Note:</strong> Search requires the Basic plan ($100/mo). Free tier is write-only.
+      </div>
+      <input id="x-token-input" type="password" placeholder="Paste Bearer Token here..."
+        style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-size:.82rem;font-family:inherit;outline:none;width:100%">
+      <div style="display:flex;gap:8px">
+        <button onclick="saveXToken()" style="flex:1;background:var(--accent);border:none;border-radius:6px;color:#fff;padding:10px;cursor:pointer;font-family:inherit;font-weight:600">Save Token</button>
+        <button onclick="document.getElementById('x-setup-modal').style.display='none'" style="background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);padding:10px 16px;cursor:pointer;font-family:inherit">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
+}
+
+async function saveXToken() {
+  const token = document.getElementById('x-token-input').value.trim();
+  if (!token) return;
+  await fetch(API + '/config', { method: 'POST', body: JSON.stringify({ xBearerToken: token }) });
+  document.getElementById('x-setup-modal').style.display = 'none';
+  toast('𝕏 connected — fetch leads to see X results', 'ok');
+}
+
+/* ── SERPER SETUP — Google results inc. Facebook Groups, LinkedIn, Quora ── */
+function showGoogleSetup() {
+  if (document.getElementById('serper-setup-modal')) return;
+  const modal = document.createElement('div');
+  modal.id = 'serper-setup-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 24px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:1rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px">
+        <span style="font-size:1.1rem">🔍</span> Connect Web Search
+        <button onclick="document.getElementById('serper-setup-modal').remove()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem">×</button>
+      </div>
+      <div style="font-size:.78rem;color:var(--muted);line-height:1.6;background:rgba(255,255,255,.03);border-radius:8px;padding:12px">
+        Searches <strong style="color:var(--text)">Facebook Groups, LinkedIn, Quora, forums</strong> via Google — anything publicly indexed.<br><br>
+        <strong style="color:var(--text)">Free: 2,500 searches</strong> — no card needed to start.<br><br>
+        1. Go to <a href="https://serper.dev" target="_blank" rel="noopener" style="color:var(--accent)">serper.dev</a> → Sign up free<br>
+        2. Dashboard → copy your <strong style="color:var(--text)">API Key</strong><br>
+        3. Paste it below and save
+      </div>
+      <div>
+        <label style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:5px">Serper API Key</label>
+        <input id="serper-api-key-input" type="password" placeholder="Paste your key here…" style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:7px;padding:10px 12px;color:var(--text);font-size:.85rem;font-family:inherit;outline:none">
+      </div>
+      <div>
+        <label style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:5px">Sites to search <span style="text-transform:none;letter-spacing:0;opacity:.6">(space-separated)</span></label>
+        <input id="serper-sites-input" value="facebook.com/groups linkedin.com quora.com" style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:7px;padding:10px 12px;color:var(--text);font-size:.85rem;font-family:inherit;outline:none">
+      </div>
+      <button onclick="saveSerperSetup()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:12px;font-size:.9rem;font-weight:700;cursor:pointer;transition:filter .15s" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">Save & Activate</button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function saveSerperSetup() {
+  const key   = document.getElementById('serper-api-key-input').value.trim();
+  const sites = document.getElementById('serper-sites-input').value.trim();
+  if (!key) { toast('Paste your Serper API key first', 'err'); return; }
+  await fetch(API + '/config', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ serperApiKey: key, serperSearchSites: sites }) });
+  document.getElementById('serper-setup-modal').remove();
+  toast('Web search connected — Facebook & LinkedIn results enabled', 'ok');
+}
+
+/* ── AI SETUP MODAL ── */
+function showAISetup() {
+  const existing = document.getElementById('ai-setup-modal');
+  if (existing) { existing.style.display = 'flex'; return; }
+
+  const modal = document.createElement('div');
+  modal.id = 'ai-setup-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 24px;width:360px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:1rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px">
+        <span style="color:var(--accent);font-size:1.1rem">⚡</span> Connect AI Assist
+      </div>
+      <div style="font-size:.78rem;color:var(--muted);line-height:1.6">
+        AI Assist sharpens your headlines, sublines, and outreach DMs using Claude — so demos are send-ready without editing.<br><br>
+        1. Go to <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a><br>
+        2. API Keys → Create Key<br>
+        3. Paste it below<br><br>
+        <span style="color:var(--accent);font-weight:600">Free to start</span> · ~$0.001 per lead refinement
+      </div>
+      <input id="ai-key-input" type="password" placeholder="sk-ant-..."
+        style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-size:.82rem;font-family:inherit;outline:none;width:100%">
+      <div style="display:flex;gap:8px">
+        <button onclick="saveAIKey()" style="flex:1;background:var(--accent);border:none;border-radius:6px;color:#fff;padding:10px;cursor:pointer;font-family:inherit;font-weight:600">Save Key</button>
+        <button onclick="document.getElementById('ai-setup-modal').style.display='none'" style="background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);padding:10px 16px;cursor:pointer;font-family:inherit">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
+}
+
+async function saveAIKey() {
+  const key = document.getElementById('ai-key-input').value.trim();
+  if (!key) return;
+  await fetch(API + '/config', { method: 'POST', body: JSON.stringify({ anthropicApiKey: key }) });
+  document.getElementById('ai-setup-modal').style.display = 'none';
+  updateAIStatus(true);
+  toast('⚡ AI Assist connected — demos will now be AI-refined', 'ok');
+}
+
+let _aiEnabled = false;
+async function checkAIStatus() {
+  try {
+    const cfg = await fetch(API + '/config').then(r => r.json());
+    _aiEnabled = !!cfg.anthropicApiKey;
+    updateAIStatus(_aiEnabled);
+  } catch {}
+}
+
+function updateAIStatus(enabled) {
+  _aiEnabled = enabled;
+  const btn = document.getElementById('btn-ai-status');
+  if (!btn) return;
+  btn.textContent = enabled ? '⚡ AI On' : '⚡ AI Off';
+  btn.style.color = enabled ? 'var(--accent)' : 'var(--muted)';
+  btn.style.borderColor = enabled ? 'rgba(255,42,42,.4)' : 'var(--border)';
+}
+
+checkAIStatus();
+
+/* ── MOBILE LINK ── */
+/* ── Fetch ngrok URL (tries live tunnel first, falls back to saved static domain) ── */
+async function getNgrokUrl() {
+  // 1. Try live ngrok tunnel
+  try {
+    const res    = await fetch('http://localhost:4040/api/tunnels');
+    const data   = await res.json();
+    const tunnel = (data.tunnels || []).find(t => t.proto === 'https') || data.tunnels[0];
+    if (tunnel && tunnel.public_url) return tunnel.public_url;
+  } catch {}
+  // 2. Fall back to saved static domain
+  try {
+    const cfg = await fetch(API + '/config').then(r => r.json());
+    if (cfg.ngrokDomain) return cfg.ngrokDomain;
+  } catch {}
+  return null;
+}
+
+/* ── Persistent URL bar in topbar ── */
+let _ngrokUrl = null;
+async function detectNgrokAndShowBar() {
+  const url = await getNgrokUrl();
+  if (!url) return;
+  _ngrokUrl = url;
+  // Update phone button to show it's live
+  const btn = document.getElementById('btn-mobile-link');
+  if (btn) {
+    btn.title = url;
+    btn.style.color = 'var(--accent)';
+    btn.style.borderColor = 'rgba(255,42,42,.4)';
+  }
+  // Show a small persistent URL strip under topbar
+  let strip = document.getElementById('ngrok-strip');
+  if (!strip) {
+    strip = document.createElement('div');
+    strip.id = 'ngrok-strip';
+    strip.style.cssText = [
+      'display:flex;align-items:center;gap:8px',
+      'background:rgba(255,42,42,.08);border-bottom:1px solid rgba(255,42,42,.2)',
+      'padding:5px 16px;font-size:.72rem;color:var(--muted)',
+      'flex-shrink:0'
+    ].join(';');
+    document.getElementById('main').insertBefore(strip, document.getElementById('content'));
+  }
+  const short = url.replace('https://','');
+  strip.innerHTML = `
+    <i class="fas fa-signal" style="color:var(--accent);font-size:.7rem"></i>
+    <span style="color:var(--accent);font-weight:600">Live:</span>
+    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${short}</span>
+    <button onclick="copyNgrokUrl()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.72rem;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,42,42,.3)">Copy</button>
+    <button onclick="showMobileLink()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.72rem;padding:2px 6px;border-radius:4px;border:1px solid var(--border)">QR</button>`;
+}
+
+function copyNgrokUrl() {
+  if (!_ngrokUrl) return;
+  navigator.clipboard.writeText(_ngrokUrl).then(() => toast('URL copied!', 'ok'));
+}
+
+async function showMobileLink() {
+  const modal  = document.getElementById('mobile-modal');
+  const status = document.getElementById('mobile-modal-status');
+  const qrWrap = document.getElementById('mobile-qr-wrap');
+  const input  = document.getElementById('mobile-url-input');
+
+  modal.classList.add('open');
+  status.textContent = 'Fetching tunnel URL...';
+  qrWrap.innerHTML   = '';
+  input.value        = '';
+
+  const url = await getNgrokUrl();
+
+  if (url) {
+    _ngrokUrl    = url;
+    input.value  = url;
+    status.textContent = 'Scan with your iPhone camera:';
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}&bgcolor=ffffff&color=000000&margin=10`;
+    const img   = document.createElement('img');
+    img.src     = qrUrl;
+    img.width   = 200; img.height = 200;
+    img.style.borderRadius = '8px';
+    qrWrap.appendChild(img);
+  } else {
+    status.textContent = '⚠ ngrok not running';
+    qrWrap.innerHTML   = `
+      <div style="font-size:.8rem;color:var(--muted);text-align:center;padding:12px;line-height:1.6">
+        Start ngrok first:<br>
+        <code style="color:var(--accent)">ngrok http 4000</code><br><br>
+        Or save your static domain below:
+      </div>
+      <div style="display:flex;gap:6px;width:100%">
+        <input id="static-domain-input" placeholder="https://your-domain.ngrok-free.app"
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:.75rem;font-family:inherit;outline:none">
+        <button onclick="saveStaticDomain()" style="background:var(--accent);border:none;border-radius:6px;color:#fff;padding:7px 12px;cursor:pointer;font-size:.78rem;font-weight:600">Save</button>
+      </div>`;
+  }
+}
+
+async function saveStaticDomain() {
+  const input = document.getElementById('static-domain-input');
+  if (!input || !input.value.trim()) return;
+  const domain = input.value.trim();
+  await fetch(API + '/config', { method: 'POST', body: JSON.stringify({ ngrokDomain: domain }) });
+  _ngrokUrl = domain;
+  document.getElementById('mobile-modal-status').textContent = 'Saved — scan below:';
+  const qrWrap = document.getElementById('mobile-qr-wrap');
+  const qrUrl  = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(domain)}&bgcolor=ffffff&color=000000&margin=10`;
+  const img    = document.createElement('img');
+  img.src = qrUrl; img.width = 200; img.height = 200; img.style.borderRadius = '8px';
+  qrWrap.innerHTML = '';
+  qrWrap.appendChild(img);
+  document.getElementById('mobile-url-input').value = domain;
+  detectNgrokAndShowBar();
+  toast('Static domain saved', 'ok');
+}
+
+function closeMobileModal() {
+  document.getElementById('mobile-modal').classList.remove('open');
+}
+
+function copyMobileUrl() {
+  const input = document.getElementById('mobile-url-input');
+  if (!input.value) return;
+  navigator.clipboard.writeText(input.value).then(() => toast('Link copied!', 'ok'));
+}
+
+// Auto-detect ngrok on load
+detectNgrokAndShowBar();
+
+/* ── LEAD TYPE FILTER ── */
+function filterLeadType(type) {
+  document.querySelectorAll('.ltf-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+  document.querySelectorAll('.feed-card').forEach(card => {
+    card.style.display = (type === 'all' || card.dataset.leadType === type) ? '' : 'none';
+  });
+}
+
+/* ══════════════════════════════════
+   ANALYTICS
+══════════════════════════════════ */
+
+async function loadAnalytics() {
+  const body = document.getElementById('an-body');
+  if (!body) return;
+  body.innerHTML = '<div class="an-loading"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  try {
+    const data = await fetch(API + '/analytics').then(r => r.json());
+    renderAnalytics(data.outreach || []);
+  } catch {
+    body.innerHTML = '<div class="an-empty"><i class="fas fa-exclamation-circle"></i><p>Could not load analytics</p></div>';
+  }
+}
+
+function renderAnalytics(rows) {
+  const body = document.getElementById('an-body');
+  if (!body) return;
+
+  if (!rows.length) {
+    body.innerHTML = '<div class="an-empty"><i class="fas fa-chart-bar"></i><p>No outreach logged yet — copy a DM from the Lead Feed to start tracking</p></div>';
+    return;
+  }
+
+  // ── Compute stats ──
+  const total     = rows.length;
+  const replied   = rows.filter(r => ['replied','interested','booked','closed'].includes(r.status)).length;
+  const booked    = rows.filter(r => ['booked','closed'].includes(r.status)).length;
+  const replyRate = total ? Math.round((replied / total) * 100) : 0;
+  const bookRate  = total ? Math.round((booked  / total) * 100) : 0;
+
+  // Subreddit leaderboard (reply rate per sub)
+  const subMap = {};
+  rows.forEach(r => {
+    const s = r.subreddit || 'unknown';
+    if (!subMap[s]) subMap[s] = { sent: 0, replied: 0 };
+    subMap[s].sent++;
+    if (['replied','interested','booked','closed'].includes(r.status)) subMap[s].replied++;
+  });
+  const subLeader = Object.entries(subMap)
+    .map(([k, v]) => ({ label: 'r/' + k, sent: v.sent, replied: v.replied, rate: v.sent ? Math.round((v.replied / v.sent) * 100) : 0 }))
+    .sort((a, b) => b.rate - a.rate).slice(0, 5);
+
+  // Niche leaderboard
+  const nicheMap = {};
+  rows.forEach(r => {
+    const n = r.niche || 'unknown';
+    if (!nicheMap[n]) nicheMap[n] = { sent: 0, replied: 0 };
+    nicheMap[n].sent++;
+    if (['replied','interested','booked','closed'].includes(r.status)) nicheMap[n].replied++;
+  });
+  const nicheLeader = Object.entries(nicheMap)
+    .map(([k, v]) => ({ label: k, sent: v.sent, replied: v.replied, rate: v.sent ? Math.round((v.replied / v.sent) * 100) : 0 }))
+    .sort((a, b) => b.rate - a.rate).slice(0, 5);
+
+  // Keyword leaderboard
+  const kwMap = {};
+  rows.forEach(r => {
+    const k = r.keyword || 'unknown';
+    if (!kwMap[k]) kwMap[k] = { sent: 0, replied: 0 };
+    kwMap[k].sent++;
+    if (['replied','interested','booked','closed'].includes(r.status)) kwMap[k].replied++;
+  });
+  const kwLeader = Object.entries(kwMap)
+    .map(([k, v]) => ({ label: '"' + k + '"', sent: v.sent, replied: v.replied, rate: v.sent ? Math.round((v.replied / v.sent) * 100) : 0 }))
+    .sort((a, b) => b.rate - a.rate).slice(0, 5);
+
+  const maxSubRate   = Math.max(...subLeader.map(x => x.rate), 1);
+  const maxNicheRate = Math.max(...nicheLeader.map(x => x.rate), 1);
+  const maxKwRate    = Math.max(...kwLeader.map(x => x.rate), 1);
+
+  function barRow(item, max) {
+    const pct = Math.round((item.rate / max) * 100);
+    const color = item.rate >= 30 ? 'var(--success)' : item.rate >= 15 ? 'var(--accent)' : 'rgba(255,255,255,.25)';
+    return `<div class="an-bar-row">
+      <span class="an-bar-label">${item.label}</span>
+      <div class="an-bar-track"><div class="an-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <span class="an-bar-stat">${item.replied}/${item.sent} <em>${item.rate}%</em></span>
+    </div>`;
+  }
+
+  // ── Status badge ──
+  const STATUS_LABELS = { sent:'Sent', replied:'Replied', interested:'Interested', booked:'Booked', closed:'Closed', ghosted:'Ghosted' };
+  const STATUS_COLOR  = { sent:'var(--muted)', replied:'var(--accent)', interested:'#f59e0b', booked:'var(--success)', closed:'#22c55e', ghosted:'rgba(255,255,255,.2)' };
+
+  function statusBadge(s) {
+    return `<span class="an-status" style="background:${STATUS_COLOR[s]||'var(--muted)'}20;color:${STATUS_COLOR[s]||'var(--muted)'};">${STATUS_LABELS[s]||s}</span>`;
+  }
+
+  function statusBtns(id, current) {
+    return ['replied','booked','closed','ghosted'].map(s =>
+      `<button class="an-status-btn${current===s?' active':''}" onclick="updateOutreachStatus(${id},'${s}')" style="--sc:${STATUS_COLOR[s]}">${STATUS_LABELS[s]}</button>`
+    ).join('');
+  }
+
+  // ── Log rows ──
+  const logHTML = rows.slice(0, 60).map(r => `
+    <div class="an-log-row" id="an-row-${r.id}">
+      <div class="an-log-main">
+        <div class="an-log-who">
+          <span class="an-log-author">@${esc(r.author)}</span>
+          ${r.subreddit ? `<span class="an-log-sub">r/${esc(r.subreddit)}</span>` : ''}
+          ${r.niche     ? `<span class="an-log-niche">${esc(r.niche)}</span>` : ''}
+        </div>
+        <div class="an-log-title">${esc((r.postTitle||'').substring(0,80))}${(r.postTitle||'').length>80?'…':''}</div>
+        <div class="an-log-meta">
+          ${new Date(r.timestamp).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}
+          ${r.keyword ? ` · <em>${esc(r.keyword)}</em>` : ''}
+          ${r.demoUrl  ? ` · <a href="${esc(r.demoUrl)}" target="_blank" rel="noopener" style="color:var(--accent)">Demo ↗</a>` : ''}
+          ${r.postUrl  ? ` · <a href="${esc(r.postUrl)}"  target="_blank" rel="noopener" style="color:var(--muted)">Post ↗</a>` : ''}
+        </div>
+      </div>
+      <div class="an-log-right">
+        ${statusBadge(r.status)}
+        <div class="an-log-actions">${statusBtns(r.id, r.status)}</div>
+        <textarea class="an-note" placeholder="Notes…" onblur="saveOutreachNote(${r.id},this.value)">${esc(r.notes||'')}</textarea>
+      </div>
+    </div>`).join('');
+
+  body.innerHTML = `
+    <div class="an-stats-row">
+      <div class="an-stat"><div class="an-stat-val">${total}</div><div class="an-stat-label">DMs Sent</div></div>
+      <div class="an-stat"><div class="an-stat-val" style="color:var(--accent)">${replied}</div><div class="an-stat-label">Replied · ${replyRate}%</div></div>
+      <div class="an-stat"><div class="an-stat-val" style="color:var(--success)">${booked}</div><div class="an-stat-label">Booked · ${bookRate}%</div></div>
+      <div class="an-stat"><div class="an-stat-val" style="color:#f59e0b">${rows.filter(r=>r.status==='interested').length}</div><div class="an-stat-label">Interested</div></div>
+    </div>
+
+    <div class="an-charts">
+      <div class="an-chart-block">
+        <div class="an-chart-title">Subreddit Performance</div>
+        ${subLeader.length ? subLeader.map(x => barRow(x, maxSubRate)).join('') : '<div class="an-chart-empty">Not enough data yet</div>'}
+      </div>
+      <div class="an-chart-block">
+        <div class="an-chart-title">Niche Performance</div>
+        ${nicheLeader.length ? nicheLeader.map(x => barRow(x, maxNicheRate)).join('') : '<div class="an-chart-empty">Not enough data yet</div>'}
+      </div>
+      <div class="an-chart-block">
+        <div class="an-chart-title">Keyword Performance</div>
+        ${kwLeader.length ? kwLeader.map(x => barRow(x, maxKwRate)).join('') : '<div class="an-chart-empty">Not enough data yet</div>'}
+      </div>
+    </div>
+
+    <div class="an-log-header">
+      <span>Outreach Log <em style="color:var(--muted);font-size:.75rem;font-weight:400">(${total} total)</em></span>
+    </div>
+    <div class="an-log">${logHTML}</div>`;
+}
+
+function updateOutreachStatus(id, status) {
+  fetch(API + '/analytics', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, status })
+  }).then(() => {
+    // Update the row UI without full reload
+    const row = document.getElementById('an-row-' + id);
+    if (!row) return loadAnalytics();
+    const badge = row.querySelector('.an-status');
+    const STATUS_LABELS = { sent:'Sent', replied:'Replied', interested:'Interested', booked:'Booked', closed:'Closed', ghosted:'Ghosted' };
+    const STATUS_COLOR  = { sent:'var(--muted)', replied:'var(--accent)', interested:'#f59e0b', booked:'var(--success)', closed:'#22c55e', ghosted:'rgba(255,255,255,.2)' };
+    if (badge) { badge.textContent = STATUS_LABELS[status]||status; badge.style.background = (STATUS_COLOR[status]||'var(--muted)')+'20'; badge.style.color = STATUS_COLOR[status]||'var(--muted)'; }
+    row.querySelectorAll('.an-status-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase() === (STATUS_LABELS[status]||status).toLowerCase()));
+    toast(STATUS_LABELS[status] + ' marked', 'ok');
+  }).catch(() => toast('Failed to update', 'err'));
+}
+
+function saveOutreachNote(id, notes) {
+  fetch(API + '/analytics', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, notes })
+  }).catch(() => {});
+}
