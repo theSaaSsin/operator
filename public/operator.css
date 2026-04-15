@@ -272,7 +272,12 @@ tbody tr:hover td{background:rgba(255,255,255,0.02);}
 
 /* ── OPENER ── */
 .feed-opener{background:rgba(255,42,42,.06);border:1px solid rgba(255,42,42,.15);border-radius:8px;padding:10px 12px;}
+.feed-opener-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
 .feed-opener-text{font-size:.8rem;color:var(--text);font-style:italic;line-height:1.5;}
+.btn-copy-opener{background:none;border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:3px 8px;color:var(--muted);cursor:pointer;font-size:.68rem;display:flex;align-items:center;gap:4px;transition:all .15s;}
+.btn-copy-opener:hover{color:var(--accent);border-color:var(--accent);}
+.btn-copy-opener.copy-flash{color:var(--accent);border-color:var(--accent);animation:copyPulse .4s ease;}
+@keyframes copyPulse{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
 .feed-time{font-size:.68rem;color:var(--muted);margin-left:auto;align-self:center;}
 .feed-loading{text-align:center;padding:40px;color:var(--muted);font-size:.85rem;}
 .feed-loading i{font-size:1.5rem;margin-bottom:8px;display:block;animation:spin .8s linear infinite;}

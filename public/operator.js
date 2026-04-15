@@ -2523,7 +2523,12 @@ function renderFeedCard(post) {
 
     <!-- OPENER -->
     <div class="feed-opener">
-      <span class="intel-label" style="color:var(--accent);margin-bottom:4px;display:block">Send this</span>
+      <div class="feed-opener-head">
+        <span class="intel-label" style="color:var(--accent)">Send this</span>
+        <button class="btn-copy-opener" onclick="copyOpener('${pid}')" title="Copy message">
+          <i class="fas fa-copy"></i>
+        </button>
+      </div>
       <span class="feed-opener-text">"${esc(buildTypeOpener(lt.key, a, post))}"</span>
     </div>
 
@@ -2533,6 +2538,9 @@ function renderFeedCard(post) {
     <div class="feed-actions">
       <button class="btn btn-primary btn-sm" onclick="buildFromLead('${pid}')" style="background:${lt.color}">
         <i class="fas fa-bolt"></i> Build ${lt.key === 'direct' ? 'Demo' : lt.key === 'operator' ? 'Pitch' : 'Deck'}
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="copyLeadIntel('${pid}')">
+        <i class="fas fa-clipboard"></i> Copy Intel
       </button>
       <button class="btn btn-secondary btn-sm" onclick="saveFeedLead('${pid}')">
         <i class="fas fa-user-plus"></i> Save
@@ -2545,6 +2553,66 @@ function renderFeedCard(post) {
       </a>
     </div>
   </div>`;
+}
+
+/* ── COPY HELPERS ── */
+function copyOpener(pid) {
+  const d = window._feedData[pid];
+  if (!d) return;
+  const msg = buildTypeOpener(d.a.leadType.key, d.a, d.post);
+  navigator.clipboard.writeText(msg).then(() => {
+    flashCopyBtn(pid, '.btn-copy-opener');
+  });
+}
+
+function copyLeadIntel(pid) {
+  const d = window._feedData[pid];
+  if (!d) return;
+  const { a, post } = d;
+  const lt = a.leadType;
+  const lines = [
+    `--- LEAD INTEL ---`,
+    `Source: ${post.platform === 'reddit' ? 'r/' + post.subreddit : post.platform} | ${post.url}`,
+    `Niche: ${a.niche}`,
+    `Lead Type: ${lt.label} (${lt.tagline})`,
+    `Urgency: ${a.urgencyLabel} (${a.urgency}/100) — ${a.urgencyReason}`,
+    ``,
+    `Problem: ${a.problem}`,
+    `Root Cause: ${a.cause}`,
+    `Angle: ${a.angle}`,
+    `Demo Focus: ${a.demoFocus}`,
+    ``,
+    `--- OPENER ---`,
+    buildTypeOpener(lt.key, a, post),
+    ``,
+    `--- ORIGINAL POST ---`,
+    post.title,
+    post.text && post.text !== post.title ? post.text : '',
+    ``,
+    `Tip: ${a.tip.replace(/[🔥⚡💬🔍]/g, '').trim()}`
+  ].filter(l => l !== undefined).join('\n');
+
+  navigator.clipboard.writeText(lines).then(() => {
+    const card = document.getElementById('fc-' + pid);
+    if (!card) return;
+    const btn = card.querySelector('[onclick*="copyLeadIntel"]');
+    if (btn) {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i> Copied';
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.color = 'var(--accent)';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.borderColor = ''; btn.style.color = ''; }, 1500);
+    }
+  });
+}
+
+function flashCopyBtn(pid, sel) {
+  const card = document.getElementById('fc-' + pid);
+  if (!card) return;
+  const btn = card.querySelector(sel);
+  if (!btn) return;
+  btn.classList.add('copy-flash');
+  setTimeout(() => btn.classList.remove('copy-flash'), 1200);
 }
 
 /* ══════════════════════════════════
