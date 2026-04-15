@@ -2427,6 +2427,8 @@ async function fetchFeed(keyword) {
     meta.innerHTML = `${allLeads.length} quality leads · ${rdCount} Reddit${xNote}${hnNote}${gNote}${typeNote}${aiNote} · "${keyword}"`;
     grid.innerHTML = allLeads.map(p => renderFeedCard(p)).join('');
 
+    logFeedScan(keyword, allLeads.length, allLeads);
+
     // Show type filter bar
     const filterBar = document.getElementById('lead-type-filters');
     if (filterBar) filterBar.style.display = 'flex';
@@ -2575,6 +2577,7 @@ function copyOpener(pid) {
   const msg = buildTypeOpener(d.a.leadType.key, d.a, d.post);
   navigator.clipboard.writeText(msg).then(() => {
     flashCopyBtn(pid, '.btn-copy-opener');
+    logFeedAction('copies');
   });
 }
 
@@ -2606,6 +2609,7 @@ function copyLeadIntel(pid) {
   ].filter(l => l !== undefined).join('\n');
 
   navigator.clipboard.writeText(lines).then(() => {
+    logFeedAction('intelCopies');
     const card = document.getElementById('fc-' + pid);
     if (!card) return;
     const btn = card.querySelector('[onclick*="copyLeadIntel"]');
@@ -2626,6 +2630,47 @@ function flashCopyBtn(pid, sel) {
   if (!btn) return;
   btn.classList.add('copy-flash');
   setTimeout(() => btn.classList.remove('copy-flash'), 1200);
+}
+
+/* ── FEED ACTIVITY TRACKER ── */
+function getFeedActivity() {
+  try { return JSON.parse(localStorage.getItem('feedActivity') || 'null') || _defaultFeedActivity(); }
+  catch { return _defaultFeedActivity(); }
+}
+function _defaultFeedActivity() {
+  return { scans: [], actions: { copies: 0, intelCopies: 0, hotMarks: 0, weakMarks: 0, saves: 0, demosBuilt: 0 }, topKeywords: {}, topNiches: {}, topSubreddits: {}, avgScore: 0, totalLeadsFound: 0, highIntentCount: 0, criticalCount: 0, sessionStart: new Date().toISOString() };
+}
+function saveFeedActivity(fa) {
+  localStorage.setItem('feedActivity', JSON.stringify(fa));
+}
+function logFeedScan(keyword, leadsFound, leads) {
+  const fa = getFeedActivity();
+  fa.scans.push({ keyword, leadsFound, ts: Date.now() });
+  fa.totalLeadsFound += leadsFound;
+  if (!fa.topKeywords[keyword]) fa.topKeywords[keyword] = 0;
+  fa.topKeywords[keyword] += leadsFound;
+  let scoreSum = 0;
+  leads.forEach(l => {
+    scoreSum += l._score || 0;
+    if ((l._score || 0) >= 70) fa.highIntentCount++;
+    if ((l._score || 0) >= 85) fa.criticalCount++;
+    const a = analyzePost(l.title, l.text, l._score);
+    const niche = a.niche || 'Unknown';
+    if (!fa.topNiches[niche]) fa.topNiches[niche] = 0;
+    fa.topNiches[niche]++;
+    const sub = l.subreddit || l.platform || 'other';
+    if (!fa.topSubreddits[sub]) fa.topSubreddits[sub] = 0;
+    fa.topSubreddits[sub]++;
+  });
+  if (fa.totalLeadsFound > 0) {
+    fa.avgScore = Math.round(((fa.avgScore * (fa.totalLeadsFound - leadsFound)) + scoreSum) / fa.totalLeadsFound);
+  }
+  saveFeedActivity(fa);
+}
+function logFeedAction(type) {
+  const fa = getFeedActivity();
+  if (fa.actions[type] !== undefined) fa.actions[type]++;
+  saveFeedActivity(fa);
 }
 
 /* ── WEAK LEAD MANAGEMENT ── */
@@ -2657,6 +2702,7 @@ function markWeakLead(pid) {
     card.style.transform = 'scale(.96)';
     setTimeout(() => card.remove(), 300);
   }
+  logFeedAction('weakMarks');
   toast('Marked as weak — hidden from future feeds', 'ok');
 }
 
@@ -2703,6 +2749,7 @@ function markHotLead(pid) {
       }, 200);
     }
   }
+  logFeedAction('hotMarks');
   toast('⭐ Starred as hot lead', 'ok');
 }
 
@@ -3146,6 +3193,7 @@ Return ONLY a JSON object with exactly these 3 fields — no other text:
 async function buildFromLead(postId) {
   const d = window._feedData && window._feedData[postId];
   if (!d) { toast('Lead data not found — try re-fetching', 'err'); return; }
+  logFeedAction('demosBuilt');
   const { post, a } = d;
   const title     = post.title  || '';
   const author    = post.author || 'unknown';
@@ -3500,6 +3548,7 @@ async function saveFeedLead(postId) {
       const btn = card.querySelector('.btn');
       if (btn) btn.innerHTML = '<i class="fas fa-check"></i> Saved';
     }
+    logFeedAction('saves');
     toast('Lead saved to CRM', 'ok');
   } catch { toast('Could not save lead', 'err'); }
 }
@@ -3792,145 +3841,243 @@ async function loadAnalytics() {
   const body = document.getElementById('an-body');
   if (!body) return;
   body.innerHTML = '<div class="an-loading"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  let outreachRows = [];
   try {
     const data = await fetch(API + '/analytics').then(r => r.json());
-    renderAnalytics(data.outreach || []);
-  } catch {
-    body.innerHTML = '<div class="an-empty"><i class="fas fa-exclamation-circle"></i><p>Could not load analytics</p></div>';
-  }
+    outreachRows = data.outreach || [];
+  } catch { /* server may be down — still show feed stats */ }
+  renderAnalytics(outreachRows);
 }
 
 function renderAnalytics(rows) {
   const body = document.getElementById('an-body');
   if (!body) return;
 
-  if (!rows.length) {
-    body.innerHTML = '<div class="an-empty"><i class="fas fa-chart-bar"></i><p>No outreach logged yet — copy a DM from the Lead Feed to start tracking</p></div>';
+  const fa = getFeedActivity();
+  const hotLeads = getHotLeads();
+  const weakLeads = getWeakLeads();
+  const hasActivity = fa.scans.length > 0 || rows.length > 0;
+
+  if (!hasActivity) {
+    body.innerHTML = `<div class="an-empty"><i class="fas fa-chart-bar"></i><p>No data yet — scan the Lead Feed to start building analytics</p></div>`;
     return;
   }
 
-  // ── Compute stats ──
-  const total     = rows.length;
-  const replied   = rows.filter(r => ['replied','interested','booked','closed'].includes(r.status)).length;
-  const booked    = rows.filter(r => ['booked','closed'].includes(r.status)).length;
-  const replyRate = total ? Math.round((replied / total) * 100) : 0;
-  const bookRate  = total ? Math.round((booked  / total) * 100) : 0;
+  // ── FEED ACTIVITY STATS ──
+  const totalScans = fa.scans.length;
+  const totalLeads = fa.totalLeadsFound;
+  const act = fa.actions;
+  const avgPerScan = totalScans ? Math.round(totalLeads / totalScans) : 0;
 
-  // Subreddit leaderboard (reply rate per sub)
-  const subMap = {};
-  rows.forEach(r => {
-    const s = r.subreddit || 'unknown';
-    if (!subMap[s]) subMap[s] = { sent: 0, replied: 0 };
-    subMap[s].sent++;
-    if (['replied','interested','booked','closed'].includes(r.status)) subMap[s].replied++;
-  });
-  const subLeader = Object.entries(subMap)
-    .map(([k, v]) => ({ label: 'r/' + k, sent: v.sent, replied: v.replied, rate: v.sent ? Math.round((v.replied / v.sent) * 100) : 0 }))
-    .sort((a, b) => b.rate - a.rate).slice(0, 5);
+  // Top keywords by leads found
+  const kwEntries = Object.entries(fa.topKeywords).sort((a,b) => b[1] - a[1]).slice(0, 6);
+  const maxKwLeads = Math.max(...kwEntries.map(x => x[1]), 1);
 
-  // Niche leaderboard
-  const nicheMap = {};
-  rows.forEach(r => {
-    const n = r.niche || 'unknown';
-    if (!nicheMap[n]) nicheMap[n] = { sent: 0, replied: 0 };
-    nicheMap[n].sent++;
-    if (['replied','interested','booked','closed'].includes(r.status)) nicheMap[n].replied++;
-  });
-  const nicheLeader = Object.entries(nicheMap)
-    .map(([k, v]) => ({ label: k, sent: v.sent, replied: v.replied, rate: v.sent ? Math.round((v.replied / v.sent) * 100) : 0 }))
-    .sort((a, b) => b.rate - a.rate).slice(0, 5);
+  // Top niches by leads found
+  const nicheEntries = Object.entries(fa.topNiches).sort((a,b) => b[1] - a[1]).slice(0, 6);
+  const maxNicheLeads = Math.max(...nicheEntries.map(x => x[1]), 1);
 
-  // Keyword leaderboard
-  const kwMap = {};
-  rows.forEach(r => {
-    const k = r.keyword || 'unknown';
-    if (!kwMap[k]) kwMap[k] = { sent: 0, replied: 0 };
-    kwMap[k].sent++;
-    if (['replied','interested','booked','closed'].includes(r.status)) kwMap[k].replied++;
-  });
-  const kwLeader = Object.entries(kwMap)
-    .map(([k, v]) => ({ label: '"' + k + '"', sent: v.sent, replied: v.replied, rate: v.sent ? Math.round((v.replied / v.sent) * 100) : 0 }))
-    .sort((a, b) => b.rate - a.rate).slice(0, 5);
+  // Top subreddits by leads found
+  const subEntries = Object.entries(fa.topSubreddits).sort((a,b) => b[1] - a[1]).slice(0, 6);
+  const maxSubLeads = Math.max(...subEntries.map(x => x[1]), 1);
 
-  const maxSubRate   = Math.max(...subLeader.map(x => x.rate), 1);
-  const maxNicheRate = Math.max(...nicheLeader.map(x => x.rate), 1);
-  const maxKwRate    = Math.max(...kwLeader.map(x => x.rate), 1);
-
-  function barRow(item, max) {
-    const pct = Math.round((item.rate / max) * 100);
-    const color = item.rate >= 30 ? 'var(--success)' : item.rate >= 15 ? 'var(--accent)' : 'rgba(255,255,255,.25)';
+  function countBar(label, val, max, color) {
+    const pct = Math.round((val / max) * 100);
     return `<div class="an-bar-row">
-      <span class="an-bar-label">${item.label}</span>
+      <span class="an-bar-label">${label}</span>
       <div class="an-bar-track"><div class="an-bar-fill" style="width:${pct}%;background:${color}"></div></div>
-      <span class="an-bar-stat">${item.replied}/${item.sent} <em>${item.rate}%</em></span>
+      <span class="an-bar-stat"><em>${val}</em></span>
     </div>`;
   }
 
-  // ── Status badge ──
-  const STATUS_LABELS = { sent:'Sent', replied:'Replied', interested:'Interested', booked:'Booked', closed:'Closed', ghosted:'Ghosted' };
-  const STATUS_COLOR  = { sent:'var(--muted)', replied:'var(--accent)', interested:'#f59e0b', booked:'var(--success)', closed:'#22c55e', ghosted:'rgba(255,255,255,.2)' };
+  // Recent scan timeline (last 10)
+  const recentScans = fa.scans.slice(-10).reverse();
+  const scanTimelineHTML = recentScans.length ? recentScans.map(s => {
+    const ago = timeAgo(s.ts);
+    const leadsColor = s.leadsFound >= 5 ? 'var(--success)' : s.leadsFound >= 2 ? '#f59e0b' : 'var(--muted)';
+    return `<div class="an-scan-row">
+      <span class="an-scan-kw">"${esc(s.keyword)}"</span>
+      <span class="an-scan-leads" style="color:${leadsColor}">${s.leadsFound} leads</span>
+      <span class="an-scan-time">${ago}</span>
+    </div>`;
+  }).join('') : '<div class="an-chart-empty">No scans yet</div>';
 
-  function statusBadge(s) {
-    return `<span class="an-status" style="background:${STATUS_COLOR[s]||'var(--muted)'}20;color:${STATUS_COLOR[s]||'var(--muted)'};">${STATUS_LABELS[s]||s}</span>`;
-  }
+  // ── FEED ACTIVITY HTML ──
+  const feedHTML = `
+    <div class="an-section-label"><i class="fas fa-rss"></i> Feed Activity</div>
+    <div class="an-stats-row an-stats-6">
+      <div class="an-stat"><div class="an-stat-val">${totalScans}</div><div class="an-stat-label">Scans</div></div>
+      <div class="an-stat"><div class="an-stat-val" style="color:var(--accent)">${totalLeads}</div><div class="an-stat-label">Leads Found</div></div>
+      <div class="an-stat"><div class="an-stat-val" style="color:#eab308">${fa.highIntentCount}</div><div class="an-stat-label">High Intent</div></div>
+      <div class="an-stat"><div class="an-stat-val" style="color:#ef4444">${fa.criticalCount}</div><div class="an-stat-label">Critical</div></div>
+      <div class="an-stat"><div class="an-stat-val">${avgPerScan}</div><div class="an-stat-label">Avg / Scan</div></div>
+      <div class="an-stat"><div class="an-stat-val">${fa.avgScore}</div><div class="an-stat-label">Avg Score</div></div>
+    </div>
 
-  function statusBtns(id, current) {
-    return ['replied','booked','closed','ghosted'].map(s =>
-      `<button class="an-status-btn${current===s?' active':''}" onclick="updateOutreachStatus(${id},'${s}')" style="--sc:${STATUS_COLOR[s]}">${STATUS_LABELS[s]}</button>`
-    ).join('');
-  }
-
-  // ── Log rows ──
-  const logHTML = rows.slice(0, 60).map(r => `
-    <div class="an-log-row" id="an-row-${r.id}">
-      <div class="an-log-main">
-        <div class="an-log-who">
-          <span class="an-log-author">@${esc(r.author)}</span>
-          ${r.subreddit ? `<span class="an-log-sub">r/${esc(r.subreddit)}</span>` : ''}
-          ${r.niche     ? `<span class="an-log-niche">${esc(r.niche)}</span>` : ''}
-        </div>
-        <div class="an-log-title">${esc((r.postTitle||'').substring(0,80))}${(r.postTitle||'').length>80?'…':''}</div>
-        <div class="an-log-meta">
-          ${new Date(r.timestamp).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}
-          ${r.keyword ? ` · <em>${esc(r.keyword)}</em>` : ''}
-          ${r.demoUrl  ? ` · <a href="${esc(r.demoUrl)}" target="_blank" rel="noopener" style="color:var(--accent)">Demo ↗</a>` : ''}
-          ${r.postUrl  ? ` · <a href="${esc(r.postUrl)}"  target="_blank" rel="noopener" style="color:var(--muted)">Post ↗</a>` : ''}
-        </div>
-      </div>
-      <div class="an-log-right">
-        ${statusBadge(r.status)}
-        <div class="an-log-actions">${statusBtns(r.id, r.status)}</div>
-        <textarea class="an-note" placeholder="Notes…" onblur="saveOutreachNote(${r.id},this.value)">${esc(r.notes||'')}</textarea>
-      </div>
-    </div>`).join('');
-
-  body.innerHTML = `
-    <div class="an-stats-row">
-      <div class="an-stat"><div class="an-stat-val">${total}</div><div class="an-stat-label">DMs Sent</div></div>
-      <div class="an-stat"><div class="an-stat-val" style="color:var(--accent)">${replied}</div><div class="an-stat-label">Replied · ${replyRate}%</div></div>
-      <div class="an-stat"><div class="an-stat-val" style="color:var(--success)">${booked}</div><div class="an-stat-label">Booked · ${bookRate}%</div></div>
-      <div class="an-stat"><div class="an-stat-val" style="color:#f59e0b">${rows.filter(r=>r.status==='interested').length}</div><div class="an-stat-label">Interested</div></div>
+    <div class="an-stats-row an-stats-6">
+      <div class="an-stat"><div class="an-stat-val">${act.copies + act.intelCopies}</div><div class="an-stat-label">Copied</div></div>
+      <div class="an-stat"><div class="an-stat-val" style="color:#eab308">${hotLeads.length}</div><div class="an-stat-label">⭐ Hot</div></div>
+      <div class="an-stat"><div class="an-stat-val" style="color:#ef4444">${Math.floor(weakLeads.length / 2)}</div><div class="an-stat-label">Weak</div></div>
+      <div class="an-stat"><div class="an-stat-val" style="color:var(--success)">${act.saves}</div><div class="an-stat-label">Saved to CRM</div></div>
+      <div class="an-stat"><div class="an-stat-val" style="color:var(--accent)">${act.demosBuilt}</div><div class="an-stat-label">Demos Built</div></div>
+      <div class="an-stat"><div class="an-stat-val">${act.intelCopies}</div><div class="an-stat-label">Intel Copies</div></div>
     </div>
 
     <div class="an-charts">
       <div class="an-chart-block">
-        <div class="an-chart-title">Subreddit Performance</div>
-        ${subLeader.length ? subLeader.map(x => barRow(x, maxSubRate)).join('') : '<div class="an-chart-empty">Not enough data yet</div>'}
+        <div class="an-chart-title">Top Keywords (by leads)</div>
+        ${kwEntries.length ? kwEntries.map(([k,v]) => countBar('"'+k+'"', v, maxKwLeads, 'var(--accent)')).join('') : '<div class="an-chart-empty">Scan more keywords</div>'}
       </div>
       <div class="an-chart-block">
-        <div class="an-chart-title">Niche Performance</div>
-        ${nicheLeader.length ? nicheLeader.map(x => barRow(x, maxNicheRate)).join('') : '<div class="an-chart-empty">Not enough data yet</div>'}
+        <div class="an-chart-title">Top Niches Detected</div>
+        ${nicheEntries.length ? nicheEntries.map(([k,v]) => countBar(k, v, maxNicheLeads, '#f59e0b')).join('') : '<div class="an-chart-empty">Scan more to detect</div>'}
       </div>
       <div class="an-chart-block">
-        <div class="an-chart-title">Keyword Performance</div>
-        ${kwLeader.length ? kwLeader.map(x => barRow(x, maxKwRate)).join('') : '<div class="an-chart-empty">Not enough data yet</div>'}
+        <div class="an-chart-title">Top Sources</div>
+        ${subEntries.length ? subEntries.map(([k,v]) => countBar(k.startsWith('r') ? k : 'r/'+k, v, maxSubLeads, 'var(--success)')).join('') : '<div class="an-chart-empty">Scan more to detect</div>'}
       </div>
     </div>
 
-    <div class="an-log-header">
-      <span>Outreach Log <em style="color:var(--muted);font-size:.75rem;font-weight:400">(${total} total)</em></span>
+    <div class="an-chart-block an-scan-timeline">
+      <div class="an-chart-title">Recent Scans</div>
+      ${scanTimelineHTML}
     </div>
-    <div class="an-log">${logHTML}</div>`;
+  `;
+
+  // ── OUTREACH STATS (only if there are rows) ──
+  let outreachHTML = '';
+  if (rows.length) {
+    const total     = rows.length;
+    const replied   = rows.filter(r => ['replied','interested','booked','closed'].includes(r.status)).length;
+    const booked    = rows.filter(r => ['booked','closed'].includes(r.status)).length;
+    const replyRate = total ? Math.round((replied / total) * 100) : 0;
+    const bookRate  = total ? Math.round((booked  / total) * 100) : 0;
+
+    const subMap = {};
+    rows.forEach(r => {
+      const s = r.subreddit || 'unknown';
+      if (!subMap[s]) subMap[s] = { sent: 0, replied: 0 };
+      subMap[s].sent++;
+      if (['replied','interested','booked','closed'].includes(r.status)) subMap[s].replied++;
+    });
+    const subLeader = Object.entries(subMap)
+      .map(([k, v]) => ({ label: 'r/' + k, sent: v.sent, replied: v.replied, rate: v.sent ? Math.round((v.replied / v.sent) * 100) : 0 }))
+      .sort((a, b) => b.rate - a.rate).slice(0, 5);
+
+    const nicheMap = {};
+    rows.forEach(r => {
+      const n = r.niche || 'unknown';
+      if (!nicheMap[n]) nicheMap[n] = { sent: 0, replied: 0 };
+      nicheMap[n].sent++;
+      if (['replied','interested','booked','closed'].includes(r.status)) nicheMap[n].replied++;
+    });
+    const nicheLeader = Object.entries(nicheMap)
+      .map(([k, v]) => ({ label: k, sent: v.sent, replied: v.replied, rate: v.sent ? Math.round((v.replied / v.sent) * 100) : 0 }))
+      .sort((a, b) => b.rate - a.rate).slice(0, 5);
+
+    const kwMap = {};
+    rows.forEach(r => {
+      const k = r.keyword || 'unknown';
+      if (!kwMap[k]) kwMap[k] = { sent: 0, replied: 0 };
+      kwMap[k].sent++;
+      if (['replied','interested','booked','closed'].includes(r.status)) kwMap[k].replied++;
+    });
+    const kwLeader = Object.entries(kwMap)
+      .map(([k, v]) => ({ label: '"' + k + '"', sent: v.sent, replied: v.replied, rate: v.sent ? Math.round((v.replied / v.sent) * 100) : 0 }))
+      .sort((a, b) => b.rate - a.rate).slice(0, 5);
+
+    const maxSubRate   = Math.max(...subLeader.map(x => x.rate), 1);
+    const maxNicheRate = Math.max(...nicheLeader.map(x => x.rate), 1);
+    const maxKwRate    = Math.max(...kwLeader.map(x => x.rate), 1);
+
+    function barRow(item, max) {
+      const pct = Math.round((item.rate / max) * 100);
+      const color = item.rate >= 30 ? 'var(--success)' : item.rate >= 15 ? 'var(--accent)' : 'rgba(255,255,255,.25)';
+      return `<div class="an-bar-row">
+        <span class="an-bar-label">${item.label}</span>
+        <div class="an-bar-track"><div class="an-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        <span class="an-bar-stat">${item.replied}/${item.sent} <em>${item.rate}%</em></span>
+      </div>`;
+    }
+
+    const STATUS_LABELS = { sent:'Sent', replied:'Replied', interested:'Interested', booked:'Booked', closed:'Closed', ghosted:'Ghosted' };
+    const STATUS_COLOR  = { sent:'var(--muted)', replied:'var(--accent)', interested:'#f59e0b', booked:'var(--success)', closed:'#22c55e', ghosted:'rgba(255,255,255,.2)' };
+
+    function statusBadge(s) {
+      return `<span class="an-status" style="background:${STATUS_COLOR[s]||'var(--muted)'}20;color:${STATUS_COLOR[s]||'var(--muted)'};">${STATUS_LABELS[s]||s}</span>`;
+    }
+
+    function statusBtns(id, current) {
+      return ['replied','booked','closed','ghosted'].map(s =>
+        `<button class="an-status-btn${current===s?' active':''}" onclick="updateOutreachStatus(${id},'${s}')" style="--sc:${STATUS_COLOR[s]}">${STATUS_LABELS[s]}</button>`
+      ).join('');
+    }
+
+    const logHTML = rows.slice(0, 60).map(r => `
+      <div class="an-log-row" id="an-row-${r.id}">
+        <div class="an-log-main">
+          <div class="an-log-who">
+            <span class="an-log-author">@${esc(r.author)}</span>
+            ${r.subreddit ? `<span class="an-log-sub">r/${esc(r.subreddit)}</span>` : ''}
+            ${r.niche     ? `<span class="an-log-niche">${esc(r.niche)}</span>` : ''}
+          </div>
+          <div class="an-log-title">${esc((r.postTitle||'').substring(0,80))}${(r.postTitle||'').length>80?'…':''}</div>
+          <div class="an-log-meta">
+            ${new Date(r.timestamp).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}
+            ${r.keyword ? ` · <em>${esc(r.keyword)}</em>` : ''}
+            ${r.demoUrl  ? ` · <a href="${esc(r.demoUrl)}" target="_blank" rel="noopener" style="color:var(--accent)">Demo ↗</a>` : ''}
+            ${r.postUrl  ? ` · <a href="${esc(r.postUrl)}"  target="_blank" rel="noopener" style="color:var(--muted)">Post ↗</a>` : ''}
+          </div>
+        </div>
+        <div class="an-log-right">
+          ${statusBadge(r.status)}
+          <div class="an-log-actions">${statusBtns(r.id, r.status)}</div>
+          <textarea class="an-note" placeholder="Notes…" onblur="saveOutreachNote(${r.id},this.value)">${esc(r.notes||'')}</textarea>
+        </div>
+      </div>`).join('');
+
+    outreachHTML = `
+      <div class="an-section-label"><i class="fas fa-paper-plane"></i> Outreach Performance</div>
+      <div class="an-stats-row">
+        <div class="an-stat"><div class="an-stat-val">${total}</div><div class="an-stat-label">DMs Sent</div></div>
+        <div class="an-stat"><div class="an-stat-val" style="color:var(--accent)">${replied}</div><div class="an-stat-label">Replied · ${replyRate}%</div></div>
+        <div class="an-stat"><div class="an-stat-val" style="color:var(--success)">${booked}</div><div class="an-stat-label">Booked · ${bookRate}%</div></div>
+        <div class="an-stat"><div class="an-stat-val" style="color:#f59e0b">${rows.filter(r=>r.status==='interested').length}</div><div class="an-stat-label">Interested</div></div>
+      </div>
+
+      <div class="an-charts">
+        <div class="an-chart-block">
+          <div class="an-chart-title">Subreddit Reply Rate</div>
+          ${subLeader.length ? subLeader.map(x => barRow(x, maxSubRate)).join('') : '<div class="an-chart-empty">Not enough data yet</div>'}
+        </div>
+        <div class="an-chart-block">
+          <div class="an-chart-title">Niche Reply Rate</div>
+          ${nicheLeader.length ? nicheLeader.map(x => barRow(x, maxNicheRate)).join('') : '<div class="an-chart-empty">Not enough data yet</div>'}
+        </div>
+        <div class="an-chart-block">
+          <div class="an-chart-title">Keyword Reply Rate</div>
+          ${kwLeader.length ? kwLeader.map(x => barRow(x, maxKwRate)).join('') : '<div class="an-chart-empty">Not enough data yet</div>'}
+        </div>
+      </div>
+
+      <div class="an-log-header">
+        <span>Outreach Log <em style="color:var(--muted);font-size:.75rem;font-weight:400">(${total} total)</em></span>
+      </div>
+      <div class="an-log">${logHTML}</div>
+    `;
+  } else {
+    outreachHTML = `
+      <div class="an-section-label"><i class="fas fa-paper-plane"></i> Outreach Performance</div>
+      <div class="an-outreach-empty">
+        <p>No DMs sent yet — build a demo from the Lead Feed and copy the message to start tracking outreach performance here.</p>
+      </div>
+    `;
+  }
+
+  // ── CLEAR BUTTON ──
+  const clearBtn = `<div class="an-clear-wrap"><button class="btn btn-secondary btn-sm" onclick="if(confirm('Clear all feed activity data?')){localStorage.removeItem('feedActivity');loadAnalytics();}"><i class="fas fa-trash"></i> Reset Feed Stats</button></div>`;
+
+  body.innerHTML = feedHTML + outreachHTML + clearBtn;
 }
 
 function updateOutreachStatus(id, status) {
