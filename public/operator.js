@@ -2389,7 +2389,12 @@ async function fetchFeed(keyword) {
     // Merge, deduplicate by post id (keep highest scorer), filter weak leads, sort desc
     const seen = new Set();
     const allLeads = [...scoredPosts, ...commentLeads, ...externalLeads]
-      .sort((a, b) => b._score - a._score)
+      .sort((a, b) => {
+        const aHot = isHotLead(a) ? 1 : 0;
+        const bHot = isHotLead(b) ? 1 : 0;
+        if (bHot !== aHot) return bHot - aHot;
+        return b._score - a._score;
+      })
       .filter(l => {
         if (isWeakLead(l)) return false;
         const key = l.id.split('_c')[0];
@@ -2470,8 +2475,9 @@ function renderFeedCard(post) {
   const desperateBanner = a.isDesparate
     ? `<div class="feed-critical-banner">🔥 DESPERATION SIGNAL — message now</div>`
     : '';
+  const hotClass = isHotLead(post) ? ' feed-card-hot' : '';
 
-  return `<div class="feed-card${a.isDesparate ? ' feed-card-critical' : ''}" id="fc-${esc(post.id)}" data-lead-type="${lt.key}">
+  return `<div class="feed-card${a.isDesparate ? ' feed-card-critical' : ''}${hotClass}" id="fc-${esc(post.id)}" data-lead-type="${lt.key}">
 
     ${desperateBanner}
 
@@ -2552,6 +2558,9 @@ function renderFeedCard(post) {
       <a class="btn btn-secondary btn-sm" href="${esc(post.url)}" target="_blank" rel="noopener">
         <i class="fas fa-arrow-up-right-from-square"></i>
       </a>
+      <button class="btn btn-hot btn-sm" onclick="markHotLead('${pid}')" title="Star as hot lead">
+        <i class="fas fa-star"></i> Hot
+      </button>
       <button class="btn btn-weak btn-sm" onclick="markWeakLead('${pid}')" title="Mark as weak lead">
         <i class="fas fa-ban"></i> Weak
       </button>
@@ -2649,6 +2658,52 @@ function markWeakLead(pid) {
     setTimeout(() => card.remove(), 300);
   }
   toast('Marked as weak — hidden from future feeds', 'ok');
+}
+
+/* ── HOT LEAD MANAGEMENT ── */
+function getHotLeads() {
+  try { return JSON.parse(localStorage.getItem('hotLeads') || '[]'); }
+  catch { return []; }
+}
+
+function isHotLead(post) {
+  const hot = getHotLeads();
+  return hot.includes(post.id);
+}
+
+function markHotLead(pid) {
+  const d = window._feedData[pid];
+  if (!d) return;
+  const { post } = d;
+  const hot = getHotLeads();
+
+  const card = document.getElementById('fc-' + pid);
+  if (hot.includes(post.id)) {
+    hot.splice(hot.indexOf(post.id), 1);
+    localStorage.setItem('hotLeads', JSON.stringify(hot));
+    if (card) card.classList.remove('feed-card-hot');
+    toast('Removed hot lead star', 'ok');
+    return;
+  }
+
+  hot.push(post.id);
+  localStorage.setItem('hotLeads', JSON.stringify(hot));
+
+  if (card) {
+    card.classList.add('feed-card-hot');
+    const grid = card.parentElement;
+    if (grid && grid.firstChild !== card) {
+      card.style.transition = 'opacity .2s, transform .2s';
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(-8px)';
+      setTimeout(() => {
+        grid.insertBefore(card, grid.firstChild);
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+      }, 200);
+    }
+  }
+  toast('⭐ Starred as hot lead', 'ok');
 }
 
 /* ══════════════════════════════════
