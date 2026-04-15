@@ -2386,11 +2386,12 @@ async function fetchFeed(keyword) {
       .filter(p => p.platform !== 'reddit')
       .map(p => ({ ...p, _score: Math.max(scorePost(p.title, p.text), 30), _source: 'external' }));
 
-    // Merge, deduplicate by post id (keep highest scorer), sort desc
+    // Merge, deduplicate by post id (keep highest scorer), filter weak leads, sort desc
     const seen = new Set();
     const allLeads = [...scoredPosts, ...commentLeads, ...externalLeads]
       .sort((a, b) => b._score - a._score)
       .filter(l => {
+        if (isWeakLead(l)) return false;
         const key = l.id.split('_c')[0];
         if (seen.has(key)) return false;
         seen.add(key);
@@ -2551,6 +2552,9 @@ function renderFeedCard(post) {
       <a class="btn btn-secondary btn-sm" href="${esc(post.url)}" target="_blank" rel="noopener">
         <i class="fas fa-arrow-up-right-from-square"></i>
       </a>
+      <button class="btn btn-weak btn-sm" onclick="markWeakLead('${pid}')" title="Mark as weak lead">
+        <i class="fas fa-ban"></i> Weak
+      </button>
     </div>
   </div>`;
 }
@@ -2613,6 +2617,38 @@ function flashCopyBtn(pid, sel) {
   if (!btn) return;
   btn.classList.add('copy-flash');
   setTimeout(() => btn.classList.remove('copy-flash'), 1200);
+}
+
+/* ── WEAK LEAD MANAGEMENT ── */
+function getWeakLeads() {
+  try { return JSON.parse(localStorage.getItem('WeakLeads') || '[]'); }
+  catch { return []; }
+}
+
+function isWeakLead(post) {
+  const dominated = getWeakLeads();
+  const key = (post.author || '') + '|' + (post.subreddit || post.platform || '');
+  return dominated.includes(key) || dominated.includes(post.id);
+}
+
+function markWeakLead(pid) {
+  const d = window._feedData[pid];
+  if (!d) return;
+  const { post } = d;
+  const weak = getWeakLeads();
+  const key = (post.author || '') + '|' + (post.subreddit || post.platform || '');
+  if (!weak.includes(key)) weak.push(key);
+  if (!weak.includes(post.id)) weak.push(post.id);
+  localStorage.setItem('WeakLeads', JSON.stringify(weak));
+
+  const card = document.getElementById('fc-' + pid);
+  if (card) {
+    card.style.transition = 'opacity .3s, transform .3s';
+    card.style.opacity = '0';
+    card.style.transform = 'scale(.96)';
+    setTimeout(() => card.remove(), 300);
+  }
+  toast('Marked as weak — hidden from future feeds', 'ok');
 }
 
 /* ══════════════════════════════════
