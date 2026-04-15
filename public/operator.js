@@ -1712,108 +1712,213 @@ function esc(str) {
 ══════════════════════════════════ */
 
 /* ── LEAD QUALITY FILTERS ── */
+
+// Tier 1 — Desperation: existential business pain, highest urgency
+const DESPERATION_SIGNALS = [
+  'about to give up','considering quitting','about to quit','about to close',
+  'going under','on the verge of closing','thinking of shutting down','closing down',
+  'running out of money','running out of savings','burning through savings',
+  'dipping into savings','can\'t pay myself','can\'t pay my bills','can\'t pay rent',
+  'had to take a loan','going into debt','maxed out','last resort',
+  'last few clients','down to my last','only have one client left',
+  'lost everything','nothing left to try','reached my limit',
+  'seriously considering','genuinely considering','not sure i can continue',
+  'this is make or break','make or break month','i give up','ready to quit',
+  'kill my business','end my business','pivot out of','stepping away',
+  'months of nothing','six months of nothing','been struggling for months',
+  'year of nothing','a year in and nothing','almost a year with no',
+  'spent thousands and nothing','spent hundreds and nothing',
+  'thousands in ads with zero','spent x on ads with nothing',
+  'burned through budget','wasted my budget','wasted my savings',
+  'negative roi','no roi','money pit','hemorrhaging money'
+];
+
+// Tier 2 — Real intent: explicit, direct pain language
 const REAL_INTENT = [
-  // Direct no-client pain
+  // Zero clients
   'no clients','zero clients','no customers','no work','no jobs',
-  'no enquiries','no leads','no sales','no bookings','no response',
-  'no one is buying','nobody is contacting','nobody is enquiring',
+  'no enquiries','no leads','no sales','no bookings','zero leads',
+  'no response','no replies','nobody is contacting','nobody enquiring',
+  'no one is buying','not getting any clients','not getting any leads',
+  'not getting any bookings','not getting any enquiries','zero bookings',
+  'zero sales','zero customers','0 clients','0 leads','0 sales',
   // Tried and failed
   'tried everything','nothing is working','nothing working','nothing converting',
-  'still not getting','not getting any','not getting clients','not getting leads',
+  'still not getting','tried multiple things','tried different things',
   'ads not working','ads aren\'t working','ads not converting',
-  'cold outreach not working','cold outreach no response','no replies',
-  'website not converting','website not getting','social media not working',
-  'posting every day','posting content','posting but',
+  'ads not bringing','wasting money on ads','pouring money into ads',
+  'cold outreach not working','cold outreach no response','cold email not working',
+  'cold dms not working','nobody replies','nobody responding',
+  'website not converting','website not getting leads','traffic but no leads',
+  'traffic but no sales','visitors but no enquiries','clicks but no conversions',
+  'social media not working','posting every day no clients','posting daily no leads',
+  'posting but nothing','content not converting','content getting no leads',
+  'got traffic but','tons of views but','good engagement but no',
+  // Specific channel failures
+  'google ads not working','facebook ads not working','instagram ads not working',
+  'linkedin not working','cold calling not working','networking not working',
+  'seo not working','not ranking','can\'t rank','website not ranking',
   // Feast or famine / slow
   'dead month','slow month','quiet month','dead period','quiet period',
   'feast or famine','famine phase','dried up','referrals dried up',
-  'business is slow','business has slowed','things are slow',
-  // Seeking help
-  'how do i get','how can i get','where do i find','how to find clients',
-  'how to get my first client','first client','can\'t get clients',
-  'cant get clients','struggling to find clients','can\'t find clients',
-  'what am i doing wrong','any advice on getting','any tips on getting',
+  'referral ran out','no more referrals','word of mouth dried up',
+  'business is slow','business has slowed','things are slow','extremely slow',
+  'really slow','so slow','painfully slow','almost nothing coming in',
+  'barely any work','barely any clients','a trickle','hardly any',
+  // Seeking help / lost
+  'how do i get clients','how can i get clients','where do i find clients',
+  'how to find clients','how to get my first client','struggling to get clients',
+  'can\'t get clients','cant get clients','can\'t find clients',
+  'what am i doing wrong','not sure what i\'m doing wrong','any advice on getting',
+  'any tips for getting clients','how to actually get clients',
+  'what actually works','what works for getting','what worked for you',
+  // Proposals / pipeline failures
+  'proposals not converting','quotes not converting','proposals ignored',
+  'getting ghosted','prospects ghosting','clients ghosting','being ghosted',
+  'no one responds after quote','send proposals and hear nothing',
+  'follow up and nothing','follow ups ignored',
   // Losing / at risk
   'losing clients','lost clients','losing customers','clients leaving',
-  'churn','client cancelled','client left'
+  'clients churning','losing accounts','client cancelled','client left',
+  'big client left','lost a major client'
 ];
 
+// Tier 3 — Soft intent: less explicit but relevant when paired with buyer context
+const SOFT_INTENT = [
+  'how do i','how can i','any advice','struggling with','not getting',
+  'need help with','what should i do','why am i not','anyone else struggle',
+  'anyone else find','how to get','help me understand','where do i',
+  'getting nowhere','slow month','quiet period','any tips',
+  'looking for clients','looking for customers','looking for leads',
+  'find clients','get customers','grow my client base','build my client base',
+  'generate leads','attract clients','market my business','promote my business',
+  'get more clients','get more customers','get more leads','scale my business',
+  'struggling to scale','struggling to grow','hard to grow','hard to scale',
+  'need more work','need more projects','need more revenue',
+  'not making enough','not profitable enough','not earning enough'
+];
+
+// Buyer context — confirms they\'re a business operator
 const BUYER_SIGNALS = [
-  'clients','customers','leads','bookings','sales','revenue',
-  'enquiries','appointments','contracts','jobs','business','freelance'
+  'clients','customers','leads','bookings','sales','revenue','enquiries',
+  'appointments','contracts','jobs','business','freelance','my business',
+  'my clients','my customers','my agency','my studio','my practice',
+  'my firm','my company','my shop','my service','my offer'
 ];
 
 const BUSINESS_SIGNALS = [
   'business','freelance','self-employed','self employed','service','offer',
   'charge','rate','pricing','invoice','contract','client','customer',
-  'revenue','income','money','pay','work','project'
+  'revenue','income','money','pay','work','project','agency','studio',
+  'practice','firm','company','shop','trade','sole trader','limited company'
 ];
 
+// Financial pressure — amplifies urgency when detected alongside pain
+const FINANCIAL_PRESSURE = [
+  'can\'t pay','can\'t afford','struggling financially','financial pressure',
+  'burning money','burning savings','burning cash','negative cash flow',
+  'broke','going broke','almost broke','nearly broke','in the red',
+  'in debt','more debt','mounting debt','overdraft','maxed credit',
+  'emergency fund gone','savings gone','no savings left','down to nothing',
+  'barely breaking even','not breaking even','losing money each month',
+  'spending more than earning','costs exceeding income','not profitable',
+  'in the hole','operating at a loss','can\'t sustain','unsustainable'
+];
+
+// Time pressure — shows urgency window is closing
+const TIME_PRESSURE = [
+  'this month','end of month','by end of','before the end',
+  'need it now','need this asap','asap','right now','immediately',
+  'this week','by friday','by monday','within the week',
+  'last month was terrible','last month was dead','past few months',
+  'for months now','months of this','three months','six months','a year of this',
+  'running out of time','time is running out','time sensitive',
+  'urgent','urgently','desperate','desperately'
+];
+
+// Hard excludes — disqualify immediately
 const HARD_EXCLUDE = [
   // Job hunting / employment
-  'looking for a job','job posting','job offer','hiring','apply for',
-  'resume','cv','career advice','employee','salary','interview',
-  // Mental health (use "client" in therapy context)
-  'therapist','therapy','mental health','anxiety','depression','counsell',
-  // Success posts — they already solved it
-  'i got a client','landed a client','just closed','i closed',
-  'signed a client','won a client','got my first client','finally got',
+  'looking for a job','job posting','job offer','hiring manager','apply for',
+  'resume','cv','career advice','employee looking','salary negotiation','interview tips',
+  // Mental health (therapy client context)
+  'therapist','therapy session','mental health client','counselling client',
+  'my therapist','seeing a therapist',
+  // Success posts — already solved it
+  'i got a client','landed a client','just closed','i closed a deal',
+  'signed a client','won a client','got my first client','finally got clients',
   'i made it','hit my goal','reached my target','celebrating',
-  'sharing my journey','my story','how i went from','here\'s what worked',
-  'case study','i scaled','6 figures','7 figures','i earn','i make',
+  'sharing my journey','how i went from','here\'s what worked for me',
+  'case study','i scaled to','6 figures','7 figures','i earn','i make $',
+  'grew to','built to','reached',
   // Unrelated business models
-  'passive income','dropship','amazon fba','print on demand',
-  'crypto','nft','affiliate','adsense','youtube channel',
+  'passive income course','dropship','amazon fba','print on demand',
+  'crypto','nft','affiliate marketing','adsense','youtube channel',
   // Offering services (they\'re a seller not a buyer)
-  'dm me','comment below','link in bio','i can help you','i offer',
-  'my service','check out my','visit my','free consultation for'
+  'dm me if','comment below','link in bio','i can help you with',
+  'check out my','visit my website','free consultation for',
+  'i offer','my services include','services starting at','prices start at'
 ];
 
 function hasBusinessContext(t) {
   return BUSINESS_SIGNALS.some(k => t.includes(k));
 }
 
-// Softer intent phrases — still relevant, just less explicit pain
-const SOFT_INTENT = [
-  'how do i','how can i','any advice','struggling','not getting',
-  'need help','what should i do','why am i not','anyone else',
-  'how to get','help me','where do i','getting nowhere',
-  'slow month','quiet period','any tips','looking for clients',
-  'find clients','get customers','grow my','build my client',
-  'generate leads','attract clients','market my','promote my'
-];
-
 function scorePost(title, text, isComment = false) {
   const raw = (title + ' ' + text).toLowerCase();
 
-  // Hard excludes — return 0 immediately
+  // Hard excludes — reject immediately
   if (HARD_EXCLUDE.some(k => raw.includes(k))) return 0;
 
-  // Must have business context (comments are already business-context-adjacent)
+  // Must have business context (comments already adjacent)
   if (!isComment && !hasBusinessContext(raw)) return 0;
 
   let score = 0;
-  const hasBuyer = BUYER_SIGNALS.some(k => raw.includes(k));
+  const hasBuyer    = BUYER_SIGNALS.some(k => raw.includes(k));
+  const hasDesper   = DESPERATION_SIGNALS.some(k => raw.includes(k));
+  const hasFinancial = FINANCIAL_PRESSURE.some(k => raw.includes(k));
+  const hasTimePressure = TIME_PRESSURE.some(k => raw.includes(k));
 
-  // Strong pain signal — high confidence lead (passes alone)
-  if (REAL_INTENT.some(k => raw.includes(k))) {
+  // ── Tier 1: Desperation — near-certain high-priority lead
+  if (hasDesper) {
+    score += 75;
+  }
+  // ── Tier 2: Real explicit pain
+  else if (REAL_INTENT.some(k => raw.includes(k))) {
     score += 50;
-  } else if (SOFT_INTENT.some(k => raw.includes(k)) && hasBuyer) {
-    // Softer intent only counts when combined with a specific buyer keyword
+  }
+  // ── Tier 3: Soft intent (only with buyer signal)
+  else if (SOFT_INTENT.some(k => raw.includes(k)) && hasBuyer) {
     score += 25;
-  } else {
-    return 0; // no clear intent + buyer combo → not a lead
+  }
+  // No detectable pain/intent → not a lead
+  else {
+    return 0;
   }
 
-  // Buyer context bonus (on top of base)
-  if (hasBuyer) score += 20;
+  // Amplifiers — stack on top of base
+  if (hasBuyer)       score += 10;  // confirmed business context
+  if (hasFinancial)   score += 12;  // financial pressure = urgency
+  if (hasTimePressure) score += 10; // time pressure = urgency
 
-  // Active question
-  if (title.includes('?') || raw.includes('?')) score += 20;
+  // Active question in title (genuine ask, not a rant)
+  if (title.includes('?')) score += 8;
+  else if (raw.includes('?')) score += 5;
 
-  // Urgency
-  if (/now|today|this week|this month|currently|right now/.test(raw)) score += 10;
-  if (/desperate|urgent|asap|really struggling|at a loss|nothing works/.test(raw)) score += 15;
+  // Multiple pain signals stacking (they wrote a lot of pain)
+  const painCount = [
+    REAL_INTENT.some(k => raw.includes(k)),
+    DESPERATION_SIGNALS.some(k => raw.includes(k)),
+    hasFinancial,
+    hasTimePressure,
+    /spent|wasted|burned/.test(raw) && /\$|£|€|\d+k|\d+ (hundred|thousand)/.test(raw)
+  ].filter(Boolean).length;
+  if (painCount >= 3) score += 10; // multi-dimensional pain = very hot lead
+  if (painCount >= 4) score += 5;  // extreme stacking bonus
+
+  // Post length signal — longer = more genuine, not a throwaway post
+  if (raw.length > 400) score += 5;
+  if (raw.length > 800) score += 5;
 
   return Math.max(0, Math.min(score, 100));
 }
@@ -1823,40 +1928,58 @@ function analyzePost(title, text, preScore) {
   const t = (title + ' ' + text).toLowerCase();
   const urgency = preScore !== undefined ? preScore : scorePost(title, text);
 
-  // ── Niche detection
-  const niche = /plumb|pipe|boiler|heating|gas safe/.test(t)        ? 'Plumber'
-    : /electrician|wiring|fuse|eicr|niceic/.test(t)                 ? 'Electrician'
-    : /builder|construction|renovation|extension|loft/.test(t)      ? 'Builder'
-    : /pt |personal train|fitness coach|gym|fat loss|body/.test(t)  ? 'PT / Fitness'
-    : /dentist|dental|teeth/.test(t)                                 ? 'Dentist'
-    : /solicitor|lawyer|legal|conveyancing/.test(t)                  ? 'Solicitor'
-    : /accountant|bookkeep|tax|vat/.test(t)                         ? 'Accountant'
-    : /cleaner|cleaning|domestic|commercial clean/.test(t)           ? 'Cleaning Business'
-    : /landscap|garden|lawn|groundswork/.test(t)                     ? 'Landscaper'
-    : /consultant|freelanc|strateg|advisor|coach|mentor/.test(t)    ? 'Consultant'
-    : /marketing|agency|seo|ads|social media|lead gen/.test(t)      ? 'Marketing Agency'
-    : /saas|software|app |platform|startup|founder/.test(t)         ? 'SaaS / Tech'
-    : /ecomm|shopify|store|product|dropship/.test(t)                 ? 'eCommerce'
-    : /photographer|videographer|photo|video|shoot/.test(t)         ? 'Photographer'
-    : /designer|graphic|brand|logo|web design/.test(t)              ? 'Designer'
+  // ── Desperation tier check (drives opener + tip tone)
+  const isDesparate = DESPERATION_SIGNALS.some(k => t.includes(k)) || urgency >= 85;
+  const hasFinancialPain = FINANCIAL_PRESSURE.some(k => t.includes(k));
+  const hasTimePain = TIME_PRESSURE.some(k => t.includes(k));
+
+  // ── Niche detection — expanded patterns
+  const niche = /plumb|pipe|boiler|heating|gas safe/.test(t)            ? 'Plumber'
+    : /electrician|wiring|fuse|eicr|niceic|sparky/.test(t)             ? 'Electrician'
+    : /builder|construction|renovation|extension|loft|joiner|carpenter/.test(t) ? 'Builder'
+    : /pt |personal train|fitness coach|gym|fat loss|body|personal trainer/.test(t) ? 'PT / Fitness'
+    : /dentist|dental|teeth|orthodont/.test(t)                          ? 'Dentist'
+    : /solicitor|lawyer|legal|conveyancing|barrister/.test(t)           ? 'Solicitor'
+    : /accountant|bookkeep|tax|vat|bookkeeper/.test(t)                  ? 'Accountant'
+    : /cleaner|cleaning|domestic clean|commercial clean|janitorial/.test(t) ? 'Cleaning Business'
+    : /landscap|garden|lawn|groundswork|tree surgeon/.test(t)           ? 'Landscaper'
+    : /roofer|roofing|guttering/.test(t)                                ? 'Roofer'
+    : /painter|decorator|plastering|plastered/.test(t)                  ? 'Painter / Decorator'
+    : /hvac|air conditioning|boiler install|heating engineer/.test(t)   ? 'HVAC'
+    : /mortgage|financial advis|financial plan|ifa |wealth/.test(t)     ? 'Financial Advisor'
+    : /physio|chiropract|osteopath|massage therap/.test(t)              ? 'Therapist / Health'
+    : /restaurant|cafe|food business|catering|hospitality/.test(t)      ? 'Restaurant / Hospitality'
+    : /consultant|freelanc|strateg|advisor|coach|mentor/.test(t)        ? 'Consultant'
+    : /marketing|agency|seo|ads|social media|lead gen/.test(t)          ? 'Marketing Agency'
+    : /saas|software|app |platform|startup|founder|tech/.test(t)        ? 'SaaS / Tech'
+    : /ecomm|shopify|store|product|dropship|amazon seller/.test(t)      ? 'eCommerce'
+    : /photographer|videographer|photo|video|shoot|wedding photo/.test(t) ? 'Photographer'
+    : /designer|graphic|brand|logo|web design|ux|ui design/.test(t)    ? 'Designer'
+    : /copywriter|content writer|content creator|blogger/.test(t)       ? 'Copywriter'
+    : /virtual assistant|va |admin support|online assistant/.test(t)    ? 'Virtual Assistant'
+    : /estate agent|realtor|real estate|property|landlord/.test(t)      ? 'Estate Agent'
     : 'Business Owner';
 
   // ── Problem type detection — specific language, not generic labels
-  const problem = /ads|paid|ppc|facebook ad|google ad|instagram ad/.test(t)
-    ? /spend|wast|burn|£|€|\$|money/.test(t)
+  const problem = /ads|paid|ppc|facebook ad|google ad|instagram ad|meta ad/.test(t)
+    ? /spend|wast|burn|£|€|\$|money|budget/.test(t)
       ? 'Spending money on ads but not getting clients from it'
       : 'Running ads but not seeing any results'
     : /cold (email|outreach|dm|message)|no (reply|response|replies)/.test(t)
     ? 'Reaching out to people but getting zero replies'
-    : /website|landing page|traffic but no/.test(t)
+    : /website|landing page|traffic but no|visitors but/.test(t)
     ? 'Getting visitors to the site but none of them convert'
-    : /social media|post(ing)?|content|instagram|tiktok/.test(t)
+    : /social media|post(ing)?|content|instagram|tiktok|reels|shorts/.test(t)
     ? 'Posting content every day but it\'s not bringing in clients'
     : /referral|word of mouth|dried up/.test(t)
     ? 'Referrals have dried up — no consistent way to get new work'
     : /proposal|quote|follow.?up|ghost/.test(t)
-    ? 'Sending quotes and proposals but prospects go cold'
-    : /no (clients|customers|work|bookings|enquiries|leads)/.test(t)
+    ? 'Sending quotes and proposals but prospects go cold or ghost'
+    : /network(ing)?|event|chamber|bni/.test(t)
+    ? 'Networking but not converting contacts into actual clients'
+    : /seo|rank|google rank|search result/.test(t)
+    ? 'Investing in SEO but not seeing enquiries come from it'
+    : /no (clients|customers|work|bookings|enquiries|leads|sales)/.test(t)
     ? 'No consistent flow of new clients or enquiries'
     : /slow|quiet|dead|dry/.test(t)
     ? 'Things have gone quiet — not enough work coming in'
@@ -1864,6 +1987,8 @@ function analyzePost(title, text, preScore) {
     ? 'Boom and bust — great months followed by nothing'
     : /tried|wasted|nothing work/.test(t)
     ? 'Tried different things but nothing\'s actually working'
+    : hasFinancialPain
+    ? 'Financial pressure building — the current approach isn\'t bringing in enough'
     : 'Struggling to get a consistent flow of new clients';
 
   // ── Root cause
@@ -1879,10 +2004,16 @@ function analyzePost(title, text, preScore) {
     ? 'One channel means one point of failure — nothing to fall back on'
     : /proposal|quote|ghost/.test(t)
     ? 'No follow-up sequence — the decision window closes and they move on'
+    : /network/.test(t)
+    ? 'Networking generates awareness but there\'s no system to turn it into booked work'
+    : hasFinancialPain
+    ? 'The spend is outpacing the revenue — no acquisition system means costs compound'
     : 'No system — relying on luck, timing, and word of mouth';
 
   // ── Pitch angle — direct, no wrapper quotes
-  const angle = /ads|paid/.test(t)
+  const angle = isDesparate
+    ? `This is exactly the situation that a proper acquisition system fixes — and fast. The good news is the work is already there, it just isn't being captured.`
+    : /ads|paid/.test(t)
     ? /spend|wast|burn|money/.test(t)
       ? 'Spending money on ads without a system to convert them is just burning cash'
       : 'You don\'t need more ad spend — you need a system that converts what you already have'
@@ -1902,34 +2033,50 @@ function analyzePost(title, text, preScore) {
 
   // ── Demo focus — what to actually show them
   const demoFocus = /ads|paid/.test(t)
-    ? 'lead capture page + follow-up sequence'
+    ? 'lead capture page + follow-up sequence to stop losing clicks'
     : /cold|outreach/.test(t)
-    ? 'landing page they can review before replying'
+    ? 'landing page they can review before replying — personalised to their sector'
     : /website|landing/.test(t)
     ? 'rebuilt landing page with offer clarity and a real CTA'
     : /social|content/.test(t)
-    ? 'lead magnet page + CRM to turn followers into enquiries'
+    ? 'lead magnet page + CRM to turn followers into actual enquiries'
     : /referral/.test(t)
     ? 'full inbound pipeline — page, outreach, and follow-up'
+    : isDesparate
+    ? 'full acquisition system — fast-track setup to get leads coming in immediately'
     : 'client acquisition system — page, CRM, and outreach';
 
-  // ── Opener — personal, direct
-  const opener = urgency >= 70
-    ? `Saw your post — I build acquisition systems for ${niche.toLowerCase()} businesses and this is exactly what I fix. I can have a preview built for your setup today. Want to see it?`
-    : `Saw this and recognised it immediately — the problem usually isn't the marketing, it's the system behind it. Happy to show you what that looks like?`;
+  // ── Opener — tiered by desperation/urgency level
+  const opener = isDesparate
+    ? `Read your post — I work specifically with ${niche.toLowerCase()} owners in this exact situation. I've fixed this before and I can show you what needs to change. No pitch, just a straight look at what's missing. Want me to break it down?`
+    : urgency >= 70
+    ? `Saw your post — I build acquisition systems for ${niche.toLowerCase()} businesses and this is exactly what I fix. I can put together a preview for your setup today. Worth a look?`
+    : `Saw this and recognised it — the problem usually isn't the service, it's the system behind it. I map this out for free. Want to see what that would look like for you?`;
 
-  // ── Tip
-  const tip = urgency >= 70 ? '⚡ High intent — message within the hour, window closes fast'
-    : urgency >= 40          ? '💬 Empathy first — acknowledge the pain before any pitch'
-    :                          '🔍 Qualify first — ask one question before investing time';
+  // ── Urgency reason — why this score (shown in tip)
+  const urgencyReason = isDesparate   ? 'Desperation signal detected'
+    : hasFinancialPain                ? 'Financial pressure language detected'
+    : hasTimePain                     ? 'Time-pressure language detected'
+    : urgency >= 60                   ? 'Strong direct pain signal'
+    : urgency >= 40                   ? 'Clear business pain + buyer context'
+    :                                   'Soft intent — qualify before pitching';
 
-  const urgencyLabel = urgency >= 70 ? 'High' : urgency >= 40 ? 'Medium' : 'Low';
-  const urgencyColor = urgency >= 70 ? '#22c55e' : urgency >= 40 ? '#f59e0b' : '#8888a0';
+  // ── Tip — action-oriented, tiered
+  const tip = isDesparate
+    ? `🔥 Desperation signal — message NOW, this closes fast. Lead with empathy: "I've fixed this exact situation before"`
+    : urgency >= 70
+    ? `⚡ High intent — message within the hour. ${hasTimePain ? 'Time pressure detected — they need this urgently.' : 'Window closes fast on hot posts.'}`
+    : urgency >= 40
+    ? `💬 Empathy first — acknowledge the pain before any pitch. ${hasFinancialPain ? 'Financial pressure detected — speed and ROI matter.' : ''}`
+    : `🔍 Qualify first — ask one specific question before investing time`;
+
+  const urgencyLabel = urgency >= 85 ? 'Critical' : urgency >= 70 ? 'High' : urgency >= 40 ? 'Medium' : 'Low';
+  const urgencyColor = urgency >= 85 ? '#ef4444' : urgency >= 70 ? '#22c55e' : urgency >= 40 ? '#f59e0b' : '#8888a0';
 
   // ── Lead Type — Direct / Operator / Partner ──
   const leadType = detectLeadType(title, text, '', urgency);
 
-  return { urgency, urgencyLabel, urgencyColor, niche, problem, cause, angle, demoFocus, opener, tip, leadType };
+  return { urgency, urgencyLabel, urgencyColor, niche, problem, cause, angle, demoFocus, opener, tip, urgencyReason, isDesparate, leadType };
 }
 
 /* ══════════════════════════════════
@@ -2014,74 +2161,127 @@ function detectLeadType(title, text, subreddit, urgency) {
 
 /* ── KEYWORD POOL ── */
 const KW_POOL = [
-  // ── Universal pain ──
+  // ── Universal desperation / existential pain ──
+  'about to give up','considering quitting','thinking of shutting down',
+  'running out of money','burning through savings','cant pay myself',
+  'desperate for clients','need clients urgently','business failing',
+  'make or break month','last few clients','only have one client left',
+  'spent thousands and nothing','spent hundreds and nothing',
+  'wasted my budget on ads','negative roi','burning cash',
+  'going under','seriously considering closing','not sure i can continue',
+
+  // ── Universal no-client pain ──
   'no clients','zero clients','no customers','no enquiries','no leads',
   'no sales','no bookings','no work','no jobs','no revenue',
+  'zero leads','zero sales','zero bookings','0 clients','0 leads',
+
+  // ── Business slow ──
   'dead month','slow month','quiet month','feast or famine',
   'referrals dried up','business is slow','clients dried up','dry spell',
   'no work coming in','losing clients','clients ghosting',
-  'about to give up','running out of money','burning through savings',
-  'desperate for clients','need clients urgently','business failing',
-  'considering quitting','cant pay myself',
+  'been slow for months','extremely slow','painfully slow','barely any work',
+  'nothing coming in','a trickle of work','almost no enquiries',
+
+  // ── Tried and failed ──
+  'tried everything','nothing is working','nothing working','tried multiple things',
+  'tried different approaches','spent months trying','been at this for months',
+  'a year in and nothing','six months of nothing','three months no clients',
+  'what am i doing wrong','not sure what im doing wrong',
+  'any advice on getting clients','what actually works for getting clients',
 
   // ── Marketing / ads not working ──
   'ads not working','ads not converting','facebook ads not working',
-  'google ads wasting money','cold outreach no response',
-  'cold email not working','no replies to outreach',
-  'website not converting','getting traffic no leads',
+  'google ads wasting money','instagram ads no results','meta ads failing',
+  'cold outreach no response','cold email not working','no replies to outreach',
+  'cold dms not working','nobody replies to my messages',
+  'website not converting','getting traffic no leads','visitors but no enquiries',
+  'traffic but no conversions','clicks but no sales',
   'social media not working','posting every day no clients',
-  'content not converting','marketing not working',
-  'how to get clients','tried everything','what am i doing wrong',
-  'proposals not converting','no one is buying',
+  'content not converting','marketing not working','posting daily nothing',
+  'great engagement no clients','going viral not converting',
+  'proposals not converting','getting ghosted after quotes','quotes ignored',
+  'sending proposals hearing nothing','follow ups going nowhere',
+
+  // ── Specific questions Reddit users ask ──
+  'how do i get clients','how to get clients','best way to find clients',
+  'where do i find clients','where to find clients',
+  'how to get my first client','struggling to get first client',
+  'what outreach actually works','outreach strategy that works',
+  'how to get consistent leads','getting consistent clients',
+  'how do i grow my business','how to scale my service business',
+  'how to make my first sale','how to land my first client',
+  'how to stop feast and famine','how to get steady work',
+  'how to build a client base','how to fill my calendar',
 
   // ── Photography & videography ──
   'need more photography clients','photography business slow',
   'wedding photography clients','struggling photographer',
-  'how to price photography','photography marketing',
-  'get more wedding bookings','videographer clients','video business slow',
+  'photography marketing','get more wedding bookings',
+  'videographer clients','video business slow','no photo bookings',
+  'photographer no work','slow season photography',
 
   // ── Trades & home services ──
   'plumber marketing','electrician getting clients','hvac marketing',
   'landscaping clients','cleaning business clients','tradesman no work',
   'builder slow','no plumbing jobs','how to get more jobs trades',
   'painter decorator clients','how to get landscaping clients',
+  'roofer getting clients','joiner no work','carpenter clients',
+  'no building jobs','how to get more jobs as a tradesman',
 
   // ── Fitness & health ──
   'personal trainer clients','gym clients','fitness coach marketing',
   'no personal training clients','online fitness coaching',
-  'health coach clients','nutritionist clients',
+  'health coach clients','nutritionist clients','no pt clients',
+  'struggling personal trainer','fitness business slow',
 
   // ── Marketing agencies & freelance ──
   'freelance clients','agency clients','web design clients',
   'graphic design clients','no design work','copywriting clients',
   'social media agency clients','seo clients','ppc clients',
   'marketing agency struggling','web developer clients','freelancer slow',
+  'no freelance work','agency not growing','struggling agency',
+  'digital agency slow','web design business slow',
 
   // ── Real estate ──
   'real estate leads','realtor clients','estate agent marketing',
   'property leads','real estate slow','landlord finding tenants',
+  'no property viewings','estate agent struggling',
 
   // ── Ecommerce & retail ──
   'shopify store no sales','ecommerce not selling','dropshipping no sales',
   'amazon seller slow','online store no traffic','product not selling',
+  'store getting traffic no conversions','ecommerce conversion problem',
 
   // ── Coaching & consulting ──
   'business coach clients','life coach clients','consulting clients',
   'coaching business slow','no consulting work','executive coach clients',
+  'coach no clients','consultant slow','struggling coach',
 
   // ── Restaurants & food ──
   'restaurant slow','cafe not busy','food business clients',
-  'catering no bookings','restaurant marketing',
+  'catering no bookings','restaurant marketing','hospitality slow',
+  'cafe struggling','restaurant not busy','catering no work',
 
   // ── Tech / SaaS ──
   'saas no customers','startup no users','app no downloads',
   'no b2b clients','software company slow','mvp no signups',
+  'saas churn','losing saas customers','startup getting no traction',
+  'product no users','b2b no demos','no demo bookings',
 
-  // ── Ask / discussion ──
-  'how do i get clients','best way to find clients','where to find clients',
-  'outreach strategy that works','getting consistent leads',
+  // ── Financial advisors / professionals ──
+  'financial advisor clients','mortgage broker clients',
+  'accountant getting clients','bookkeeper clients',
+  'no accounting clients','financial planner clients',
+
+  // ── Virtual assistants & admin ──
+  'virtual assistant clients','va clients','no va work',
+  'remote work clients','online business clients',
+
+  // ── Lead gen / general growth ──
   'struggling to scale','how to grow my business',
-  'need more leads','lead generation help'
+  'need more leads','lead generation help',
+  'client acquisition strategy','getting consistent leads',
+  'how to fill my pipeline','pipeline empty','no pipeline'
 ];
 
 function shuffleKws() {
@@ -2265,7 +2465,14 @@ function renderFeedCard(post) {
 
   const lt = a.leadType;
 
-  return `<div class="feed-card" id="fc-${esc(post.id)}" data-lead-type="${lt.key}">
+  // Critical desperation band shown above card
+  const desperateBanner = a.isDesparate
+    ? `<div class="feed-critical-banner">🔥 DESPERATION SIGNAL — message now</div>`
+    : '';
+
+  return `<div class="feed-card${a.isDesparate ? ' feed-card-critical' : ''}" id="fc-${esc(post.id)}" data-lead-type="${lt.key}">
+
+    ${desperateBanner}
 
     <div class="feed-card-top">
       ${platformBadge}
@@ -2292,6 +2499,7 @@ function renderFeedCard(post) {
       <span style="color:${a.urgencyColor};font-weight:700;font-size:.75rem">${a.urgencyLabel} · ${a.urgency}</span>
       <span class="feed-niche-tag">${esc(a.niche)}</span>
     </div>
+    <div class="feed-urgency-reason">${esc(a.urgencyReason)}</div>
 
     <!-- INTEL PANEL -->
     <div class="intel-panel">

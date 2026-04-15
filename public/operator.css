@@ -237,6 +237,10 @@ tbody tr:hover td{background:rgba(255,255,255,0.02);}
 .feed-empty p{font-size:.85rem;opacity:.5;}
 .feed-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;transition:border-color .18s;}
 .feed-card:hover{border-color:rgba(255,255,255,.1);}
+.feed-card-critical{border-color:rgba(239,68,68,.35)!important;background:linear-gradient(180deg,rgba(239,68,68,.04) 0%,var(--card) 60%);}
+.feed-card-critical:hover{border-color:rgba(239,68,68,.55)!important;}
+.feed-critical-banner{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:5px 10px;font-size:.72rem;font-weight:700;color:#ef4444;letter-spacing:.04em;text-align:center;}
+.feed-urgency-reason{font-size:.68rem;color:var(--muted);margin-top:-4px;padding-left:2px;}
 .feed-card-top{display:flex;align-items:flex-start;gap:10px;}
 .feed-platform{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;padding:3px 8px;border-radius:4px;background:rgba(255,69,0,.15);color:#ff6b35;flex-shrink:0;margin-top:2px;}
 .feed-platform-x{background:rgba(255,255,255,.08);color:var(--text);letter-spacing:0;font-size:.75rem;}
