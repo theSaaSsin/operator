@@ -490,6 +490,71 @@ const ROUTES = {
     res.end(JSON.stringify({ ok: true }));
   },
 
+  /* ── MODULE SETTINGS ── */
+  'GET /api/module-settings': (_, res) => {
+    res.end(JSON.stringify(readJSON('module-settings.json')));
+  },
+
+  'PATCH /api/module-settings': async (req, res) => {
+    const data = await body(req);
+    const n = data.module;
+    if (!n) { res.end(JSON.stringify({ ok: false, error: 'missing module number' })); return; }
+    const db = readJSON('module-settings.json');
+    if (!db.settings) db.settings = {};
+    db.settings[n] = { ...(db.settings[n] || {}), ...data.settings, updatedAt: new Date().toISOString() };
+    writeJSON('module-settings.json', db);
+    res.end(JSON.stringify({ ok: true, settings: db.settings[n] }));
+  },
+
+  /* ── INTEGRATIONS ── */
+  'GET /api/integrations': (_, res) => {
+    res.end(JSON.stringify(readJSON('integrations.json')));
+  },
+
+  'POST /api/integrations': async (req, res) => {
+    const data = await body(req);
+    const db = readJSON('integrations.json');
+    if (!Array.isArray(db.integrations)) db.integrations = [];
+    const entry = { ...data, id: Date.now(), createdAt: new Date().toISOString(), enabled: true };
+    db.integrations.push(entry);
+    writeJSON('integrations.json', db);
+    res.end(JSON.stringify({ ok: true, integration: entry }));
+  },
+
+  'PATCH /api/integrations': async (req, res) => {
+    const data = await body(req);
+    const db = readJSON('integrations.json');
+    db.integrations = (db.integrations || []).map(i =>
+      i.id === data.id ? { ...i, ...data, updatedAt: new Date().toISOString() } : i
+    );
+    writeJSON('integrations.json', db);
+    res.end(JSON.stringify({ ok: true }));
+  },
+
+  'DELETE /api/integrations': async (req, res) => {
+    const data = await body(req);
+    const db = readJSON('integrations.json');
+    db.integrations = (db.integrations || []).filter(i => i.id !== data.id);
+    writeJSON('integrations.json', db);
+    res.end(JSON.stringify({ ok: true }));
+  },
+
+  /* ── WEBHOOK RECEIVER (external tools fire into this) ── */
+  'POST /api/webhook': async (req, res) => {
+    const data = await body(req);
+    const db = readJSON('integrations.json');
+    const webhookLog = readJSON('webhook-log.json');
+    if (!Array.isArray(webhookLog.events)) webhookLog.events = [];
+    webhookLog.events.unshift({ ...data, receivedAt: new Date().toISOString(), id: Date.now() });
+    if (webhookLog.events.length > 500) webhookLog.events = webhookLog.events.slice(0, 500);
+    writeJSON('webhook-log.json', webhookLog);
+    res.end(JSON.stringify({ ok: true, received: true }));
+  },
+
+  'GET /api/webhook-log': (_, res) => {
+    res.end(JSON.stringify(readJSON('webhook-log.json')));
+  },
+
   /* ── AI ASSIST — calls Claude Haiku to refine context engine output ── */
   'POST /api/ai': async (req, res) => {
     const cfg = readJSON('config.json');

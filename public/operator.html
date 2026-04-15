@@ -40,40 +40,46 @@
       </div>
 
       <div class="nav-section" data-cat="acquisition">Acquisition <span class="nav-cat-count" id="cat-count-acquisition"></span></div>
-      <div class="nav-item nav-coming" data-panel="mod-keyword-detect">
-        <i class="fas fa-crosshairs"></i> Keyword Detection
-      </div>
-      <div class="nav-item nav-coming" data-panel="mod-intent">
-        <i class="fas fa-brain"></i> Intent Analyzer
-      </div>
+      <div class="nav-item" data-panel="mod-keyword-detect"><i class="fas fa-crosshairs"></i> Keyword Detection</div>
+      <div class="nav-item" data-panel="mod-intent"><i class="fas fa-brain"></i> Intent Analyzer</div>
+      <div class="nav-item" data-panel="mod-outreach-send"><i class="fas fa-share-nodes"></i> Outreach Sender</div>
+      <div class="nav-item" data-panel="mod-followup"><i class="fas fa-clock-rotate-left"></i> Follow-Up Auto</div>
+      <div class="nav-item" data-panel="mod-reply-detect"><i class="fas fa-reply"></i> Reply Detection</div>
+      <div class="nav-item" data-panel="mod-booking"><i class="fas fa-calendar-check"></i> Booking</div>
 
       <div class="nav-section" data-cat="sales">Sales / Conversion <span class="nav-cat-count" id="cat-count-sales"></span></div>
-      <div class="nav-item nav-coming" data-panel="mod-landing">
-        <i class="fas fa-file-code"></i> Landing Pages
-      </div>
-      <div class="nav-item nav-coming" data-panel="mod-funnel">
-        <i class="fas fa-filter"></i> Funnel Builder
-      </div>
+      <div class="nav-item" data-panel="mod-funnel"><i class="fas fa-filter"></i> Funnel Builder</div>
+      <div class="nav-item" data-panel="mod-offer"><i class="fas fa-gift"></i> Offer Generator</div>
+      <div class="nav-item" data-panel="mod-proposal"><i class="fas fa-file-invoice"></i> Proposal Builder</div>
+      <div class="nav-item" data-panel="mod-demo-viz"><i class="fas fa-eye"></i> Demo Visualizer</div>
+      <div class="nav-item" data-panel="mod-close-track"><i class="fas fa-handshake"></i> Close Tracking</div>
 
       <div class="nav-section" data-cat="content">Content / Brand <span class="nav-cat-count" id="cat-count-content"></span></div>
-      <div class="nav-item nav-coming" data-panel="mod-content-ideas">
-        <i class="fas fa-lightbulb"></i> Content Ideas
-      </div>
+      <div class="nav-item" data-panel="mod-content-ideas"><i class="fas fa-lightbulb"></i> Content Ideas</div>
+      <div class="nav-item" data-panel="mod-social-posts"><i class="fas fa-thumbs-up"></i> Social Posts</div>
+      <div class="nav-item" data-panel="mod-scheduler"><i class="fas fa-calendar-days"></i> Scheduler</div>
+      <div class="nav-item" data-panel="mod-brand"><i class="fas fa-palette"></i> Brand Builder</div>
+      <div class="nav-item" data-panel="mod-content-perf"><i class="fas fa-chart-simple"></i> Content Stats</div>
 
       <div class="nav-section" data-cat="automation">Automation <span class="nav-cat-count" id="cat-count-automation"></span></div>
-      <div class="nav-item nav-coming" data-panel="mod-workflows">
-        <i class="fas fa-diagram-project"></i> Workflows
-      </div>
+      <div class="nav-item" data-panel="mod-workflows"><i class="fas fa-diagram-project"></i> Workflows</div>
+      <div class="nav-item" data-panel="mod-crm-auto"><i class="fas fa-robot"></i> CRM Auto</div>
+      <div class="nav-item" data-panel="mod-email-auto"><i class="fas fa-envelope-open-text"></i> Email Auto</div>
+      <div class="nav-item" data-panel="mod-notifications"><i class="fas fa-bell"></i> Notifications</div>
+      <div class="nav-item" data-panel="mod-tasks"><i class="fas fa-list-check"></i> Task Manager</div>
 
       <div class="nav-section" data-cat="delivery">Client Delivery <span class="nav-cat-count" id="cat-count-delivery"></span></div>
-      <div class="nav-item nav-coming" data-panel="mod-client-dash">
-        <i class="fas fa-gauge-high"></i> Client Dashboard
-      </div>
+      <div class="nav-item" data-panel="mod-client-dash"><i class="fas fa-gauge-high"></i> Client Dashboard</div>
+      <div class="nav-item" data-panel="mod-system-viz"><i class="fas fa-sitemap"></i> System Visual</div>
+      <div class="nav-item" data-panel="mod-progress"><i class="fas fa-bars-progress"></i> Progress</div>
+      <div class="nav-item" data-panel="mod-support"><i class="fas fa-headset"></i> Support</div>
+      <div class="nav-item" data-panel="mod-whitelabel"><i class="fas fa-tag"></i> White-Label</div>
 
       <div class="nav-section" data-cat="expansion">Expansion <span class="nav-cat-count" id="cat-count-expansion"></span></div>
-      <div class="nav-item nav-coming" data-panel="mod-api">
-        <i class="fas fa-plug"></i> API Layer
-      </div>
+      <div class="nav-item" data-panel="mod-api-layer"><i class="fas fa-plug"></i> API Layer</div>
+      <div class="nav-item" data-panel="mod-billing"><i class="fas fa-credit-card"></i> Billing</div>
+      <div class="nav-item" data-panel="mod-teams"><i class="fas fa-users"></i> Teams</div>
+      <div class="nav-item" data-panel="mod-global-analytics"><i class="fas fa-earth-americas"></i> Global Analytics</div>
     </nav>
     <div class="sidebar-footer">
       <span class="status-dot"></span>System Online
@@ -455,6 +461,30 @@
         </div>
         <div id="an-body" class="an-body">
           <div class="an-empty"><i class="fas fa-chart-bar"></i><p>Copy a DM from the Lead Feed to start tracking performance</p></div>
+        </div>
+      </div>
+
+      <!-- ── DYNAMIC MODULE PANEL (lazy-loaded) ── -->
+      <div class="panel" id="panel-module">
+        <div class="mod-topbar" id="mod-topbar">
+          <div class="mod-topbar-left">
+            <button class="btn btn-secondary btn-sm mod-back-btn" onclick="switchPanel('dashboard')"><i class="fas fa-arrow-left"></i></button>
+            <h2 id="mod-title">Module</h2>
+          </div>
+          <div class="mod-topbar-right">
+            <button class="btn btn-secondary btn-sm" id="mod-settings-btn" onclick="toggleModSettings()" title="Module settings"><i class="fas fa-gear"></i></button>
+            <button class="btn btn-secondary btn-sm" id="mod-refresh-btn" onclick="refreshCurrentModule()"><i class="fas fa-rotate-right"></i></button>
+          </div>
+        </div>
+        <div class="mod-layout">
+          <div class="mod-body" id="mod-body"></div>
+          <div class="mod-sidebar" id="mod-sidebar" style="display:none">
+            <div class="mod-sidebar-header">
+              <h3>Settings</h3>
+              <button class="btn btn-secondary btn-sm" onclick="toggleModSettings()"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="mod-sidebar-body" id="mod-sidebar-body"></div>
+          </div>
         </div>
       </div>
 

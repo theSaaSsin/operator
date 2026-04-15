@@ -284,11 +284,105 @@ const TITLES = {
   analytics: 'Outreach Analytics'
 };
 
-function switchPanel(target) {
-  if (target && target.startsWith('mod-')) {
-    toast('Module coming soon', 'err');
+/* ── MODULE LOADER SYSTEM ── */
+const _loadedModules = {};
+let _currentModuleKey = null;
+
+function _moduleFileKey(target) {
+  return target.replace(/^mod-/, '');
+}
+
+function _findModuleByPanel(panelKey) {
+  for (const cat of MODULE_MAP) {
+    for (const m of cat.modules) {
+      if (m.panel === panelKey) return m;
+    }
+  }
+  return null;
+}
+
+function _findModuleByNavKey(navKey) {
+  const fileKey = _moduleFileKey(navKey);
+  for (const cat of MODULE_MAP) {
+    for (const m of cat.modules) {
+      if (m._navKey === navKey || m._fileKey === fileKey) return m;
+    }
+  }
+  return null;
+}
+
+async function loadModulePanel(target) {
+  const fileKey = _moduleFileKey(target);
+  const modBody = document.getElementById('mod-body');
+  const modTitle = document.getElementById('mod-title');
+  const modSidebar = document.getElementById('mod-sidebar');
+
+  modBody.innerHTML = '<div class="mod-loading"><i class="fas fa-circle-notch fa-spin"></i> Loading module…</div>';
+  if (modSidebar) modSidebar.style.display = 'none';
+
+  const mod = _findModuleByNavKey(target);
+  modTitle.textContent = mod ? mod.name : fileKey;
+  _currentModuleKey = fileKey;
+
+  if (_loadedModules[fileKey]) {
+    try {
+      _loadedModules[fileKey].render(modBody, mod);
+      if (_loadedModules[fileKey].renderSettings) {
+        document.getElementById('mod-settings-btn').style.display = '';
+      } else {
+        document.getElementById('mod-settings-btn').style.display = 'none';
+      }
+    } catch (e) {
+      modBody.innerHTML = `<div class="mod-error"><i class="fas fa-triangle-exclamation"></i><p>Module render error: ${e.message}</p></div>`;
+    }
     return;
   }
+
+  const scriptUrl = `modules/mod-${fileKey}.js`;
+  try {
+    const res = await fetch(scriptUrl);
+    if (!res.ok) throw new Error(`Module file not found (${res.status})`);
+    const code = await res.text();
+    const moduleFactory = new Function('return ' + code)();
+    _loadedModules[fileKey] = moduleFactory;
+
+    if (moduleFactory.init) await moduleFactory.init(mod);
+    moduleFactory.render(modBody, mod);
+
+    if (moduleFactory.renderSettings) {
+      document.getElementById('mod-settings-btn').style.display = '';
+    } else {
+      document.getElementById('mod-settings-btn').style.display = 'none';
+    }
+  } catch (e) {
+    modBody.innerHTML = `<div class="mod-error"><i class="fas fa-triangle-exclamation"></i><p>Could not load module: ${e.message}</p><p class="mod-error-hint">Expected file: ${scriptUrl}</p></div>`;
+    document.getElementById('mod-settings-btn').style.display = 'none';
+  }
+}
+
+function toggleModSettings() {
+  const sb = document.getElementById('mod-sidebar');
+  const sbBody = document.getElementById('mod-sidebar-body');
+  if (!sb) return;
+  const isOpen = sb.style.display !== 'none';
+  if (isOpen) { sb.style.display = 'none'; return; }
+  sb.style.display = '';
+  if (_currentModuleKey && _loadedModules[_currentModuleKey] && _loadedModules[_currentModuleKey].renderSettings) {
+    _loadedModules[_currentModuleKey].renderSettings(sbBody);
+  } else {
+    sbBody.innerHTML = '<p style="color:var(--muted);font-size:.82rem;">No settings for this module.</p>';
+  }
+}
+
+function refreshCurrentModule() {
+  if (_currentModuleKey && _loadedModules[_currentModuleKey]) {
+    const modBody = document.getElementById('mod-body');
+    const mod = _findModuleByNavKey('mod-' + _currentModuleKey);
+    _loadedModules[_currentModuleKey].render(modBody, mod);
+  }
+}
+
+function switchPanel(target) {
   navItems.forEach(n => n.classList.remove('active'));
   panels.forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
@@ -296,6 +390,15 @@ function switchPanel(target) {
   if (navItem) navItem.classList.add('active');
   const mobBtn = document.querySelector(`.mob-nav-btn[data-panel="${target}"]`);
   if (mobBtn) mobBtn.classList.add('active');
+
+  if (target && target.startsWith('mod-')) {
+    const panel = document.getElementById('panel-module');
+    if (panel) panel.classList.add('active');
+    topbarTitle.textContent = 'Loading…';
+    loadModulePanel(target);
+    return;
+  }
+
   const panel = document.getElementById('panel-' + target);
   if (panel) panel.classList.add('active');
   topbarTitle.textContent = TITLES[target] || target;
