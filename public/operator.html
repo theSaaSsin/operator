@@ -19,6 +19,9 @@
     </div>
     <nav>
       <div class="nav-section">Command</div>
+      <div class="nav-item active" data-panel="execute">
+        <i class="fas fa-bolt"></i> Execute
+      </div>
       <div class="nav-item" data-panel="dashboard">
         <i class="fas fa-gauge-high"></i> Dashboard
       </div>
@@ -50,6 +53,90 @@
     </div>
 
     <div id="content">
+
+      <!-- ── PANEL: EXECUTION ENGINE ── -->
+      <div class="panel active" id="panel-execute">
+        <div class="exec-container">
+          <div class="exec-input-zone">
+            <div class="exec-label">What's the situation?</div>
+            <textarea id="exec-input" class="exec-textarea" placeholder="Paste a lead idea, problem statement, customer friction, or revenue gap. Be specific. Raw is fine."></textarea>
+            <div class="exec-meta">
+              <select id="exec-type" class="exec-select">
+                <option value="lead">Lead / Outreach Opportunity</option>
+                <option value="problem">Customer Problem / Friction</option>
+                <option value="gap">Revenue Gap / Growth Blocker</option>
+                <option value="competitor">Competitor Threat / Market Shift</option>
+                <option value="product">Product / Feature Question</option>
+              </select>
+              <button class="btn btn-primary" id="btn-exec-run" style="margin-left:auto">
+                <i class="fas fa-bolt"></i> Run Operator
+              </button>
+            </div>
+          </div>
+
+          <div class="exec-output-zone" id="exec-output-zone" style="display:none">
+            <div class="exec-output-section">
+              <div class="exec-section-header">
+                <i class="fas fa-stethoscope"></i> DIAGNOSIS
+                <span class="exec-copy-btn" onclick="execCopySection('diagnosis')"><i class="fas fa-copy"></i></span>
+              </div>
+              <div class="exec-section-body" id="exec-diagnosis"></div>
+            </div>
+
+            <div class="exec-output-section">
+              <div class="exec-section-header">
+                <i class="fas fa-target"></i> OPPORTUNITY
+                <span class="exec-copy-btn" onclick="execCopySection('opportunity')"><i class="fas fa-copy"></i></span>
+              </div>
+              <div class="exec-section-body" id="exec-opportunity"></div>
+            </div>
+
+            <div class="exec-output-section">
+              <div class="exec-section-header">
+                <i class="fas fa-list-check"></i> ACTION PLAN
+                <span class="exec-copy-btn" onclick="execCopySection('actions')"><i class="fas fa-copy"></i></span>
+              </div>
+              <div class="exec-section-body" id="exec-actions"></div>
+            </div>
+
+            <div class="exec-output-section">
+              <div class="exec-section-header">
+                <i class="fas fa-envelope"></i> OUTPUT MESSAGE
+                <span class="exec-copy-btn" onclick="execCopySection('message')"><i class="fas fa-copy"></i></span>
+              </div>
+              <div class="exec-section-body exec-message-body" id="exec-message"></div>
+              <button class="btn btn-secondary btn-sm" style="margin-top:12px;width:100%" onclick="execEditMessage()">
+                <i class="fas fa-pencil"></i> Edit & Finalize
+              </button>
+            </div>
+
+            <div class="exec-output-section">
+              <div class="exec-section-header">
+                <i class="fas fa-arrow-right"></i> NEXT STAGE
+                <span class="exec-copy-btn" onclick="execCopySection('next')"><i class="fas fa-copy"></i></span>
+              </div>
+              <div class="exec-section-body" id="exec-next"></div>
+            </div>
+
+            <div class="exec-action-bar">
+              <button class="btn btn-secondary" onclick="execReset()">
+                <i class="fas fa-arrow-left"></i> New Input
+              </button>
+              <button class="btn btn-primary" id="btn-exec-save-case" style="margin-left:auto">
+                <i class="fas fa-save"></i> Save as Case Study
+              </button>
+              <button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="execTestShadow()">
+                <i class="fas fa-flask"></i> Shadow Test
+              </button>
+            </div>
+          </div>
+
+          <div class="exec-loading" id="exec-loading" style="display:none">
+            <i class="fas fa-spinner"></i>
+            <p>Operator running...</p>
+          </div>
+        </div>
+      </div>
 
       <!-- ── PANEL: DASHBOARD ── -->
       <div class="panel" id="panel-dashboard">

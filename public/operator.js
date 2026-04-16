@@ -2155,6 +2155,158 @@ async function renderDashboard() {
     </div>`).join('');
 }
 
+/* ══════════════════════════════════
+   EXECUTION ENGINE
+══════════════════════════════════ */
+
+let execState = { input: '', type: '', output: null };
+
+const EXEC_SYSTEM_PROMPT = `You are TheSaaSsin Operator, an execution-first AI for business growth.
+
+Your job: analyse messy input, identify leverage, return structured action.
+
+RESPONSE FORMAT (strict):
+
+DIAGNOSIS
+─────────
+What's actually happening here. Strip noise, find the root. 1-3 sentences.
+
+OPPORTUNITY
+───────────
+Where the leverage is. What to attack first. Why it matters. 1-2 sentences.
+
+ACTION PLAN
+───────────
+Exact steps, no fluff. Numbered. Each step: [action] — [why] — [success metric].
+1. [step] — [why] — [metric]
+2. [step] — [why] — [metric]
+3. [step] — [why] — [metric]
+
+OUTPUT MESSAGE
+──────────────
+System-ready copy. Email, DM, or call script. Ready to paste. Make it tight, make it land.
+
+NEXT STAGE
+──────────
+What happens after this completes. Feedback loop. One sentence.
+
+Rules:
+- No fluff. No vague advice. Actionable only.
+- Prioritise speed, revenue impact, simplicity.
+- If the input is a lead: diagnosis is their pain, opportunity is where you fit, action is how to reach them.
+- If the input is a problem: diagnosis is the bottleneck, opportunity is the fix, action is the steps.
+- Output message must be ready to send immediately.`;
+
+document.getElementById('btn-exec-run').addEventListener('click', async () => {
+  const input = document.getElementById('exec-input').value.trim();
+  const type  = document.getElementById('exec-type').value;
+  if (!input) { toast('Paste the situation first', 'err'); return; }
+
+  execState.input = input;
+  execState.type  = type;
+
+  document.getElementById('exec-input-zone').style.display = 'none';
+  document.getElementById('exec-output-zone').style.display = 'none';
+  document.getElementById('exec-loading').style.display = 'flex';
+
+  try {
+    const prompt = `${type === 'lead' ? 'LEAD OPPORTUNITY:' : type === 'problem' ? 'CUSTOMER PROBLEM:' : type === 'gap' ? 'REVENUE GAP:' : type === 'competitor' ? 'COMPETITIVE THREAT:' : 'PRODUCT QUESTION:'}\n\n${input}`;
+
+    // Call Claude via fetch (Anthropic SDK would be better but we keep it simple)
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': '', // User will need to set this
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-7',
+        max_tokens: 1500,
+        system: EXEC_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('API call failed: ' + response.statusText);
+    }
+
+    const data = await response.json();
+    const fullText = data.content[0].text;
+
+    // Parse sections
+    execState.output = parseExecOutput(fullText);
+    renderExecOutput();
+
+    document.getElementById('exec-loading').style.display = 'none';
+    document.getElementById('exec-output-zone').style.display = 'flex';
+  } catch (e) {
+    document.getElementById('exec-loading').style.display = 'none';
+    toast('Operator error: ' + e.message, 'err');
+  }
+});
+
+function parseExecOutput(text) {
+  const sections = {
+    diagnosis: '', opportunity: '', actions: '', message: '', next: ''
+  };
+
+  const extractSection = (label, start, end) => {
+    const match = text.substring(text.indexOf(label) + label.length, text.indexOf(end || 'OUTPUT MESSAGE')).trim();
+    return match.split('\n').filter(l => l.trim()).slice(0, 3).join('\n');
+  };
+
+  sections.diagnosis   = extractSection('DIAGNOSIS', 'OPPORTUNITY');
+  sections.opportunity = extractSection('OPPORTUNITY', 'ACTION PLAN');
+  sections.actions     = extractSection('ACTION PLAN', 'OUTPUT MESSAGE');
+  sections.message     = extractSection('OUTPUT MESSAGE', 'NEXT STAGE');
+  sections.next        = extractSection('NEXT STAGE', '');
+
+  return sections;
+}
+
+function renderExecOutput() {
+  if (!execState.output) return;
+  document.getElementById('exec-diagnosis').textContent   = execState.output.diagnosis;
+  document.getElementById('exec-opportunity').textContent = execState.output.opportunity;
+  document.getElementById('exec-actions').innerHTML       = execState.output.actions.split('\n').filter(l=>l.trim()).map(l => `<div>${esc(l)}</div>`).join('');
+  document.getElementById('exec-message').textContent     = execState.output.message;
+  document.getElementById('exec-next').textContent        = execState.output.next;
+}
+
+function execCopySection(section) {
+  const sectionMap = {
+    diagnosis: 'exec-diagnosis', opportunity: 'exec-opportunity',
+    actions: 'exec-actions', message: 'exec-message', next: 'exec-next'
+  };
+  const text = document.getElementById(sectionMap[section]).textContent;
+  navigator.clipboard.writeText(text).then(() => toast('Copied', 'ok'));
+}
+
+function execEditMessage() {
+  const msg = execState.output.message;
+  const edited = prompt('Edit message:', msg);
+  if (edited && edited !== msg) {
+    execState.output.message = edited;
+    document.getElementById('exec-message').textContent = edited;
+    toast('Updated', 'ok');
+  }
+}
+
+function execReset() {
+  document.getElementById('exec-input').value = '';
+  document.getElementById('exec-input-zone').style.display = 'flex';
+  document.getElementById('exec-output-zone').style.display = 'none';
+  document.getElementById('exec-loading').style.display = 'none';
+  execState = { input: '', type: '', output: null };
+}
+
+function execTestShadow() {
+  if (!execState.output) return;
+  toast('Shadow test: save case study first to enable testing', 'err');
+}
+
 /* ── INIT ── */
 loadClients();
 renderDashboard();
