@@ -141,6 +141,17 @@ function selectClient(id) {
       if (s.imgStyle) document.getElementById('s-imgstyle').value = s.imgStyle;
     }
 
+    // Restore creator type
+    if (c.creatorType) {
+      document.querySelectorAll('.ctype-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.type === c.creatorType));
+    }
+    // Restore platforms
+    if (c.platforms && c.platforms.length) {
+      document.querySelectorAll('.plat-btn').forEach(b =>
+        b.classList.toggle('active', c.platforms.includes(b.dataset.plat)));
+    }
+
     renderClientList(data.clients);
   });
 }
@@ -162,6 +173,154 @@ document.getElementById('btn-clear-form').addEventListener('click', () => {
   generatedHTML = '';
 });
 
+/* ── CREATOR TYPE + PLATFORM SELECTORS ── */
+(function() {
+  // Single-select creator type
+  const ctGrid = document.getElementById('creator-type-grid');
+  if (ctGrid) ctGrid.addEventListener('click', e => {
+    const btn = e.target.closest('.ctype-btn');
+    if (!btn) return;
+    document.querySelectorAll('.ctype-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+
+  // Multi-select platforms (always keep at least one active)
+  const platGrid = document.getElementById('platform-grid');
+  if (platGrid) platGrid.addEventListener('click', e => {
+    const btn = e.target.closest('.plat-btn');
+    if (!btn) return;
+    const active = document.querySelectorAll('.plat-btn.active');
+    if (active.length === 1 && btn.classList.contains('active')) return;
+    btn.classList.toggle('active');
+  });
+})();
+
+function getActiveCreatorType() {
+  const active = document.querySelector('.ctype-btn.active');
+  return active ? active.dataset.type : 'service';
+}
+
+function getActivePlatforms() {
+  return [...document.querySelectorAll('.plat-btn.active')].map(b => b.dataset.plat);
+}
+
+function getCreatorProfile(creatorType, nicheProfile) {
+  const typeDefaults = {
+    service:  { focus: 'lead generation',    primaryPlatform: 'web'       },
+    creator:  { focus: 'audience growth',    primaryPlatform: 'youtube'   },
+    brand:    { focus: 'brand awareness',    primaryPlatform: 'instagram' },
+    personal: { focus: 'authority & trust',  primaryPlatform: 'linkedin'  },
+    smm:      { focus: 'client acquisition', primaryPlatform: 'web'       },
+    ecom:     { focus: 'product sales',      primaryPlatform: 'instagram' }
+  };
+  return { ...nicheProfile, creatorType, ...(typeDefaults[creatorType] || typeDefaults.service) };
+}
+
+function buildPlatformCopy(platform, { name, niche, offer, goal, loc }, profile) {
+  const p  = profile;
+  const at = loc ? ` in ${loc}` : '';
+  const specs = {
+    web: {
+      label: 'Web / Landing Page',
+      assets: [
+        { key: 'headline',  label: 'Hero Headline',    value: p.headline },
+        { key: 'subline',   label: 'Subline',          value: p.subline  },
+        { key: 'cta',       label: 'CTA Button',       value: p.cta      },
+        { key: 'metaTitle', label: 'Meta Title',       value: `${name} | ${offer || niche}` },
+        { key: 'metaDesc',  label: 'Meta Description', value: `${p.subline} · ${p.proof[0]}` }
+      ]
+    },
+    youtube: {
+      label: 'YouTube Channel',
+      dims: '2560×1440 banner · 1280×720 thumbnail',
+      assets: [
+        { key: 'channelName', label: 'Channel Name',      value: name },
+        { key: 'channelDesc', label: 'Channel Description',
+          value: `${p.headline}\n\n${p.subline}\n\nOn this channel I help ${p.audience}:\n${p.outcomes.map(o=>`→ ${o}`).join('\n')}\n\n${p.proof.join(' · ')}\n\nNew content every week — subscribe to stay ahead.` },
+        { key: 'bannerTag',   label: 'Banner Tagline',    value: p.headline.substring(0, 65) },
+        { key: 'thumbHook',   label: 'Thumbnail Hook',    value: p.scenarios[0].substring(0, 55) + '...' },
+        { key: 'about',       label: 'About Section',     value: `${offer || name}${at} — ${p.subline}` }
+      ]
+    },
+    instagram: {
+      label: 'Instagram',
+      dims: '1080×1080 post · 1080×1920 story',
+      assets: [
+        { key: 'bio',         label: 'Bio (150 chars)',
+          value: `${offer || niche}${at}\n${p.proof[0]} · ${p.proof[1]}\n${p.cta} 👇` },
+        { key: 'username',    label: 'Username Suggestion',
+          value: name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'') },
+        { key: 'postCaption', label: 'First Post Caption',
+          value: `${p.headline}\n\n${p.painPoints[0]}\n\nHere's what changes:\n✓ ${p.outcomes[0]}\n✓ ${p.outcomes[1]}\n\n${p.cta} — link in bio.` },
+        { key: 'storyHook',   label: 'Story Hook',        value: p.scenarios[0].substring(0, 80) }
+      ]
+    },
+    tiktok: {
+      label: 'TikTok',
+      dims: '200×200 profile image',
+      assets: [
+        { key: 'bio',   label: 'Bio (80 chars)',  value: `${offer}${at} · ${p.proof[0]}` },
+        { key: 'hook1', label: 'Content Hook #1', value: `"${p.scenarios[0].substring(0,60)}..."` },
+        { key: 'hook2', label: 'Content Hook #2', value: `POV: ${p.painPoints[0].substring(0,55)}` },
+        { key: 'hook3', label: 'Content Hook #3', value: `The real reason ${p.audience.split(' ')[0]}s are struggling with ${niche}` },
+        { key: 'cta',   label: 'Profile CTA',     value: p.cta }
+      ]
+    },
+    linkedin: {
+      label: 'LinkedIn',
+      dims: '1584×396 banner',
+      assets: [
+        { key: 'headline', label: 'Profile Headline',
+          value: `${offer}${at} · Helping ${p.audience} · ${p.proof[0]}` },
+        { key: 'about',    label: 'About Section',
+          value: `${p.headline}\n\nI work with ${p.audience} who are dealing with:\n→ ${p.painPoints[0]}\n→ ${p.painPoints[1]}\n\nWhat I deliver:\n✔ ${p.outcomes[0]}\n✔ ${p.outcomes[1]}\n\n${p.ctaLow || p.cta}` },
+        { key: 'bannerTag', label: 'Banner Tagline', value: p.headline.substring(0, 80) }
+      ]
+    },
+    twitter: {
+      label: 'X / Twitter',
+      dims: '1500×500 header',
+      assets: [
+        { key: 'bio',         label: 'Bio (160 chars)',
+          value: `${offer}${at} · ${p.proof[0]} · ${p.proof[1]} · ${p.cta}` },
+        { key: 'pinnedTweet', label: 'Pinned Tweet',
+          value: `${p.headline}\n\n${p.outcomes[0]}\n${p.outcomes[1]}\n\n${p.cta}` },
+        { key: 'headerTag',   label: 'Header Tagline', value: p.headline.substring(0, 70) },
+        { key: 'username',    label: 'Username Suggestion',
+          value: '@' + name.replace(/\s+/g,'').substring(0,15) }
+      ]
+    }
+  };
+  return specs[platform] || null;
+}
+
+function buildAllPlatformsCopy(platforms, payload, profile) {
+  return platforms.map(plat => buildPlatformCopy(plat, payload, profile)).filter(Boolean);
+}
+
+function renderPlatformOutputs(platformOutputs) {
+  const bar = document.getElementById('pkg-bar');
+  if (!bar) return;
+  if (!platformOutputs || !platformOutputs.length) return;
+  bar.innerHTML = platformOutputs.map(po => `
+    <div class="plat-copy-card">
+      <div class="plat-copy-header">
+        <i class="fas fa-layer-group"></i>
+        <span>${esc(po.label)}</span>
+        ${po.dims ? `<span class="plat-dims">${esc(po.dims)}</span>` : ''}
+      </div>
+      <div class="plat-copy-body">
+        ${po.assets.map(a => `
+          <div class="plat-asset-row">
+            <div class="plat-asset-label">${esc(a.label)}</div>
+            <div class="plat-asset-value">${esc(a.value)}
+              <button class="plat-copy-btn" onclick="navigator.clipboard.writeText(${JSON.stringify(a.value)}).then(()=>toast('Copied','ok'))">copy</button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
 function getFormPayload() {
   const style = getStyle();
   return {
@@ -172,6 +331,8 @@ function getFormPayload() {
     location:     document.getElementById('f-location').value.trim(),
     notes:        document.getElementById('f-notes').value.trim(),
     tone:         style.tone,
+    creatorType:  getActiveCreatorType(),
+    platforms:    getActivePlatforms(),
     systemComponents: style.systems,
     style: {
       primary:  style.primary,
@@ -276,8 +437,11 @@ document.getElementById('btn-generate').addEventListener('click', () => {
   const notes = document.getElementById('f-notes').value.trim();
   const style = getStyle();
 
-  /* Resolve niche profile — drives ALL output */
+  /* Resolve niche profile + creator context — drives ALL output */
   const profile = getNicheProfile(niche, offer, goal, loc);
+  const creatorType = getActiveCreatorType();
+  const platforms   = getActivePlatforms();
+  const creatorProfile = getCreatorProfile(creatorType, profile);
 
   /* 1. Landing page */
   generatedHTML = buildLandingPage({ name, niche, offer, goal, loc, profile, style });
@@ -303,11 +467,20 @@ document.getElementById('btn-generate').addEventListener('click', () => {
   const offerDef = buildOfferDefinition({ name, niche, offer, goal, loc, profile });
   console.log('[TheSaaSsin] Offer Definition:', JSON.stringify(offerDef, null, 2));
 
-  /* 5. Package summary → show in right panel */
+  /* 5. Platform copy → Package tab */
+  const platformOutputs = buildAllPlatformsCopy(platforms, { name, niche, offer, goal, loc }, creatorProfile);
+  renderPlatformOutputs(platformOutputs);
+
+  /* 6. Package summary → show in Package tab */
   showPackageSummary(buildPackageSummary({ name, profile, style }));
 
-  /* 6. Auto-save generated system back to client record */
+  /* 7. Auto-save generated system + platform copy back to client record */
   if (selectedClient) {
+    const platformCopyMap = {};
+    platformOutputs.forEach(po => {
+      const key = po.label.split('/')[0].trim().toLowerCase().replace(/\s+/g,'');
+      platformCopyMap[key] = Object.fromEntries(po.assets.map(a => [a.key, a.value]));
+    });
     const updatedSystems = {
       landingPage: generatedHTML,
       outreach:    sequence.map(s => ({ label: s.label, body: s.body })),
@@ -316,7 +489,7 @@ document.getElementById('btn-generate').addEventListener('click', () => {
     };
     fetch(API + '/clients', {
       method: 'PATCH',
-      body: JSON.stringify({ id: selectedClient.id, systems: updatedSystems, lastUpdated: new Date().toISOString() })
+      body: JSON.stringify({ id: selectedClient.id, systems: updatedSystems, platformCopy: platformCopyMap, lastUpdated: new Date().toISOString() })
     }).then(r => r.json()).then(d => { if (d.client) selectedClient = d.client; }).catch(() => {});
   }
 

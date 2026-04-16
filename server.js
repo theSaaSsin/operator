@@ -107,8 +107,10 @@ const ROUTES = {
     data.id    = Date.now();
     data.createdAt  = new Date().toISOString();
     data.lastUpdated = new Date().toISOString();
-    data.status = 'active';
-    data.systems = data.systems || { landingPage: '', outreach: [], crm: {} };
+    data.status      = 'active';
+    data.creatorType = data.creatorType || 'service';
+    data.platforms   = data.platforms   || ['web'];
+    data.systems     = data.systems || { landingPage: '', outreach: [], crm: {} };
     db.clients.push(data);
     writeJSON('clients.json', db);
     res.end(JSON.stringify({ ok: true, client: data }));
