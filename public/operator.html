@@ -22,6 +22,9 @@
       <div class="nav-item active" data-panel="client">
         <i class="fas fa-user-plus"></i> Client Creator
       </div>
+      <div class="nav-item" data-panel="studio">
+        <i class="fas fa-layer-group"></i> Asset Studio
+      </div>
       <div class="nav-section">Manage</div>
       <div class="nav-item" data-panel="crm">
         <i class="fas fa-chart-line"></i> CRM / Leads
@@ -276,6 +279,112 @@
           <div class="out-tab" data-status="sent">Sent <span id="count-sent" class="badge badge-pending" style="margin-left:4px">0</span></div>
         </div>
         <div class="out-list" id="out-list"></div>
+      </div>
+
+      <!-- ── PANEL: ASSET STUDIO ── -->
+      <div class="panel" id="panel-studio">
+        <div class="studio-left">
+
+          <div class="studio-section">
+            <div class="studio-section-label">Client</div>
+            <select id="studio-client-select" class="studio-select">
+              <option value="">— Select client —</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" id="btn-studio-load" style="width:100%;margin-top:6px">
+              <i class="fas fa-wand-magic-sparkles"></i> Generate from Client
+            </button>
+          </div>
+
+          <div class="studio-section">
+            <div class="studio-section-label">Platform / Size</div>
+            <div class="studio-preset-grid" id="studio-preset-grid">
+              <button class="studio-preset-btn active" data-preset="yt-banner" data-w="2560" data-h="1440">
+                <i class="fab fa-youtube"></i><span>YouTube Banner</span><small>2560×1440</small>
+              </button>
+              <button class="studio-preset-btn" data-preset="yt-thumb" data-w="1280" data-h="720">
+                <i class="fab fa-youtube"></i><span>YT Thumbnail</span><small>1280×720</small>
+              </button>
+              <button class="studio-preset-btn" data-preset="ig-post" data-w="1080" data-h="1080">
+                <i class="fab fa-instagram"></i><span>IG Post</span><small>1080×1080</small>
+              </button>
+              <button class="studio-preset-btn" data-preset="ig-story" data-w="1080" data-h="1920">
+                <i class="fab fa-instagram"></i><span>IG Story</span><small>1080×1920</small>
+              </button>
+              <button class="studio-preset-btn" data-preset="li-banner" data-w="1584" data-h="396">
+                <i class="fab fa-linkedin"></i><span>LinkedIn Banner</span><small>1584×396</small>
+              </button>
+              <button class="studio-preset-btn" data-preset="tw-header" data-w="1500" data-h="500">
+                <i class="fab fa-x-twitter"></i><span>X / Twitter Header</span><small>1500×500</small>
+              </button>
+              <button class="studio-preset-btn" data-preset="tt-profile" data-w="200" data-h="200">
+                <i class="fab fa-tiktok"></i><span>TikTok Profile</span><small>200×200</small>
+              </button>
+              <button class="studio-preset-btn" data-preset="web-og" data-w="1200" data-h="630">
+                <i class="fas fa-globe"></i><span>OG / Web Share</span><small>1200×630</small>
+              </button>
+            </div>
+          </div>
+
+          <div class="studio-section">
+            <div class="studio-section-label">Template Layout</div>
+            <div class="studio-template-row" id="studio-template-row">
+              <button class="studio-tpl-btn active" data-tpl="0">1</button>
+              <button class="studio-tpl-btn" data-tpl="1">2</button>
+              <button class="studio-tpl-btn" data-tpl="2">3</button>
+              <button class="studio-tpl-btn" data-tpl="3">4</button>
+            </div>
+          </div>
+
+          <div class="studio-section">
+            <div class="studio-section-label">Brand Colors</div>
+            <div class="studio-color-row">
+              <div class="studio-color-swatch" id="studio-swatch-bg"      style="background:#0a0a0f" title="Background"></div>
+              <div class="studio-color-swatch" id="studio-swatch-primary" style="background:#ff2a2a" title="Primary"></div>
+              <div class="studio-color-swatch" id="studio-swatch-text"    style="background:#f0f0f5" title="Text"></div>
+            </div>
+            <div class="studio-color-inputs">
+              <label>BG</label>    <input type="color" id="sc-bg"      value="#0a0a0f">
+              <label>Primary</label><input type="color" id="sc-primary" value="#ff2a2a">
+              <label>Text</label>  <input type="color" id="sc-text"    value="#f0f0f5">
+            </div>
+          </div>
+
+          <div class="studio-section">
+            <div class="studio-section-label">Text Content</div>
+            <div class="studio-text-field">
+              <label>Headline</label>
+              <input type="text" id="sc-headline" placeholder="Main headline..." class="studio-input">
+            </div>
+            <div class="studio-text-field">
+              <label>Subline</label>
+              <input type="text" id="sc-subline" placeholder="Supporting text..." class="studio-input">
+            </div>
+            <div class="studio-text-field">
+              <label>Name / Brand</label>
+              <input type="text" id="sc-name" placeholder="Business name..." class="studio-input">
+            </div>
+          </div>
+
+          <div class="studio-section">
+            <button class="btn btn-primary" id="btn-studio-export" style="width:100%">
+              <i class="fas fa-download"></i> Export PNG
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-studio-copy-svg" style="width:100%;margin-top:6px">
+              <i class="fas fa-code"></i> Copy SVG
+            </button>
+          </div>
+
+        </div>
+        <div class="studio-right">
+          <div class="studio-canvas-wrap" id="studio-canvas-wrap">
+            <div class="studio-canvas-inner" id="studio-canvas-inner"></div>
+          </div>
+          <div class="studio-status-bar">
+            <span id="studio-size-label">2560 × 1440</span>
+            <span id="studio-preset-label">YouTube Banner</span>
+            <span id="studio-tpl-label">Template 1</span>
+          </div>
+        </div>
       </div>
 
     </div><!-- /content -->

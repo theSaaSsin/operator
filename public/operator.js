@@ -1667,5 +1667,288 @@ async function saveFeedLead(id, author, niche, url, title, score) {
   } catch { toast('Could not save lead', 'err'); }
 }
 
+/* ══════════════════════════════════
+   ASSET STUDIO
+══════════════════════════════════ */
+
+const STUDIO_PRESETS = {
+  'yt-banner':  { label: 'YouTube Banner',     w: 2560, h: 1440 },
+  'yt-thumb':   { label: 'YT Thumbnail',       w: 1280, h: 720  },
+  'ig-post':    { label: 'IG Post',            w: 1080, h: 1080 },
+  'ig-story':   { label: 'IG Story',           w: 1080, h: 1920 },
+  'li-banner':  { label: 'LinkedIn Banner',    w: 1584, h: 396  },
+  'tw-header':  { label: 'X / Twitter Header', w: 1500, h: 500  },
+  'tt-profile': { label: 'TikTok Profile',     w: 200,  h: 200  },
+  'web-og':     { label: 'OG / Web Share',     w: 1200, h: 630  }
+};
+
+const studioState = {
+  preset:   'yt-banner',
+  template: 0,
+  colors:   { bg: '#0a0a0f', primary: '#ff2a2a', text: '#f0f0f5' },
+  content:  { headline: '', subline: '', name: '' }
+};
+
+function svgEsc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function lightenHex(hex, amount) {
+  const n = parseInt(hex.replace('#',''), 16);
+  const r = Math.min(255, ((n>>16)&0xff) + Math.round(255*amount));
+  const g = Math.min(255, ((n>>8)&0xff)  + Math.round(255*amount));
+  const b = Math.min(255, (n&0xff)        + Math.round(255*amount));
+  return '#' + [r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+/* ── 4 TEMPLATE BUILDERS ── */
+function buildTpl_Gradient(w, h, c, txt) {
+  const cx = w/2, cy = h/2;
+  const fs1 = Math.min(w*0.055, 120);
+  const fs2 = Math.min(w*0.022, 48);
+  const fs3 = Math.min(w*0.018, 38);
+  return `
+    <defs>
+      <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="${c.bg}"/>
+        <stop offset="100%" stop-color="${lightenHex(c.bg,0.1)}"/>
+      </linearGradient>
+      <linearGradient id="g2" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="${c.primary}" stop-opacity="0"/>
+        <stop offset="50%" stop-color="${c.primary}" stop-opacity="0.25"/>
+        <stop offset="100%" stop-color="${c.primary}" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <rect width="${w}" height="${h}" fill="url(#g1)"/>
+    <rect width="${w}" height="${Math.round(h*0.004)}" y="${cy}" fill="url(#g2)"/>
+    <text x="${cx}" y="${cy - fs1*0.7}" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="${fs1}" fill="${c.text}">${svgEsc(txt.headline||'Your Headline')}</text>
+    <text x="${cx}" y="${cy + fs2*0.9}" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="400" font-size="${fs2}" fill="${c.text}" opacity="0.65">${svgEsc(txt.subline||'Supporting text')}</text>
+    <text x="${cx}" y="${h - fs3*1.2}" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="${fs3}" fill="${c.primary}">${svgEsc(txt.name||'Brand Name')}</text>`;
+}
+
+function buildTpl_Split(w, h, c, txt) {
+  const fs1 = Math.min(w*0.042, 90);
+  const fs2 = Math.min(w*0.018, 40);
+  const fs3 = Math.min(w*0.016, 34);
+  const split = Math.round(w*0.55);
+  return `
+    <rect width="${w}" height="${h}" fill="${c.bg}"/>
+    <rect x="${split}" width="${w - split}" height="${h}" fill="${c.primary}" opacity="0.12"/>
+    <rect x="${split}" width="${Math.round(w*0.004)}" height="${h}" fill="${c.primary}" opacity="0.6"/>
+    <text x="${Math.round(w*0.05)}" y="${Math.round(h*0.42)}" font-family="system-ui,sans-serif" font-weight="800" font-size="${fs1}" fill="${c.text}">${svgEsc(txt.headline||'Your Headline')}</text>
+    <text x="${Math.round(w*0.05)}" y="${Math.round(h*0.42) + fs1*1.2}" font-family="system-ui,sans-serif" font-weight="400" font-size="${fs2}" fill="${c.text}" opacity="0.6">${svgEsc(txt.subline||'Supporting text')}</text>
+    <text x="${split + Math.round(w*0.04)}" y="${Math.round(h*0.52)}" font-family="system-ui,sans-serif" font-weight="700" font-size="${fs3}" fill="${c.primary}">${svgEsc(txt.name||'Brand Name')}</text>`;
+}
+
+function buildTpl_Bold(w, h, c, txt) {
+  const fs1 = Math.min(w*0.065, 130);
+  const fs2 = Math.min(w*0.02, 44);
+  const fs3 = Math.min(w*0.016, 34);
+  const barH = Math.round(h*0.012);
+  return `
+    <rect width="${w}" height="${h}" fill="${c.bg}"/>
+    <rect y="${Math.round(h*0.08)}" width="${Math.round(w*0.08)}" height="${barH}" fill="${c.primary}"/>
+    <text x="${Math.round(w*0.05)}" y="${Math.round(h*0.48)}" font-family="system-ui,sans-serif" font-weight="900" font-size="${fs1}" fill="${c.text}">${svgEsc((txt.headline||'HEADLINE').toUpperCase())}</text>
+    <rect y="${Math.round(h*0.55)}" width="${w}" height="${Math.round(barH*0.5)}" fill="${c.primary}" opacity="0.2"/>
+    <text x="${Math.round(w*0.05)}" y="${Math.round(h*0.68)}" font-family="system-ui,sans-serif" font-weight="400" font-size="${fs2}" fill="${c.text}" opacity="0.65">${svgEsc(txt.subline||'Supporting text')}</text>
+    <text x="${Math.round(w*0.05)}" y="${h - Math.round(h*0.06)}" font-family="system-ui,sans-serif" font-weight="700" font-size="${fs3}" fill="${c.primary}">${svgEsc(txt.name||'Brand Name')}</text>`;
+}
+
+function buildTpl_Minimal(w, h, c, txt) {
+  const pad  = Math.round(Math.min(w,h)*0.06);
+  const fs1  = Math.min(w*0.038, 80);
+  const fs2  = Math.min(w*0.016, 36);
+  const fs3  = Math.min(w*0.014, 30);
+  return `
+    <rect width="${w}" height="${h}" fill="${c.bg}"/>
+    <rect x="${pad}" y="${pad}" width="${w-pad*2}" height="${h-pad*2}" fill="none" stroke="${c.primary}" stroke-width="${Math.round(Math.min(w,h)*0.003)}" opacity="0.4"/>
+    <text x="${w/2}" y="${h/2 - fs1*0.5}" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="${fs1}" fill="${c.text}">${svgEsc(txt.headline||'Your Headline')}</text>
+    <line x1="${w/2 - Math.round(w*0.06)}" y1="${h/2 + fs1*0.1}" x2="${w/2 + Math.round(w*0.06)}" y2="${h/2 + fs1*0.1}" stroke="${c.primary}" stroke-width="${Math.round(Math.min(w,h)*0.003)}"/>
+    <text x="${w/2}" y="${h/2 + fs2*1.4}" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="300" font-size="${fs2}" fill="${c.text}" opacity="0.6">${svgEsc(txt.subline||'Supporting text')}</text>
+    <text x="${w/2}" y="${h - pad - fs3*0.3}" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="600" font-size="${fs3}" fill="${c.primary}">${svgEsc(txt.name||'Brand Name')}</text>`;
+}
+
+function buildTemplateSVG(state, preset, scale) {
+  const { w, h } = preset;
+  const dW = Math.round(w * scale);
+  const dH = Math.round(h * scale);
+  const TPLS = [buildTpl_Gradient, buildTpl_Split, buildTpl_Bold, buildTpl_Minimal];
+  const fn = TPLS[state.template] || TPLS[0];
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${dW}" height="${dH}" viewBox="0 0 ${w} ${h}">${fn(w, h, state.colors, state.content)}</svg>`;
+}
+
+function studioRender() {
+  const preset = STUDIO_PRESETS[studioState.preset];
+  const wrap  = document.getElementById('studio-canvas-wrap');
+  const inner = document.getElementById('studio-canvas-inner');
+  if (!wrap || !inner || !preset) return;
+
+  const availW = (wrap.offsetWidth  || 600) - 40;
+  const availH = (wrap.offsetHeight || 400) - 40;
+  const scale  = Math.min(availW / preset.w, availH / preset.h, 1);
+
+  inner.style.width  = Math.round(preset.w * scale) + 'px';
+  inner.style.height = Math.round(preset.h * scale) + 'px';
+  inner.innerHTML    = buildTemplateSVG(studioState, preset, scale);
+
+  const sl = document.getElementById('studio-size-label');
+  const pl = document.getElementById('studio-preset-label');
+  const tl = document.getElementById('studio-tpl-label');
+  if (sl) sl.textContent = `${preset.w} × ${preset.h}`;
+  if (pl) pl.textContent = preset.label;
+  if (tl) tl.textContent = `Template ${studioState.template + 1}`;
+}
+
+function studioPopulateFromClient(client) {
+  if (!client) return;
+  const profile = getNicheProfile(client.niche || '', client.offer || '', client.goal || 'leads', client.location || '');
+  studioState.content.headline = (profile.headline || '').substring(0, 70);
+  studioState.content.subline  = (profile.subline  || '').substring(0, 90);
+  studioState.content.name     = client.businessName || '';
+
+  if (client.style) {
+    const isDark = client.style.theme !== 'light';
+    studioState.colors.bg      = isDark ? '#0a0a0f' : '#f5f5fa';
+    studioState.colors.primary = client.style.primary || '#ff2a2a';
+    studioState.colors.text    = isDark ? '#f0f0f5'  : '#1a1a2e';
+  }
+
+  ['bg','primary','text'].forEach(k => {
+    const inp = document.getElementById('sc-' + k);
+    const sw  = document.getElementById('studio-swatch-' + k);
+    if (inp) inp.value = studioState.colors[k];
+    if (sw)  sw.style.background = studioState.colors[k];
+  });
+  const fields = { headline: 'sc-headline', subline: 'sc-subline', name: 'sc-name' };
+  Object.entries(fields).forEach(([k, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = studioState.content[k];
+  });
+
+  studioRender();
+  toast('Generated from ' + client.businessName, 'ok');
+}
+
+async function populateStudioClientSelect() {
+  try {
+    const res  = await fetch(API + '/clients');
+    const data = await res.json();
+    const sel  = document.getElementById('studio-client-select');
+    if (!sel) return;
+    const clients = data.clients || [];
+    sel.innerHTML = '<option value="">— Select client —</option>' +
+      clients.map(c => `<option value="${c.id}">${esc(c.businessName)}</option>`).join('');
+  } catch {}
+}
+
+function studioExportPNG() {
+  const preset = STUDIO_PRESETS[studioState.preset];
+  const svgEl  = document.querySelector('#studio-canvas-inner svg');
+  if (!svgEl || !preset) { toast('Nothing to export', 'err'); return; }
+
+  const clone = svgEl.cloneNode(true);
+  clone.setAttribute('width',  preset.w);
+  clone.setAttribute('height', preset.h);
+
+  const svgStr = new XMLSerializer().serializeToString(clone);
+  const blob   = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url    = URL.createObjectURL(blob);
+
+  const img = new Image();
+  img.onload = () => {
+    const canvas  = document.createElement('canvas');
+    canvas.width  = preset.w;
+    canvas.height = preset.h;
+    canvas.getContext('2d').drawImage(img, 0, 0, preset.w, preset.h);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(pngBlob => {
+      const a  = document.createElement('a');
+      a.href   = URL.createObjectURL(pngBlob);
+      a.download = (studioState.content.name || 'asset').replace(/\s+/g,'-').toLowerCase() + '-' + studioState.preset + '.png';
+      a.click();
+      toast('PNG exported', 'ok');
+    }, 'image/png');
+  };
+  img.src = url;
+}
+
+function studioCopySVG() {
+  const preset = STUDIO_PRESETS[studioState.preset];
+  const svgEl  = document.querySelector('#studio-canvas-inner svg');
+  if (!svgEl || !preset) { toast('Nothing to copy', 'err'); return; }
+  const clone = svgEl.cloneNode(true);
+  clone.setAttribute('width',  preset.w);
+  clone.setAttribute('height', preset.h);
+  const str = new XMLSerializer().serializeToString(clone);
+  navigator.clipboard.writeText(str).then(() => toast('SVG copied to clipboard', 'ok'));
+}
+
+/* ── STUDIO WIRING ── */
+(function initStudio() {
+  const presetGrid = document.getElementById('studio-preset-grid');
+  if (!presetGrid) return;
+
+  presetGrid.addEventListener('click', e => {
+    const btn = e.target.closest('.studio-preset-btn');
+    if (!btn) return;
+    document.querySelectorAll('.studio-preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    studioState.preset = btn.dataset.preset;
+    studioRender();
+  });
+
+  document.getElementById('studio-template-row').addEventListener('click', e => {
+    const btn = e.target.closest('.studio-tpl-btn');
+    if (!btn) return;
+    document.querySelectorAll('.studio-tpl-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    studioState.template = parseInt(btn.dataset.tpl, 10);
+    studioRender();
+  });
+
+  ['bg','primary','text'].forEach(key => {
+    const inp = document.getElementById('sc-' + key);
+    if (!inp) return;
+    inp.addEventListener('input', e => {
+      studioState.colors[key] = e.target.value;
+      const sw = document.getElementById('studio-swatch-' + key);
+      if (sw) sw.style.background = e.target.value;
+      studioRender();
+    });
+  });
+
+  let studioDebounce;
+  [['headline','sc-headline'],['subline','sc-subline'],['name','sc-name']].forEach(([key, id]) => {
+    const inp = document.getElementById(id);
+    if (!inp) return;
+    inp.addEventListener('input', e => {
+      studioState.content[key] = e.target.value;
+      clearTimeout(studioDebounce);
+      studioDebounce = setTimeout(studioRender, 120);
+    });
+  });
+
+  document.getElementById('btn-studio-load').addEventListener('click', async () => {
+    const sel = document.getElementById('studio-client-select');
+    const id  = sel ? parseInt(sel.value, 10) : 0;
+    if (!id) { toast('Select a client first', 'err'); return; }
+    try {
+      const res  = await fetch(API + '/clients');
+      const data = await res.json();
+      const client = (data.clients || []).find(c => c.id === id);
+      if (client) studioPopulateFromClient(client);
+      else toast('Client not found', 'err');
+    } catch { toast('Could not load client', 'err'); }
+  });
+
+  document.getElementById('btn-studio-export').addEventListener('click', studioExportPNG);
+  document.getElementById('btn-studio-copy-svg').addEventListener('click', studioCopySVG);
+
+  // Re-render on window resize
+  window.addEventListener('resize', () => {
+    if (document.getElementById('panel-studio').classList.contains('active')) studioRender();
+  });
+})();
+
 /* ── INIT ── */
 loadClients();
