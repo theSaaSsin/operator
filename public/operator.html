@@ -18,6 +18,10 @@
       <div class="s-tag">Operator Panel</div>
     </div>
     <nav>
+      <div class="nav-section">Command</div>
+      <div class="nav-item" data-panel="dashboard">
+        <i class="fas fa-gauge-high"></i> Dashboard
+      </div>
       <div class="nav-section">Build</div>
       <div class="nav-item active" data-panel="client">
         <i class="fas fa-user-plus"></i> Client Creator
@@ -46,6 +50,66 @@
     </div>
 
     <div id="content">
+
+      <!-- ── PANEL: DASHBOARD ── -->
+      <div class="panel" id="panel-dashboard">
+        <div class="dash-scroll">
+
+          <div class="dash-hero-row">
+            <div class="dash-active-client">
+              <div class="dac-label">Active Client</div>
+              <div class="dac-empty" id="dac-empty">
+                <i class="fas fa-user-slash"></i>
+                <p>No client selected</p>
+                <button class="btn btn-secondary btn-sm" onclick="switchPanel('client')">
+                  <i class="fas fa-user-plus"></i> Create First Client
+                </button>
+              </div>
+              <div class="dac-content" id="dac-content" style="display:none">
+                <div class="dac-avatar" id="dac-avatar">A</div>
+                <div class="dac-info">
+                  <div class="dac-name" id="dac-name">—</div>
+                  <div class="dac-meta" id="dac-meta">—</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="switchPanel('client')">
+                  <i class="fas fa-edit"></i> Edit
+                </button>
+              </div>
+            </div>
+            <div class="dash-quick-stats">
+              <div class="dqs-card"><div class="dqs-num" id="dqs-clients">0</div><div class="dqs-label">Clients</div></div>
+              <div class="dqs-card"><div class="dqs-num" id="dqs-leads">0</div><div class="dqs-label">Leads</div></div>
+              <div class="dqs-card"><div class="dqs-num" id="dqs-outreach">0</div><div class="dqs-label">Msgs Pending</div></div>
+              <div class="dqs-card"><div class="dqs-num" id="dqs-platforms">0</div><div class="dqs-label">Platforms Active</div></div>
+            </div>
+          </div>
+
+          <div class="dash-section">
+            <div class="dash-section-header">
+              <h3>Platform Readiness</h3>
+              <span class="dash-section-hint">Based on active client</span>
+            </div>
+            <div class="dash-platform-grid" id="dash-platform-grid">
+              <div style="padding:20px;color:var(--muted);font-size:.82rem;text-align:center;width:100%">
+                Select a client to see platform readiness
+              </div>
+            </div>
+          </div>
+
+          <div class="dash-section">
+            <div class="dash-section-header">
+              <h3>Next Actions</h3>
+              <span class="dash-section-hint">Top 3 — ranked by impact</span>
+            </div>
+            <div class="dash-actions-list" id="dash-actions-list">
+              <div style="padding:20px;color:var(--muted);font-size:.82rem;text-align:center">
+                Loading...
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
 
       <!-- ── PANEL: CLIENT CREATOR ── -->
       <div class="panel active" id="panel-client">

@@ -141,6 +141,9 @@ function selectClient(id) {
       if (s.imgStyle) document.getElementById('s-imgstyle').value = s.imgStyle;
     }
 
+    // Refresh dashboard if visible
+    if (document.getElementById('panel-dashboard').classList.contains('active')) renderDashboard();
+
     // Restore creator type
     if (c.creatorType) {
       document.querySelectorAll('.ctype-btn').forEach(b =>
@@ -1950,5 +1953,208 @@ function studioCopySVG() {
   });
 })();
 
+/* ══════════════════════════════════
+   DASHBOARD — DECISION ENGINE
+══════════════════════════════════ */
+
+const PLATFORM_ICONS = {
+  web: 'fas fa-globe', youtube: 'fab fa-youtube', instagram: 'fab fa-instagram',
+  tiktok: 'fab fa-tiktok', linkedin: 'fab fa-linkedin', twitter: 'fab fa-x-twitter'
+};
+
+function computePlatformReadiness(client) {
+  if (!client) return [];
+  const platforms = client.platforms || ['web'];
+  const checks = {
+    web: [
+      { label: 'Landing page generated',  ok: c => !!(c.systems && c.systems.landingPage) },
+      { label: 'Outreach sequence ready', ok: c => !!(c.systems && c.systems.outreach && c.systems.outreach.length >= 3) },
+      { label: 'CRM structure built',     ok: c => !!(c.systems && c.systems.crm && Object.keys(c.systems.crm).length > 0) }
+    ],
+    youtube: [
+      { label: 'Channel description written', ok: c => !!(c.platformCopy && c.platformCopy.youtube && c.platformCopy.youtube.channelDesc) },
+      { label: 'Banner tagline ready',        ok: c => !!(c.platformCopy && c.platformCopy.youtube && c.platformCopy.youtube.bannerTag) },
+      { label: 'Thumbnail hook written',      ok: c => !!(c.platformCopy && c.platformCopy.youtube && c.platformCopy.youtube.thumbHook) }
+    ],
+    instagram: [
+      { label: 'Bio written',         ok: c => !!(c.platformCopy && c.platformCopy.instagram && c.platformCopy.instagram.bio) },
+      { label: 'Post caption ready',  ok: c => !!(c.platformCopy && c.platformCopy.instagram && c.platformCopy.instagram.postCaption) },
+      { label: 'Story hook written',  ok: c => !!(c.platformCopy && c.platformCopy.instagram && c.platformCopy.instagram.storyHook) }
+    ],
+    tiktok: [
+      { label: 'Bio written',          ok: c => !!(c.platformCopy && c.platformCopy.tiktok && c.platformCopy.tiktok.bio) },
+      { label: 'Content hooks written',ok: c => !!(c.platformCopy && c.platformCopy.tiktok && c.platformCopy.tiktok.hook1) }
+    ],
+    linkedin: [
+      { label: 'Headline written',     ok: c => !!(c.platformCopy && c.platformCopy.linkedin && c.platformCopy.linkedin.headline) },
+      { label: 'About section written',ok: c => !!(c.platformCopy && c.platformCopy.linkedin && c.platformCopy.linkedin.about) }
+    ],
+    twitter: [
+      { label: 'Bio written',          ok: c => !!(c.platformCopy && c.platformCopy.twitter && c.platformCopy.twitter.bio) },
+      { label: 'Pinned tweet written', ok: c => !!(c.platformCopy && c.platformCopy.twitter && c.platformCopy.twitter.pinnedTweet) }
+    ]
+  };
+
+  return platforms.map(plat => {
+    const platChecks = checks[plat] || [];
+    const passed = platChecks.filter(ch => ch.ok(client)).length;
+    const total  = platChecks.length || 1;
+    const score  = Math.round((passed / total) * 100);
+    const missing = platChecks.filter(ch => !ch.ok(client)).map(ch => ch.label);
+    return {
+      platform: plat,
+      icon: PLATFORM_ICONS[plat] || 'fas fa-globe',
+      label: plat.charAt(0).toUpperCase() + plat.slice(1),
+      score, passed, total, missing,
+      scoreColor: score >= 80 ? 'var(--success)' : score >= 40 ? 'var(--warn)' : 'var(--accent)'
+    };
+  });
+}
+
+function computeNextActions(client, readiness) {
+  const actions = [];
+
+  if (!client) {
+    return [{
+      rank: 1, name: 'Create your first client',
+      why:  'The entire system runs from a client record. Landing pages, outreach sequences, platform copy, and the Asset Studio all unlock once you create one.',
+      panel: 'client', cta: 'Open Client Creator'
+    }];
+  }
+
+  if (!(client.systems && client.systems.landingPage)) {
+    actions.push({
+      rank: actions.length + 1,
+      name: `Generate ${client.businessName}'s system`,
+      why:  `You have a client saved but no system generated yet. One click builds the landing page, 5-message outreach sequence, and CRM structure.`,
+      panel: 'client', cta: 'Go to Client Creator'
+    });
+  }
+
+  const empty = readiness.filter(p => p.score === 0 && p.platform !== 'web');
+  if (empty.length) {
+    actions.push({
+      rank: actions.length + 1,
+      name: `Generate ${empty[0].label} copy for ${client.businessName}`,
+      why:  `${empty[0].label} is a target platform but has zero assets. Click Generate in Client Creator to produce all ${empty[0].label} copy assets.`,
+      panel: 'client', cta: 'Generate Platform Copy'
+    });
+  }
+
+  if (window._outreachPendingCount > 0 && actions.length < 3) {
+    actions.push({
+      rank: actions.length + 1,
+      name: `Approve ${window._outreachPendingCount} pending outreach message${window._outreachPendingCount !== 1 ? 's' : ''}`,
+      why:  `Messages are sitting in your queue waiting for approval. Every day they wait is a potential client not being contacted.`,
+      panel: 'outreach', cta: 'Review Outreach Queue'
+    });
+  }
+
+  const partial = readiness.filter(p => p.score > 0 && p.score < 100);
+  if (partial.length && actions.length < 3) {
+    const p = partial.sort((a, b) => b.score - a.score)[0];
+    actions.push({
+      rank: actions.length + 1,
+      name: `Complete ${p.label} setup: ${p.missing[0]}`,
+      why:  `Your ${p.label} presence is ${p.score}% complete. A consistent presence across every targeted platform builds trust before a prospect even speaks to you.`,
+      panel: p.score === 0 ? 'client' : 'studio', cta: 'Open Asset Studio'
+    });
+  }
+
+  if ((!window._leadCount || window._leadCount === 0) && actions.length < 3) {
+    actions.push({
+      rank: actions.length + 1,
+      name: 'Add your first lead to the CRM',
+      why:  'Your CRM is empty. Even one lead with a status and score gives you a pipeline to track and a reason to follow up.',
+      panel: 'crm', cta: 'Open CRM'
+    });
+  }
+
+  if (!actions.length) {
+    actions.push({
+      rank: 1,
+      name: 'System is fully set up',
+      why:  `${client.businessName} has all platforms configured and assets generated. Keep your CRM up to date and review new leads in the Lead Feed.`,
+      panel: 'outreach', cta: 'Review Outreach Queue'
+    });
+  }
+
+  return actions.slice(0, 3);
+}
+
+async function renderDashboard() {
+  // Fetch fresh counts
+  try {
+    const [cr, lr, or_] = await Promise.all([
+      fetch(API + '/clients'), fetch(API + '/leads'), fetch(API + '/outreach')
+    ]);
+    const [cd, ld, od] = await Promise.all([cr.json(), lr.json(), or_.json()]);
+    const clients  = cd.clients || [];
+    const leads    = ld.leads   || [];
+    const pending  = (od.queue  || []).filter(q => q.status === 'pending');
+
+    window._leadCount            = leads.length;
+    window._outreachPendingCount = pending.length;
+
+    document.querySelector('#dqs-clients .dqs-num').textContent  = clients.length;
+    document.querySelector('#dqs-leads .dqs-num').textContent    = leads.length;
+    document.querySelector('#dqs-outreach .dqs-num').textContent = pending.length;
+    document.querySelector('#dqs-platforms .dqs-num').textContent =
+      selectedClient ? (selectedClient.platforms || ['web']).length : 0;
+  } catch {}
+
+  // Active client card
+  const dacEmpty   = document.getElementById('dac-empty');
+  const dacContent = document.getElementById('dac-content');
+  if (selectedClient) {
+    dacEmpty.style.display   = 'none';
+    dacContent.style.display = 'flex';
+    document.getElementById('dac-avatar').textContent = selectedClient.businessName.charAt(0).toUpperCase();
+    document.getElementById('dac-name').textContent   = selectedClient.businessName;
+    document.getElementById('dac-meta').textContent   =
+      [selectedClient.niche, selectedClient.creatorType, (selectedClient.platforms || ['web']).join(', ')]
+        .filter(Boolean).join(' · ');
+  } else {
+    dacEmpty.style.display   = 'flex';
+    dacContent.style.display = 'none';
+  }
+
+  // Platform readiness grid
+  const readiness = computePlatformReadiness(selectedClient);
+  const platGrid  = document.getElementById('dash-platform-grid');
+  if (!readiness.length) {
+    platGrid.innerHTML = `<div style="padding:20px;color:var(--muted);font-size:.82rem;text-align:center;width:100%">Select a client to see platform readiness</div>`;
+  } else {
+    platGrid.innerHTML = readiness.map(p => `
+      <div class="dash-plat-card">
+        <div class="dpc-header">
+          <i class="${p.icon} dpc-icon" style="color:${p.scoreColor}"></i>
+          <span class="dpc-name">${p.label}</span>
+        </div>
+        <div class="dpc-score-wrap">
+          <div class="dpc-bar"><div class="dpc-bar-fill" style="width:${p.score}%;background:${p.scoreColor}"></div></div>
+          <span class="dpc-pct" style="color:${p.scoreColor}">${p.score}%</span>
+        </div>
+        <div class="dpc-missing">${p.missing.length ? `Next: ${esc(p.missing[0])}` : '<span style="color:var(--success)">Complete ✓</span>'}</div>
+        ${p.score < 100 ? `<button class="dpc-action-btn" onclick="switchPanel('${p.score === 0 ? 'client' : 'studio'}')">${p.score === 0 ? 'Generate copy' : 'Open studio'}</button>` : ''}
+      </div>`).join('');
+  }
+
+  // Next actions
+  const actions = computeNextActions(selectedClient, readiness);
+  document.getElementById('dash-actions-list').innerHTML = actions.map((a, i) => `
+    <div class="dash-action-card${i === 0 ? ' priority-1' : ''}">
+      <div class="dac-rank">${a.rank}</div>
+      <div class="dac-body">
+        <div class="dac-action-name">${esc(a.name)}</div>
+        <div class="dac-action-why">${esc(a.why)}</div>
+        <button class="dac-do-btn" onclick="switchPanel('${a.panel}')">
+          <i class="fas fa-arrow-right"></i> ${esc(a.cta)}
+        </button>
+      </div>
+    </div>`).join('');
+}
+
 /* ── INIT ── */
 loadClients();
+renderDashboard();
