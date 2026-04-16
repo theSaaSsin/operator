@@ -25,20 +25,40 @@ function toast(msg, type) {
 const panels = document.querySelectorAll('.panel');
 const navItems = document.querySelectorAll('.nav-item');
 const topbarTitle = document.getElementById('topbar-title');
-const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue' };
+const TITLES = { dashboard: 'Dashboard', client: 'Client Creator', studio: 'Asset Studio', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue' };
+
+function switchPanel(target) {
+  navItems.forEach(n => n.classList.remove('active'));
+  panels.forEach(p => p.classList.remove('active'));
+  const navItem = document.querySelector(`[data-panel="${target}"]`);
+  if (navItem) navItem.classList.add('active');
+  const panel = document.getElementById('panel-' + target);
+  if (panel) panel.classList.add('active');
+  topbarTitle.textContent = TITLES[target] || target;
+  if (target === 'crm')       loadLeads();
+  if (target === 'outreach')  loadOutreach();
+  if (target === 'dashboard') renderDashboard();
+  if (target === 'studio')    { populateStudioClientSelect(); studioRender(); }
+}
 
 navItems.forEach(item => {
-  item.addEventListener('click', () => {
-    const target = item.dataset.panel;
-    navItems.forEach(n => n.classList.remove('active'));
-    panels.forEach(p => p.classList.remove('active'));
-    item.classList.add('active');
-    document.getElementById('panel-' + target).classList.add('active');
-    topbarTitle.textContent = TITLES[target];
-    if (target === 'crm') loadLeads();
-    if (target === 'outreach') loadOutreach();
-  });
+  item.addEventListener('click', () => switchPanel(item.dataset.panel));
 });
+
+/* ── PREVIEW TABS ── */
+(function() {
+  const tabBar = document.getElementById('preview-tabs');
+  if (!tabBar) return;
+  tabBar.addEventListener('click', e => {
+    const tab = e.target.closest('.preview-tab');
+    if (!tab) return;
+    document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.preview-pane').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    const pane = document.getElementById('pane-' + tab.dataset.tab);
+    if (pane) pane.classList.add('active');
+  });
+})();
 
 /* ══════════════════════════════════
    CLIENT CREATOR
@@ -136,7 +156,9 @@ document.getElementById('btn-clear-form').addEventListener('click', () => {
   document.getElementById('btn-download').style.display  = 'none';
   document.getElementById('btn-copy-html').style.display = 'none';
   const pkgBar = document.getElementById('pkg-bar');
-  if (pkgBar) { pkgBar.innerHTML = ''; pkgBar.classList.remove('visible'); }
+  if (pkgBar) pkgBar.innerHTML = '<div class="empty-state"><i class="fas fa-bolt"></i><p>Generate a client to see the package summary</p></div>';
+  const outPreview = document.getElementById('out-preview-list');
+  if (outPreview) outPreview.innerHTML = '<div class="empty-state"><i class="fas fa-paper-plane"></i><p>Generate a client to preview outreach messages</p></div>';
   generatedHTML = '';
 });
 
@@ -261,8 +283,9 @@ document.getElementById('btn-generate').addEventListener('click', () => {
   generatedHTML = buildLandingPage({ name, niche, offer, goal, loc, profile, style });
   showPreview(generatedHTML);
 
-  /* 2. Full outreach sequence → outreach queue (only if system component enabled) */
+  /* 2. Full outreach sequence → outreach queue + preview pane */
   const sequence = buildOutreachSequence({ name, niche, offer, loc, profile, style });
+  renderOutreachPreview(sequence);
   if (style.systems.outreach) {
     sequence.forEach((msg) => {
       fetch(API + '/outreach', {
@@ -324,6 +347,19 @@ function showPreview(html) {
   document.getElementById('btn-copy-html').style.display = 'inline-flex';
   const doc = frame.contentDocument || frame.contentWindow.document;
   doc.open(); doc.write(html); doc.close();
+  // Switch to preview tab
+  document.querySelectorAll('.preview-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'preview'));
+  document.querySelectorAll('.preview-pane').forEach(p => p.classList.toggle('active', p.id === 'pane-preview'));
+}
+
+function renderOutreachPreview(sequence) {
+  const list = document.getElementById('out-preview-list');
+  if (!list || !sequence || !sequence.length) return;
+  list.innerHTML = sequence.map(msg => `
+    <div class="out-preview-card">
+      <div class="out-preview-label">${esc(msg.label)}</div>
+      <div class="out-preview-body">${esc(msg.body)}</div>
+    </div>`).join('');
 }
 
 /* ══════════════════════════════════
@@ -937,7 +973,9 @@ function showPackageSummary({ name, components, outcome, expectedResult, tone, t
       Expected: <strong>${expectedResult}</strong>
       <div class="pkg-meta">Tone: ${toneLabel} &nbsp;·&nbsp; Outcome: ${esc(outcome)}</div>
     </div>`;
-  bar.classList.add('visible');
+  // Switch to Package tab to show the summary
+  document.querySelectorAll('.preview-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'package'));
+  document.querySelectorAll('.preview-pane').forEach(p => p.classList.toggle('active', p.id === 'pane-package'));
 }
 
 /* ── CRM STRUCTURE GENERATOR ── */

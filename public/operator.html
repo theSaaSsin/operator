@@ -172,11 +172,15 @@
           </div>
         </div>
 
-        <!-- RIGHT: live preview -->
+        <!-- RIGHT: tabbed output (Preview / Package / Outreach) -->
         <div class="client-right">
           <div class="panel-header">
-            <h2>Live Preview</h2>
-            <div style="display:flex;gap:8px" id="preview-actions" style="display:none">
+            <div class="preview-tabs" id="preview-tabs">
+              <button class="preview-tab active" data-tab="preview"><i class="fas fa-eye"></i> Preview</button>
+              <button class="preview-tab" data-tab="package"><i class="fas fa-bolt"></i> Package</button>
+              <button class="preview-tab" data-tab="outreach"><i class="fas fa-paper-plane"></i> Outreach</button>
+            </div>
+            <div id="preview-actions" style="display:flex;gap:8px">
               <button class="btn btn-secondary btn-sm" id="btn-download" style="display:none">
                 <i class="fas fa-download"></i> Download HTML
               </button>
@@ -185,13 +189,22 @@
               </button>
             </div>
           </div>
-          <div class="pkg-bar" id="pkg-bar"></div>
-          <div class="preview-wrap">
+          <div class="preview-pane active" id="pane-preview">
             <div class="preview-placeholder" id="preview-placeholder">
               <i class="fas fa-eye-slash"></i>
-              <p>Fill in the form and click Generate System</p>
+              <p>Fill in the form and click Generate</p>
             </div>
             <iframe id="preview-frame" style="display:none"></iframe>
+          </div>
+          <div class="preview-pane" id="pane-package">
+            <div class="pkg-bar" id="pkg-bar">
+              <div class="empty-state"><i class="fas fa-bolt"></i><p>Generate a client to see the package summary</p></div>
+            </div>
+          </div>
+          <div class="preview-pane" id="pane-outreach">
+            <div class="out-preview-list" id="out-preview-list">
+              <div class="empty-state"><i class="fas fa-paper-plane"></i><p>Generate a client to preview outreach messages</p></div>
+            </div>
           </div>
         </div>
       </div>
