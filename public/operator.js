@@ -56,6 +56,10 @@ const MODULE_MAP = [
       { n:18, name:'Follow-Up Automation',          icon:'fa-clock-rotate-left', status:'planned' },
       { n:19, name:'Reply Detection + Routing',     icon:'fa-reply',           status:'planned' },
       { n:20, name:'Appointment Booking Integration', icon:'fa-calendar-check', status:'planned' },
+    ,
+      { n:14, name:'Competitor Lead Hijack',       icon:'fa-user-secret',   status:'planned', panel:'mod-competitor-hijack' },
+      { n:15, name:'Local Business Lead Finder',   icon:'fa-map-pin',       status:'planned', panel:'mod-local-finder' },
+      { n:16, name:'Cold Outreach Msg Generator',  icon:'fa-comment-dots',  status:'active',  panel:'mod-cold-outreach' }
     ]
   },
   {
@@ -72,6 +76,12 @@ const MODULE_MAP = [
       { n:28, name:'Pricing Structure Builder',     icon:'fa-money-bill-wave', status:'planned' },
       { n:29, name:'Objection Handling Scripts',    icon:'fa-shield-halved',   status:'planned' },
       { n:30, name:'Close Tracking System',         icon:'fa-handshake',       status:'planned' },
+    ,
+      { n:21, name:'Landing Page Generator',       icon:'fa-globe',         status:'planned', panel:'mod-landing-page' },
+      { n:26, name:'Testimonial/Proof Generator',  icon:'fa-star',          status:'planned', panel:'mod-testimonials' },
+      { n:27, name:'Call Script Generator',        icon:'fa-phone',         status:'planned', panel:'mod-call-script' },
+      { n:28, name:'Pricing Structure Builder',    icon:'fa-tags',          status:'planned', panel:'mod-pricing' },
+      { n:29, name:'Objection Handling Scripts',   icon:'fa-shield-halved', status:'planned', panel:'mod-objections' }
     ]
   },
   {
@@ -88,6 +98,12 @@ const MODULE_MAP = [
       { n:38, name:'Profile Optimizer',             icon:'fa-user-pen',        status:'planned' },
       { n:39, name:'Engagement Booster System',     icon:'fa-comments',        status:'planned' },
       { n:40, name:'Content Performance Tracker',   icon:'fa-chart-simple',    status:'planned' },
+    ,
+      { n:32, name:'Short-Form Content Generator', icon:'fa-video',         status:'planned', panel:'mod-short-form' },
+      { n:33, name:'Long-Form Content Generator',  icon:'fa-newspaper',     status:'planned', panel:'mod-long-form' },
+      { n:36, name:'Visual Asset Generator',       icon:'fa-image',         status:'planned', panel:'mod-visual-assets' },
+      { n:38, name:'Profile Optimizer',            icon:'fa-user-circle',   status:'planned', panel:'mod-profile-optimizer' },
+      { n:39, name:'Engagement Booster',           icon:'fa-comments',      status:'planned', panel:'mod-engagement' }
     ]
   },
   {
@@ -104,6 +120,12 @@ const MODULE_MAP = [
       { n:48, name:'File / Asset Management',       icon:'fa-folder-open',     status:'planned' },
       { n:49, name:'Template Library',              icon:'fa-clone',           status:'planned' },
       { n:50, name:'System Cloning Tool',           icon:'fa-copy',            status:'planned' },
+    ,
+      { n:46, name:'Client Onboarding Automation', icon:'fa-user-check',    status:'planned', panel:'mod-onboarding' },
+      { n:47, name:'Data Sync System',             icon:'fa-database',      status:'planned', panel:'mod-data-sync' },
+      { n:48, name:'File / Asset Management',      icon:'fa-folder-open',   status:'planned', panel:'mod-file-assets' },
+      { n:49, name:'Template Library',             icon:'fa-book',          status:'active',  panel:'mod-templates' },
+      { n:50, name:'System Cloning Tool',          icon:'fa-clone',         status:'planned', panel:'mod-clone' }
     ]
   },
   {
@@ -120,6 +142,12 @@ const MODULE_MAP = [
       { n:58, name:'Client Access Control',         icon:'fa-lock',            status:'planned' },
       { n:59, name:'System Export / Handoff',       icon:'fa-file-export',     status:'planned' },
       { n:60, name:'White-Label Option',            icon:'fa-tag',             status:'planned' },
+    ,
+      { n:53, name:'Training / Tutorial Generator',icon:'fa-graduation-cap',status:'planned', panel:'mod-training' },
+      { n:55, name:'Performance Dashboard',        icon:'fa-chart-line',    status:'planned', panel:'mod-performance' },
+      { n:57, name:'Update / Change Request System',icon:'fa-pen-to-square',status:'planned', panel:'mod-change-requests' },
+      { n:58, name:'Client Access Control',        icon:'fa-lock',          status:'planned', panel:'mod-access-control' },
+      { n:59, name:'System Export / Handoff',      icon:'fa-file-export',   status:'planned', panel:'mod-export' }
     ]
   },
   {
@@ -136,6 +164,14 @@ const MODULE_MAP = [
       { n:68, name:'Affiliate System',              icon:'fa-people-arrows',   status:'later' },
       { n:69, name:'Multi-User Team System',        icon:'fa-users',           status:'later' },
       { n:70, name:'Global Analytics',              icon:'fa-earth-americas',  status:'later' },
+    ,
+      { n:61, name:'Partner Management System',    icon:'fa-handshake',     status:'later',   panel:'mod-partners' },
+      { n:62, name:'Reseller Dashboard',           icon:'fa-store',         status:'later',   panel:'mod-resellers' },
+      { n:63, name:'Marketplace Integration',      icon:'fa-plug',          status:'later',   panel:'mod-marketplace' },
+      { n:65, name:'Plugin / Extension System',    icon:'fa-puzzle-piece',  status:'later',   panel:'mod-plugins' },
+      { n:66, name:'Revenue Tracking System',      icon:'fa-receipt',       status:'later',   panel:'mod-revenue' },
+      { n:68, name:'Affiliate System',             icon:'fa-people-arrows', status:'later',   panel:'mod-affiliates' },
+      { n:7,  name:'System Matcher Engine',        icon:'fa-puzzle-piece',  status:'building',panel:'mod-system-matcher' }
     ]
   }
 ];
