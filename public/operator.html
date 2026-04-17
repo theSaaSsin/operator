@@ -33,6 +33,10 @@
       <div class="nav-item" data-panel="outreach">
         <i class="fas fa-paper-plane"></i> Outreach Queue
       </div>
+      <div class="nav-section">Account</div>
+      <div class="nav-item" data-panel="settings">
+        <i class="fas fa-sliders"></i> Persona &amp; Keys
+      </div>
     </nav>
     <div class="sidebar-footer">
       <span class="status-dot"></span>System Online
@@ -295,6 +299,52 @@
         </div>
       </div>
 
+      <!-- ── PANEL: SETTINGS / PERSONA ── -->
+      <div class="panel" id="panel-settings">
+        <div class="settings-wrap">
+
+          <!-- Persona -->
+          <div class="settings-section">
+            <div class="settings-hdr">
+              <h2><i class="fas fa-user-circle"></i> Your Persona</h2>
+              <p>Used to personalise every outreach message. Set this once — all composer messages update automatically.</p>
+            </div>
+            <div class="settings-body">
+              <div class="field"><label>Your Name</label>
+                <input type="text" id="p-name" placeholder="e.g. Josh"></div>
+              <div class="field"><label>What You Do (1 line)</label>
+                <input type="text" id="p-niche" placeholder="e.g. I build AI lead systems for UK tradesmen"></div>
+              <div class="field"><label>Your Core Offer</label>
+                <textarea id="p-offer" rows="2" placeholder="e.g. A system that finds 10+ local clients/week — free 14-day trial, cancel anytime"></textarea></div>
+              <div class="field"><label>Target Market</label>
+                <input type="text" id="p-market" placeholder="e.g. UK plumbers, electricians, builders, PTs"></div>
+              <div class="field"><label>Your Location</label>
+                <input type="text" id="p-location" placeholder="e.g. UK / Remote"></div>
+              <div class="field"><label>Default Tone</label>
+                <div class="tone-btns" id="p-tone-btns">
+                  <button class="tone-btn" data-tone="aggressive">Aggressive</button>
+                  <button class="tone-btn active" data-tone="professional">Professional</button>
+                  <button class="tone-btn" data-tone="friendly">Friendly</button>
+                </div>
+              </div>
+              <button class="btn btn-primary" id="btn-save-persona" style="margin-top:4px">
+                <i class="fas fa-save"></i> Save Persona
+              </button>
+            </div>
+          </div>
+
+          <!-- API Keys -->
+          <div class="settings-section">
+            <div class="settings-hdr">
+              <h2><i class="fas fa-key"></i> API Keys</h2>
+              <p>Click any key to configure it. Keys save instantly — no server restart needed.</p>
+            </div>
+            <div class="api-keys-grid" id="api-keys-grid"></div>
+          </div>
+
+        </div>
+      </div>
+
       <!-- ── PANEL: OUTREACH ── -->
       <div class="panel" id="panel-outreach">
         <div class="out-tabs">
@@ -329,6 +379,63 @@
       <button class="btn btn-secondary" id="btn-cancel-lead">Cancel</button>
     </div>
   </div>
+</div>
+
+<!-- ── API SETUP MODAL ── -->
+<div id="modal-api-setup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;align-items:center;justify-content:center;">
+  <div class="api-modal-card">
+    <div class="api-modal-head">
+      <div class="api-modal-icon" id="api-modal-icon"><i class="fas fa-key"></i></div>
+      <div>
+        <div class="api-modal-title" id="api-modal-title">Set up API Key</div>
+        <div class="api-modal-sub" id="api-modal-desc">Connect this service to unlock the feature.</div>
+      </div>
+      <button class="api-modal-close" onclick="closeApiSetup()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="api-modal-hint" id="api-modal-hint"></div>
+    <div id="api-modal-fields"></div>
+    <div class="api-modal-actions">
+      <a id="api-modal-link" href="#" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-up-right-from-square"></i> <span id="api-modal-link-label">Get free key</span>
+      </a>
+      <button class="btn btn-primary" style="flex:1" onclick="saveApiKeys()">
+        <i class="fas fa-save"></i> Save &amp; Activate
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── COMPOSER DRAWER ── -->
+<div id="drawer-overlay" class="drawer-overlay" onclick="closeComposer()"></div>
+<div id="drawer-composer" class="drawer-composer">
+  <div class="drawer-hdr">
+    <div class="drawer-title"><i class="fas fa-pen-to-square"></i> Compose Outreach</div>
+    <button class="drawer-close-btn" onclick="closeComposer()"><i class="fas fa-times"></i></button>
+  </div>
+  <div id="composer-lead-ctx" class="composer-lead-ctx"></div>
+  <div class="composer-msg-tabs" id="composer-tabs"></div>
+  <div class="composer-msg-wrap">
+    <textarea id="composer-textarea" class="composer-textarea" rows="7" placeholder="Generating message..."></textarea>
+    <div class="composer-char-count" id="composer-chars">0 / 300</div>
+  </div>
+  <div class="composer-channel-row">
+    <button class="channel-btn active" data-channel="copy" onclick="setComposerChannel('copy',this)">
+      <i class="fab fa-reddit-alien"></i> Reddit DM
+    </button>
+    <button class="channel-btn" data-channel="email" onclick="setComposerChannel('email',this)">
+      <i class="fas fa-envelope"></i> Email
+    </button>
+    <button class="channel-btn" data-channel="sms" onclick="setComposerChannel('sms',this)">
+      <i class="fas fa-mobile-screen"></i> SMS
+    </button>
+  </div>
+  <div id="composer-channel-input" class="composer-channel-input" style="display:none">
+    <input type="text" id="composer-recipient" placeholder="Enter email or phone number">
+  </div>
+  <button class="btn btn-primary" id="composer-send-btn" onclick="composerSend()" style="width:100%;margin-top:10px">
+    <i class="fas fa-paper-plane"></i> Copy &amp; Open Reddit
+  </button>
+  <div id="composer-status" class="composer-status"></div>
 </div>
 
 <div id="toast"></div>

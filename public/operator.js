@@ -27,7 +27,7 @@ function toast(msg, type) {
 const panels = document.querySelectorAll('.panel');
 const navItems = document.querySelectorAll('.nav-item');
 const topbarTitle = document.getElementById('topbar-title');
-const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue' };
+const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue', settings: 'Persona & API Keys' };
 
 navItems.forEach(item => {
   item.addEventListener('click', () => {
@@ -39,6 +39,7 @@ navItems.forEach(item => {
     topbarTitle.textContent = TITLES[target];
     if (target === 'crm') loadLeads();
     if (target === 'outreach') loadOutreach();
+    if (target === 'settings') initSettingsPanel();
   });
 });
 
@@ -1188,6 +1189,163 @@ function esc(str) {
 }
 
 /* ══════════════════════════════════
+   PERSONA
+══════════════════════════════════ */
+function loadPersona() {
+  try { return JSON.parse(localStorage.getItem('ts_persona') || '{}'); } catch { return {}; }
+}
+function savePersonaData(p) {
+  localStorage.setItem('ts_persona', JSON.stringify(p));
+}
+
+/* ══════════════════════════════════
+   SETTINGS PANEL INIT
+══════════════════════════════════ */
+function initSettingsPanel() {
+  const p = loadPersona();
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  set('p-name', p.name); set('p-niche', p.niche); set('p-offer', p.offer);
+  set('p-market', p.market); set('p-location', p.location);
+  if (p.tone) {
+    document.querySelectorAll('#p-tone-btns .tone-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.tone === p.tone));
+  }
+  renderApiKeysGrid();
+}
+
+document.getElementById('btn-save-persona') && document.getElementById('btn-save-persona').addEventListener('click', () => {
+  const activeTone = document.querySelector('#p-tone-btns .tone-btn.active');
+  const p = {
+    name:     document.getElementById('p-name').value.trim(),
+    niche:    document.getElementById('p-niche').value.trim(),
+    offer:    document.getElementById('p-offer').value.trim(),
+    market:   document.getElementById('p-market').value.trim(),
+    location: document.getElementById('p-location').value.trim(),
+    tone:     activeTone ? activeTone.dataset.tone : 'professional'
+  };
+  savePersonaData(p);
+  toast('Persona saved', 'ok');
+});
+
+document.querySelectorAll('#p-tone-btns .tone-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#p-tone-btns .tone-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+/* ══════════════════════════════════
+   API SETUP MODAL
+══════════════════════════════════ */
+const API_DEFS = {
+  claude:  { label:'Claude AI',    icon:'fa-brain',             key:'ANTHROPIC_API_KEY',   desc:'AI lead scoring and personalised outreach generation',      url:'https://console.anthropic.com/account/keys', urlLabel:'Get free key ($5 credit)',  hint:'$5 free credit = 10,000+ lead scores. Model: claude-haiku-4-5.',    ph:'sk-ant-api03-...' },
+  resend:  { label:'Resend Email', icon:'fa-envelope',          key:'RESEND_API_KEY',       desc:'Send outreach emails directly from the composer',            url:'https://resend.com/api-keys',                urlLabel:'Get free key',             hint:'Free tier: 3,000 emails/month. Also set FROM_EMAIL below.',         ph:'re_...',
+             extra:[{label:'From Email',key:'FROM_EMAIL',ph:'you@yourdomain.com'}] },
+  hunter:  { label:'Hunter.io',    icon:'fa-magnifying-glass',  key:'HUNTER_API_KEY',       desc:'Find email addresses from names and company domains',        url:'https://hunter.io/api',                      urlLabel:'Get free key',             hint:'Free tier: 25 searches/month — enough to test every lead.',         ph:'Your Hunter.io API key' },
+  twilio:  { label:'Twilio SMS',   icon:'fa-mobile-screen',     key:'TWILIO_ACCOUNT_SID',   desc:'Send SMS messages to leads directly from the composer',      url:'https://www.twilio.com/console',             urlLabel:'Get free trial ($15)',     hint:'Need 3 values: Account SID + Auth Token + From Number.',           ph:'ACxxxxxxxx...',
+             extra:[{label:'Auth Token',key:'TWILIO_AUTH_TOKEN',ph:'Your auth token'},{label:'From Number (+44...)',key:'TWILIO_FROM_NUMBER',ph:'+447...'}] },
+  twitter: { label:'X / Twitter',  icon:'fa-x-twitter',         key:'TWITTER_BEARER_TOKEN', desc:'Scan X/Twitter for leads mentioning client pain points',     url:'https://developer.twitter.com/en/portal',    urlLabel:'Get free Basic key',       hint:'Free Basic tier: 100 reads/month — enough for daily scanning.',    ph:'AAAA...' },
+  serpapi: { label:'SerpAPI',      icon:'fa-linkedin',          key:'SERPAPI_KEY',          desc:'LinkedIn lead search via Google dorking (no LinkedIn API)',  url:'https://serpapi.com/manage-api-key',         urlLabel:'Get free key',             hint:'Free tier: 100 searches/month.',                                   ph:'Your SerpAPI key' },
+  stripe:  { label:'Stripe',       icon:'fa-credit-card',       key:'STRIPE_SECRET_KEY',    desc:'Power the £49/month subscription checkout',                 url:'https://dashboard.stripe.com/apikeys',       urlLabel:'Get test key',             hint:'Use sk_test_... first. Swap sk_live_... when ready to charge.',    ph:'sk_test_...' }
+};
+
+let _currentApiDef = null;
+
+function openApiSetup(serviceKey) {
+  const def = API_DEFS[serviceKey];
+  if (!def) return;
+  _currentApiDef = def;
+
+  document.getElementById('api-modal-icon').innerHTML  = `<i class="fas ${def.icon}"></i>`;
+  document.getElementById('api-modal-title').textContent = `Set up ${def.label}`;
+  document.getElementById('api-modal-desc').textContent  = def.desc;
+  document.getElementById('api-modal-hint').textContent  = def.hint;
+  document.getElementById('api-modal-link').href         = def.url;
+  document.getElementById('api-modal-link-label').textContent = def.urlLabel;
+
+  const fields = document.getElementById('api-modal-fields');
+  const allFields = [{ label: def.label + ' Key', key: def.key, ph: def.ph }, ...(def.extra || [])];
+  fields.innerHTML = allFields.map(f => `
+    <div class="api-modal-field">
+      <label>${esc(f.label)}</label>
+      <input type="password" id="api-input-${esc(f.key)}" placeholder="${esc(f.ph)}" autocomplete="off">
+    </div>`).join('');
+
+  const modal = document.getElementById('modal-api-setup');
+  modal.style.display = 'flex';
+}
+
+function closeApiSetup() {
+  document.getElementById('modal-api-setup').style.display = 'none';
+  _currentApiDef = null;
+}
+
+async function saveApiKeys() {
+  if (!_currentApiDef) return;
+  const allFields = [{ key: _currentApiDef.key }, ...(_currentApiDef.extra || [])];
+  const pairs = allFields.map(f => ({
+    key:   f.key,
+    value: (document.getElementById('api-input-' + f.key) || {}).value || ''
+  })).filter(p => p.value.trim());
+
+  if (!pairs.length) { toast('Paste at least one key first', 'err'); return; }
+
+  const btn = document.querySelector('#modal-api-setup .btn-primary');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Saving...';
+
+  let saved = 0;
+  for (const pair of pairs) {
+    try {
+      const r = await fetch(API + '/save-key', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: pair.key, value: pair.value })
+      });
+      const d = await r.json();
+      if (d.ok) saved++;
+    } catch {}
+  }
+
+  btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save & Activate';
+
+  if (saved > 0) {
+    toast(`${_currentApiDef.label} activated`, 'ok');
+    closeApiSetup();
+    checkApiStatus();
+    renderApiKeysGrid();
+  } else {
+    toast('Save failed — check server is running', 'err');
+  }
+}
+
+function renderApiKeysGrid() {
+  const grid = document.getElementById('api-keys-grid');
+  if (!grid) return;
+  fetch(API + '/status').then(r => r.json()).then(data => {
+    const s = data.services || {};
+    const SERVICE_MAP = {
+      claude: 'claude', resend: 'resend', hunter: 'hunter',
+      twilio: 'twilio', twitter: 'twitter', stripe: 'stripe', serpapi: 'serpapi'
+    };
+    const STATUS_KEYS = {
+      claude: s.claude, resend: s.resend, hunter: s.hunter,
+      twilio: s.twilio, twitter: s.twitter, stripe: s.stripe, serpapi: !!s.serpapi
+    };
+    grid.innerHTML = Object.entries(API_DEFS).map(([key, def]) => {
+      const isSet = STATUS_KEYS[key];
+      return `<div class="api-key-row ${isSet ? 'key-set' : ''}" onclick="openApiSetup('${key}')">
+        <div class="api-key-icon"><i class="fas ${def.icon}"></i></div>
+        <div class="api-key-info">
+          <div class="api-key-label">${def.label}</div>
+          <div class="api-key-hint">${def.hint.split('.')[0]}</div>
+        </div>
+        <span class="api-key-status">${isSet ? '✓ Connected' : 'Not set'}</span>
+        <i class="fas fa-chevron-right api-key-edit"></i>
+      </div>`;
+    }).join('');
+  }).catch(() => {});
+}
+
+/* ══════════════════════════════════
    LEAD FEED
 ══════════════════════════════════ */
 
@@ -1311,6 +1469,9 @@ function analyzePost(title, text, preScore) {
   return { urgency, urgencyLabel, urgencyColor, niche, approach, opener, tip };
 }
 
+/* ── POST CACHE (for composer) ── */
+const feedPostCache = {};
+
 /* ── KEYWORD PILLS ── */
 let activeFeedKw       = 'need clients';
 let activeFeedPlatform = 'reddit';
@@ -1426,6 +1587,7 @@ function timeAgo(utc) {
 }
 
 function renderFeedCard(post) {
+  feedPostCache[post.id] = post; // cache for composer
   const isComment = post._source === 'comment';
   const a   = analyzePost(post.title, post.text, post._score);
   const ago = timeAgo(post.created);
@@ -1464,17 +1626,20 @@ function renderFeedCard(post) {
       </div>
     </div>
     <div class="feed-actions">
+      <button class="btn btn-primary btn-sm" onclick="openComposer('${esc(post.id)}')">
+        <i class="fas fa-pen-to-square"></i> Compose
+      </button>
       <button class="btn btn-secondary btn-sm" onclick="saveFeedLead('${esc(post.id)}','${esc(post.author)}','${esc(a.niche)}','${esc(post.url)}','${esc(post.title).replace(/'/g,'')}',${a.urgency})">
-        <i class="fas fa-user-plus"></i> Save Lead
+        <i class="fas fa-user-plus"></i> Save
       </button>
       <button class="btn btn-secondary btn-sm" id="ai-btn-${esc(post.id)}" onclick="aiScorePost('${esc(post.id)}','${esc(post.title).replace(/'/g,'')}','${esc(post.text).replace(/'/g,'').substring(0,300)}')">
         <i class="fas fa-brain"></i> AI Score
       </button>
       <button class="btn btn-secondary btn-sm" id="email-btn-${esc(post.id)}" onclick="findEmail('${esc(post.id)}','${esc(post.author)}','')">
-        <i class="fas fa-at"></i> Find Email
+        <i class="fas fa-at"></i> Email
       </button>
       <a class="btn btn-secondary btn-sm" href="${esc(post.url)}" target="_blank" rel="noopener">
-        <i class="fas fa-arrow-up-right-from-square"></i> Open Post
+        <i class="fas fa-arrow-up-right-from-square"></i> Post
       </a>
     </div>
     <div id="ai-result-${esc(post.id)}" style="display:none;margin-top:8px;padding:10px 12px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px;font-size:.78rem;color:var(--text)"></div>
@@ -1499,10 +1664,14 @@ async function aiScorePost(postId, title, text) {
       result.style.display = 'block';
       result.innerHTML = `<b style="color:${color}">Claude Score: ${data.score}/100</b> · <i>${data.intent}</i><br><span style="color:var(--muted)">${data.reason}</span>${data.suggested_opener ? `<br><span style="color:var(--accent);margin-top:4px;display:block">💬 "${data.suggested_opener}"</span>` : ''}`;
       btn.innerHTML = '<i class="fas fa-check"></i> Scored';
+    } else if (data.needsKey || (data.error || '').includes('ANTHROPIC')) {
+      btn.innerHTML = '<i class="fas fa-brain"></i> AI Score';
+      btn.disabled = false;
+      openApiSetup('claude');
     } else {
       btn.innerHTML = '<i class="fas fa-brain"></i> AI Score';
       btn.disabled = false;
-      toast(data.error || 'Score failed — check ANTHROPIC_API_KEY', 'err');
+      toast(data.error || 'Score failed', 'err');
     }
   } catch {
     btn.innerHTML = '<i class="fas fa-brain"></i> AI Score';
@@ -1549,19 +1718,22 @@ async function checkApiStatus() {
     const s = data.services;
     const bar = document.getElementById('api-status-bar');
     if (!bar) return;
+    // supabase not configurable in-app; others map to API_DEFS
     const items = [
-      { key: 'supabase',  label: 'DB',       icon: 'fa-database' },
-      { key: 'claude',    label: 'AI',        icon: 'fa-brain' },
-      { key: 'resend',    label: 'Email',     icon: 'fa-envelope' },
-      { key: 'hunter',    label: 'Hunter',    icon: 'fa-magnifying-glass' },
-      { key: 'twilio',    label: 'SMS',       icon: 'fa-mobile-screen' },
-      { key: 'twitter',   label: 'X/Twitter', icon: 'fa-x-twitter' }
+      { key: 'supabase', label: 'DB',      icon: 'fa-database',        setup: null },
+      { key: 'claude',   label: 'AI',      icon: 'fa-brain',           setup: 'claude' },
+      { key: 'resend',   label: 'Email',   icon: 'fa-envelope',        setup: 'resend' },
+      { key: 'twilio',   label: 'SMS',     icon: 'fa-mobile-screen',   setup: 'twilio' },
+      { key: 'stripe',   label: 'Stripe',  icon: 'fa-credit-card',     setup: 'stripe' }
     ];
-    bar.innerHTML = items.map(i =>
-      `<span class="api-dot ${s[i.key] ? 'api-on' : 'api-off'}" title="${i.label}: ${s[i.key] ? 'connected' : 'key missing'}">
+    bar.innerHTML = items.map(i => {
+      const on      = !!s[i.key];
+      const clickFn = i.setup && !on ? `onclick="openApiSetup('${i.setup}')" style="cursor:pointer"` : '';
+      const tip     = on ? `${i.label}: connected` : `${i.label}: click to set up`;
+      return `<span class="api-dot ${on ? 'api-on' : 'api-off'}" title="${tip}" ${clickFn}>
         <i class="fas ${i.icon}"></i> ${i.label}
-      </span>`
-    ).join('');
+      </span>`;
+    }).join('');
   } catch { /* silent */ }
 }
 
@@ -1650,6 +1822,213 @@ async function findEmail(postId, authorName, domain) {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-at"></i> Find Email';
     toast('Email lookup failed', 'err');
+  }
+}
+
+/* ══════════════════════════════════
+   OUTREACH COMPOSER
+══════════════════════════════════ */
+let _composerMsgs   = [];
+let _composerTabIdx = 0;
+let _composerPost   = null;
+let _composerChannel = 'copy';
+
+function openComposer(postId) {
+  const post = feedPostCache[postId];
+  if (!post) { toast('Lead not found', 'err'); return; }
+  _composerPost   = post;
+  _composerChannel = 'copy';
+
+  // Show drawer
+  document.getElementById('drawer-composer').classList.add('open');
+  document.getElementById('drawer-overlay').classList.add('open');
+
+  // Lead context
+  const a = analyzePost(post.title, post.text, post._score);
+  document.getElementById('composer-lead-ctx').innerHTML = `
+    <div class="composer-lead-platform">${esc(post.platform || 'reddit')} · r/${esc(post.subreddit || post.author)}</div>
+    <div class="composer-lead-title">${esc(post.title)}</div>
+    <div class="composer-lead-meta">
+      <span>u/${esc(post.author)}</span>
+      <span class="composer-lead-score" style="color:${a.urgencyColor}">${a.urgencyLabel} intent (${a.urgency})</span>
+      <span>${esc(a.niche)}</span>
+    </div>`;
+
+  // Reset tabs
+  document.getElementById('composer-tabs').innerHTML = '';
+  document.getElementById('composer-textarea').value = '';
+  document.getElementById('composer-status').textContent = '';
+  document.getElementById('composer-textarea').value = '';
+
+  // Reset channel button
+  document.querySelectorAll('.channel-btn').forEach(b => b.classList.toggle('active', b.dataset.channel === 'copy'));
+  document.getElementById('composer-channel-input').style.display = 'none';
+  document.getElementById('composer-send-btn').innerHTML = '<i class="fas fa-copy"></i> Copy & Open Reddit';
+
+  // Generate messages
+  generateComposerMessages(post, a);
+}
+
+function closeComposer() {
+  document.getElementById('drawer-composer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+
+async function generateComposerMessages(post, analysis) {
+  const textarea = document.getElementById('composer-textarea');
+  const tabs     = document.getElementById('composer-tabs');
+  const persona  = loadPersona();
+
+  textarea.value = '';
+  tabs.innerHTML = '<div class="composer-loading"><i class="fas fa-circle-notch"></i> Generating with your persona...</div>';
+
+  // Try Claude API first
+  let msgs = null;
+  try {
+    const r = await fetch(API + '/generate-outreach', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        niche:       analysis.niche,
+        offer:       persona.offer || 'an AI lead generation system',
+        goal:        'leads',
+        location:    persona.location || 'UK',
+        tone:        persona.tone || 'professional',
+        leadContext: `Platform: ${post.platform}. Post: ${post.title}. Body: ${(post.text || '').substring(0, 300)}. Urgency: ${analysis.urgencyLabel}. Niche: ${analysis.niche}.`,
+        persona:     { name: persona.name, niche: persona.niche, offer: persona.offer, market: persona.market }
+      })
+    });
+    const d = await r.json();
+    if (d.ok && d.messages) msgs = d.messages;
+  } catch {}
+
+  // Template fallback (no Claude key needed)
+  if (!msgs) {
+    const name   = persona.name   || 'I';
+    const offer  = persona.offer  || 'a system that finds you clients on autopilot';
+    const niche  = analysis.niche;
+    const author = post.author || 'there';
+    msgs = [
+      { label: 'Direct', body: `Hey u/${author} — saw your post about getting clients. ${name} built a system that scans Reddit daily for ${niche.toLowerCase()} businesses in your exact situation and sends you 10+ ready-to-contact leads every morning. 14-day free trial — no card needed. Want to see what it pulls for your area tonight?` },
+      { label: 'Empathy', body: `Saw this and it resonated — most ${niche.toLowerCase()} businesses I talk to hit this exact wall. The referral cycle runs dry right when you need it most. ${name} built ${offer} specifically for this. Took 10 minutes to set up, no agency fees. Happy to show you what it found for someone in your niche this week?` },
+      { label: 'Value-first', body: `Quick one for u/${author} — I ran your niche ("${niche}") through the system I built and it pulled 14 local leads in the last 48hrs who are actively asking for help. I can send you that list free. If any of them convert, you'd know the system works and it's £49/mo — less than one lost job. Want the list?` }
+    ];
+  }
+
+  _composerMsgs = msgs;
+  _composerTabIdx = 0;
+  renderComposerTabs();
+}
+
+function renderComposerTabs() {
+  const tabs     = document.getElementById('composer-tabs');
+  const textarea = document.getElementById('composer-textarea');
+  tabs.innerHTML = _composerMsgs.map((m, i) =>
+    `<div class="composer-tab${i === _composerTabIdx ? ' active' : ''}" onclick="switchComposerTab(${i})">${esc(m.label)}</div>`
+  ).join('');
+  textarea.value = _composerMsgs[_composerTabIdx]?.body || '';
+  updateCharCount();
+  textarea.addEventListener('input', updateCharCount);
+}
+
+function switchComposerTab(i) {
+  _composerTabIdx = i;
+  document.querySelectorAll('.composer-tab').forEach((t, idx) => t.classList.toggle('active', idx === i));
+  document.getElementById('composer-textarea').value = _composerMsgs[i]?.body || '';
+  updateCharCount();
+}
+
+function updateCharCount() {
+  const ta  = document.getElementById('composer-textarea');
+  const cnt = document.getElementById('composer-chars');
+  if (ta && cnt) cnt.textContent = `${ta.value.length} / 300`;
+}
+
+function setComposerChannel(channel, btn) {
+  _composerChannel = channel;
+  document.querySelectorAll('.channel-btn').forEach(b => b.classList.toggle('active', b === btn));
+  const inputWrap = document.getElementById('composer-channel-input');
+  const input     = document.getElementById('composer-recipient');
+  const sendBtn   = document.getElementById('composer-send-btn');
+
+  if (channel === 'copy') {
+    inputWrap.style.display = 'none';
+    sendBtn.innerHTML = '<i class="fas fa-copy"></i> Copy & Open Reddit';
+  } else if (channel === 'email') {
+    inputWrap.style.display = 'block';
+    input.placeholder = 'Their email address';
+    input.type = 'email';
+    sendBtn.innerHTML = '<i class="fas fa-envelope"></i> Send Email';
+  } else if (channel === 'sms') {
+    inputWrap.style.display = 'block';
+    input.placeholder = 'Mobile number (e.g. 07700900000)';
+    input.type = 'tel';
+    sendBtn.innerHTML = '<i class="fas fa-mobile-screen"></i> Send SMS';
+  }
+}
+
+async function composerSend() {
+  const message = document.getElementById('composer-textarea').value.trim();
+  if (!message) { toast('Write a message first', 'err'); return; }
+
+  const status  = document.getElementById('composer-status');
+  const sendBtn = document.getElementById('composer-send-btn');
+
+  if (_composerChannel === 'copy') {
+    navigator.clipboard.writeText(message).then(() => {
+      toast('Copied! Opening Reddit...', 'ok');
+      status.textContent = '✓ Copied to clipboard — paste it as a Reddit DM';
+      if (_composerPost?.url) window.open(_composerPost.url, '_blank');
+    });
+    return;
+  }
+
+  const recipient = document.getElementById('composer-recipient').value.trim();
+  if (!recipient) { toast('Enter a recipient first', 'err'); return; }
+
+  sendBtn.disabled = true;
+  sendBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Sending...';
+
+  try {
+    if (_composerChannel === 'email') {
+      const r = await fetch(API + '/send-outreach', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: recipient, subject: 'Quick question for you', message })
+      });
+      const d = await r.json();
+      if (d.ok) {
+        toast('Email sent!', 'ok');
+        status.textContent = `✓ Email sent to ${recipient}`;
+        closeComposer();
+      } else if (d.needsKey || d.error?.includes('RESEND')) {
+        toast('Set up Resend to send emails', 'err');
+        openApiSetup('resend');
+      } else {
+        toast(d.error || 'Send failed', 'err');
+      }
+    } else if (_composerChannel === 'sms') {
+      const r = await fetch(API + '/send-sms', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: recipient, message })
+      });
+      const d = await r.json();
+      if (d.ok) {
+        toast('SMS sent!', 'ok');
+        status.textContent = `✓ SMS sent to ${recipient}`;
+        closeComposer();
+      } else if (d.error?.includes('Twilio') || d.error?.includes('not configured')) {
+        toast('Set up Twilio to send SMS', 'err');
+        openApiSetup('twilio');
+      } else {
+        toast(d.error || 'SMS failed', 'err');
+      }
+    }
+  } catch {
+    toast('Send failed — check server', 'err');
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.innerHTML = _composerChannel === 'email'
+      ? '<i class="fas fa-envelope"></i> Send Email'
+      : '<i class="fas fa-mobile-screen"></i> Send SMS';
   }
 }
 

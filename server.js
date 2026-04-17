@@ -19,25 +19,29 @@ const MIME = {
 };
 
 // ── Clients ──────────────────────────────────────────────
-const supabase  = createClient(
+const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_ANON_KEY
 );
-const anthropic = process.env.ANTHROPIC_API_KEY
-  ? new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY })
-  : null;
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
 
-// API availability flags — everything degrades gracefully when key missing
-const HAS_HUNTER  = !!process.env.HUNTER_API_KEY;
-const HAS_TWILIO  = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER);
-const HAS_TWITTER = !!process.env.TWITTER_BEARER_TOKEN;
+let anthropic, resend, stripe;
+let HAS_HUNTER, HAS_TWILIO, HAS_TWITTER;
 
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? require('stripe')(process.env.STRIPE_SECRET_KEY)
-  : null;
+function initServices() {
+  anthropic = process.env.ANTHROPIC_API_KEY
+    ? new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY })
+    : null;
+  resend = process.env.RESEND_API_KEY
+    ? new Resend(process.env.RESEND_API_KEY)
+    : null;
+  HAS_HUNTER  = !!process.env.HUNTER_API_KEY;
+  HAS_TWILIO  = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER);
+  HAS_TWITTER = !!process.env.TWITTER_BEARER_TOKEN;
+  stripe = process.env.STRIPE_SECRET_KEY
+    ? require('stripe')(process.env.STRIPE_SECRET_KEY)
+    : null;
+}
+initServices();
 
 // ── Helpers ───────────────────────────────────────────────
 function body(req) {
@@ -141,7 +145,7 @@ const ROUTES = {
 
   // ── Claude Lead Scoring ───────────────────────────────
   'POST /api/score': async (req, res) => {
-    if (!anthropic) return json(res, { ok: false, error: 'No ANTHROPIC_API_KEY set' }, 400);
+    if (!anthropic) return json(res, { ok: false, error: 'ANTHROPIC_API_KEY not set', needsKey: 'claude' }, 400);
     const { title, text, comments = [] } = await body(req);
 
     const prompt = `You are a lead qualification expert for a B2B outreach system targeting small businesses that need leads, clients, or sales help.
@@ -170,15 +174,33 @@ Return JSON only: {"score": <0-100>, "reason": "<one sentence why>", "intent": "
 
   // ── Claude Outreach Generator ─────────────────────────
   'POST /api/generate-outreach': async (req, res) => {
-    if (!anthropic) return json(res, { ok: false, error: 'No ANTHROPIC_API_KEY set' }, 400);
-    const { niche, offer, goal, location, tone = 'professional', leadContext = '' } = await body(req);
+    if (!anthropic) return json(res, { ok: false, error: 'ANTHROPIC_API_KEY not set', needsKey: 'claude' }, 400);
+    const { niche, offer, goal, location, tone = 'professional', leadContext = '',
+            persona = {} } = await body(req);
 
-    const prompt = `Write 3 short outreach messages for a ${niche} business${location ? ` in ${location}` : ''}.
-Their offer: ${offer}. Their goal: ${goal}. Tone: ${tone}.
-${leadContext ? `Lead context: ${leadContext}` : ''}
+    const senderName   = persona.name    || 'I';
+    const senderNiche  = persona.niche   || niche || 'lead generation';
+    const senderOffer  = persona.offer   || offer || 'a system that gets you consistent clients';
+    const senderMarket = persona.market  || 'local service businesses';
 
-Each message should be under 80 words, direct, and end with a clear call to action.
-Return JSON: {"messages": [{"label": "Cold DM", "body": "..."}, {"label": "Follow-up", "body": "..."}, {"label": "Value-first", "body": "..."}]}`;
+    const prompt = `You are ${senderName}, who ${senderNiche}.
+Your offer: ${senderOffer}.
+You target: ${senderMarket}.
+Tone: ${tone}. Location context: ${location || 'UK'}.
+
+Write 3 short outreach messages for this lead:
+${leadContext ? leadContext : `Someone who needs help getting clients in ${niche || 'their business'}`}
+
+Rules:
+- Under 80 words each
+- Sound human, not AI — avoid "I hope this finds you well", "reach out", "leverage"
+- Lead with the pain you spotted in their post
+- End with ONE clear action (reply, 15-min call, see a preview)
+- Variant 1 = Direct (assume they want help now, make an offer)
+- Variant 2 = Empathy (acknowledge pain first, then offer)
+- Variant 3 = Value-first (give something useful, then pitch)
+
+Return JSON only: {"messages": [{"label": "Direct", "body": "..."}, {"label": "Empathy", "body": "..."}, {"label": "Value-first", "body": "..."}]}`;
 
     try {
       const msg = await anthropic.messages.create({
@@ -279,18 +301,49 @@ Return JSON: {"messages": [{"label": "Cold DM", "body": "..."}, {"label": "Follo
     }
   },
 
+  // ── Save API Key (hot-reload without restart) ────────
+  'POST /api/save-key': async (req, res) => {
+    const ALLOWED = {
+      ANTHROPIC_API_KEY: true, RESEND_API_KEY: true, FROM_EMAIL: true,
+      HUNTER_API_KEY: true, TWILIO_ACCOUNT_SID: true, TWILIO_AUTH_TOKEN: true,
+      TWILIO_FROM_NUMBER: true, TWITTER_BEARER_TOKEN: true, SERPAPI_KEY: true,
+      STRIPE_SECRET_KEY: true, STRIPE_WEBHOOK_SECRET: true
+    };
+    const { key, value } = await body(req);
+    if (!ALLOWED[key]) return json(res, { ok: false, error: 'Unknown key' }, 400);
+    if (!value || !value.trim()) return json(res, { ok: false, error: 'Empty value' }, 400);
+
+    const envPath = path.join(__dirname, '.env');
+    let envContent = '';
+    try { envContent = fs.readFileSync(envPath, 'utf8'); } catch {}
+    const escaped = value.trim().replace(/\r?\n/g, '');
+    const regex = new RegExp(`^${key}=.*$`, 'm');
+    if (regex.test(envContent)) {
+      envContent = envContent.replace(regex, `${key}=${escaped}`);
+    } else {
+      envContent = envContent.trimEnd() + `\n${key}=${escaped}\n`;
+    }
+    try { fs.writeFileSync(envPath, envContent, 'utf8'); } catch (e) {
+      console.warn('[save-key] Could not write .env:', e.message);
+    }
+    process.env[key] = value.trim();
+    initServices();
+    json(res, { ok: true, key });
+  },
+
   // ── API Status ───────────────────────────────────────
   'GET /api/status': (_, res) => {
     json(res, {
       ok: true,
       services: {
-        supabase:    !!process.env.SUPABASE_URL,
-        claude:      !!process.env.ANTHROPIC_API_KEY,
-        resend:      !!process.env.RESEND_API_KEY,
-        hunter:      HAS_HUNTER,
-        twilio:      HAS_TWILIO,
-        twitter:     HAS_TWITTER,
-        stripe:      !!process.env.STRIPE_SECRET_KEY
+        supabase: !!process.env.SUPABASE_URL,
+        claude:   !!process.env.ANTHROPIC_API_KEY,
+        resend:   !!process.env.RESEND_API_KEY,
+        hunter:   HAS_HUNTER,
+        twilio:   HAS_TWILIO,
+        twitter:  HAS_TWITTER,
+        stripe:   !!process.env.STRIPE_SECRET_KEY,
+        serpapi:  !!process.env.SERPAPI_KEY
       }
     });
   },
