@@ -2449,6 +2449,326 @@ async function composerSend() {
   }
 }
 
+/* ══════════════════════════════════
+   BATCH OUTREACH + FEEDBACK LOOP
+══════════════════════════════════ */
+let _batchItems   = [];   // [{ post, message, channel, status }]
+let _feedbackQueue = [];  // pending feedback checks
+let _feedbackCurrent = null;
+
+async function runBatch() {
+  // 1. Need posts in the feed — scan if empty
+  const grid = document.getElementById('feed-grid');
+  const hasPosts = Object.keys(feedPostCache).length > 0;
+
+  document.getElementById('modal-batch').style.display = 'flex';
+  document.getElementById('batch-list').innerHTML =
+    '<div class="composer-loading"><i class="fas fa-circle-notch"></i> Scanning for top leads…</div>';
+  document.getElementById('batch-sub').textContent = 'Scanning Reddit…';
+  document.getElementById('btn-fire-all').disabled = true;
+
+  // 2. Fetch leads if cache empty
+  if (!hasPosts) {
+    try {
+      const kw  = activeFeedKw || 'need clients';
+      const res = await fetch(API + '/feed?q=' + encodeURIComponent(kw));
+      const data = await res.json();
+      if (data.ok) {
+        const TARGET_SUBS = new Set(['smallbusiness','entrepreneur','sidehustle','freelance',
+          'sales','startups','sweatystartup','entrepreneurridealong','smallbusinessuk',
+          'forhire','businessowners','growmybusiness']);
+        (data.posts || [])
+          .filter(p => TARGET_SUBS.has((p.subreddit||'').toLowerCase()))
+          .forEach(p => { feedPostCache[p.id] = p; });
+      }
+    } catch {}
+  }
+
+  // 3. Pick top 5 by score
+  const scored = Object.values(feedPostCache)
+    .map(p => ({ ...p, _score: p._score !== undefined ? p._score : scorePost(p.title, p.text) }))
+    .filter(p => p._score >= 35)
+    .sort((a, b) => b._score - a._score)
+    .slice(0, 5);
+
+  if (!scored.length) {
+    document.getElementById('batch-list').innerHTML =
+      '<div class="feed-empty"><i class="fas fa-filter"></i><p>No quality leads found — hit Scan first, then Run Batch.</p></div>';
+    document.getElementById('batch-sub').textContent = 'No leads found';
+    return;
+  }
+
+  document.getElementById('batch-sub').textContent = `Composing ${scored.length} messages from your persona…`;
+
+  // 4. Generate messages (Claude or template)
+  const persona = loadPersona();
+  _batchItems = [];
+
+  for (const post of scored) {
+    const a = analyzePost(post.title, post.text, post._score);
+    let msg = buildTemplateMessage(post, a, persona);
+
+    // Try Claude
+    try {
+      const r = await fetch(API + '/generate-outreach', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          niche: a.niche, offer: persona.offer, goal: 'leads',
+          location: persona.location || 'UK', tone: persona.tone || 'professional',
+          leadContext: `Post: ${post.title}. Body: ${(post.text||'').substring(0,200)}. Urgency: ${a.urgencyLabel}. Niche: ${a.niche}.`,
+          persona: { name: persona.name, niche: persona.niche, offer: persona.offer, market: persona.market }
+        })
+      });
+      const d = await r.json();
+      if (d.ok && d.messages?.[0]) msg = d.messages[0].body;
+    } catch {}
+
+    _batchItems.push({ post, analysis: a, message: msg, channel: 'copy', status: 'pending', id: post.id });
+  }
+
+  // 5. Render batch list
+  renderBatchList();
+  document.getElementById('batch-sub').textContent = `${_batchItems.length} messages ready — review and fire`;
+  document.getElementById('btn-fire-all').disabled = false;
+  updateBatchReadyCount();
+}
+
+function buildTemplateMessage(post, a, persona) {
+  const name   = persona.name   || 'I';
+  const offer  = persona.offer  || 'an AI system that finds local clients on autopilot';
+  const author = post.author    || 'there';
+  const niche  = a.niche.toLowerCase();
+
+  if (a.urgency >= 70) {
+    return `Hey u/${author} — saw this and it's exactly the problem ${name} built a solution for. ${offer.charAt(0).toUpperCase() + offer.slice(1)} — specifically for ${niche} businesses. 14-day trial, no card. Want me to run it on your area tonight and send you what it pulls?`;
+  }
+  if (a.urgency >= 40) {
+    return `Saw your post, u/${author}. Most ${niche} businesses ${name} work with hit the same wall — works when you're lucky, nothing when you're not. ${name} fixed that with ${offer}. Happy to show you what it found for someone in your niche this week?`;
+  }
+  return `Quick one for u/${author} — ${name} built a system that scans Reddit daily for ${niche} leads actively looking right now. Ran it on your niche and found 8 in the last 48hrs. Worth a 10-min look? Free trial, no commitment.`;
+}
+
+function renderBatchList() {
+  const list = document.getElementById('batch-list');
+  list.innerHTML = _batchItems.map((item, i) => {
+    const { post, analysis: a, message, status } = item;
+    const scoreColor = a.urgency >= 70 ? 'var(--success)' : a.urgency >= 40 ? 'var(--warn)' : 'var(--muted)';
+    return `<div class="batch-item" id="batch-item-${i}">
+      <div class="batch-item-hdr">
+        <div class="batch-item-num">${i+1}</div>
+        <div class="batch-item-lead">
+          <div class="batch-item-author">u/${esc(post.author)} · r/${esc(post.subreddit||'')}</div>
+          <div class="batch-item-meta">${esc(post.title.substring(0,70))}${post.title.length>70?'…':''}</div>
+        </div>
+        <span class="batch-item-score" style="background:${scoreColor}22;color:${scoreColor};border:1px solid ${scoreColor}44">${a.urgency}</span>
+        <span class="batch-item-status ${status}" id="batch-status-${i}">${status==='fired'?'✓ Fired':'Pending'}</span>
+      </div>
+      <textarea class="batch-textarea" id="batch-msg-${i}" rows="3">${esc(message)}</textarea>
+      <div class="batch-item-actions">
+        <select class="batch-channel-sel" id="batch-ch-${i}" onchange="_batchItems[${i}].channel=this.value">
+          <option value="copy">Reddit DM (Copy)</option>
+          <option value="email">Email</option>
+          <option value="sms">SMS</option>
+        </select>
+        <input type="text" class="batch-textarea" id="batch-rec-${i}" placeholder="Email or phone (if not Reddit)"
+               style="min-height:0;padding:5px 10px;font-size:.75rem;flex:1;display:none">
+        <button class="btn btn-secondary btn-sm" onclick="fireSingle(${i})">
+          <i class="fas fa-paper-plane"></i> Fire
+        </button>
+        <a class="btn btn-secondary btn-sm" href="${esc(post.url)}" target="_blank" rel="noopener">
+          <i class="fas fa-arrow-up-right-from-square"></i>
+        </a>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Wire up channel selects to show/hide recipient input
+  _batchItems.forEach((_, i) => {
+    const sel = document.getElementById('batch-ch-' + i);
+    const rec = document.getElementById('batch-rec-' + i);
+    if (sel && rec) {
+      sel.addEventListener('change', () => {
+        rec.style.display = sel.value === 'copy' ? 'none' : 'block';
+        rec.placeholder = sel.value === 'email' ? 'Email address' : 'Phone number';
+      });
+    }
+  });
+}
+
+function updateBatchReadyCount() {
+  const fired   = _batchItems.filter(i => i.status === 'fired').length;
+  const pending = _batchItems.length - fired;
+  document.getElementById('batch-ready-count').textContent =
+    fired ? `${fired} fired · ${pending} remaining` : `${_batchItems.length} ready to fire`;
+}
+
+async function fireSingle(idx) {
+  const item = _batchItems[idx];
+  if (!item) return;
+
+  // Read live textarea value
+  item.message = document.getElementById('batch-msg-' + idx)?.value || item.message;
+  const channel = item.channel;
+  const recipient = document.getElementById('batch-rec-' + idx)?.value?.trim() || '';
+
+  if (channel === 'copy') {
+    navigator.clipboard.writeText(item.message).then(() => {
+      window.open(item.post.url, '_blank');
+      markBatchFired(idx, item);
+    });
+    return;
+  }
+
+  if (!recipient) { toast('Enter a recipient for item ' + (idx+1), 'err'); return; }
+
+  try {
+    if (channel === 'email') {
+      const r = await fetch(API + '/send-outreach', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ to: recipient, subject: 'Quick question for you', message: item.message })
+      });
+      const d = await r.json();
+      if (d.ok) markBatchFired(idx, item);
+      else if (d.needsKey) { closeBatch(); openApiSetup('resend'); }
+      else toast(d.error || 'Send failed', 'err');
+    } else if (channel === 'sms') {
+      const r = await fetch(API + '/send-sms', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ to: recipient, message: item.message })
+      });
+      const d = await r.json();
+      if (d.ok) markBatchFired(idx, item);
+      else if (d.error?.includes('not configured')) { closeBatch(); openApiSetup('twilio'); }
+      else toast(d.error || 'SMS failed', 'err');
+    }
+  } catch { toast('Send failed', 'err'); }
+}
+
+function markBatchFired(idx, item) {
+  item.status = 'fired';
+  const statusEl = document.getElementById('batch-status-' + idx);
+  if (statusEl) { statusEl.textContent = '✓ Fired'; statusEl.className = 'batch-item-status fired'; }
+  updateBatchReadyCount();
+
+  // Queue feedback check for this lead
+  _feedbackQueue.push({
+    author:  item.post.author,
+    title:   item.post.title.substring(0, 60),
+    url:     item.post.url,
+    channel: item.channel,
+    message: item.message
+  });
+}
+
+async function fireAll() {
+  const btn = document.getElementById('btn-fire-all');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Firing…';
+
+  for (let i = 0; i < _batchItems.length; i++) {
+    if (_batchItems[i].status !== 'fired') await fireSingle(i);
+    await new Promise(r => setTimeout(r, 400)); // small delay between sends
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-check"></i> All Fired';
+
+  // Save batch to outreach queue for tracking
+  for (const item of _batchItems) {
+    fetch(API + '/outreach', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientName: loadPersona().name || 'Operator',
+        niche:      item.analysis.niche,
+        label:      'Batch — ' + item.channel,
+        message:    item.message,
+        status:     'sent'
+      })
+    }).catch(()=>{});
+  }
+
+  // Start feedback loop after 8s
+  setTimeout(() => {
+    closeBatch();
+    showNextFeedback();
+  }, 8000);
+}
+
+function closeBatch() {
+  document.getElementById('modal-batch').style.display = 'none';
+}
+
+/* ── Feedback Loop ── */
+function showNextFeedback() {
+  if (!_feedbackQueue.length) {
+    maybeShowInsights();
+    return;
+  }
+  _feedbackCurrent = _feedbackQueue.shift();
+  const modal = document.getElementById('modal-feedback');
+  document.getElementById('feedback-title').textContent = 'Did they reply?';
+  document.getElementById('feedback-lead-name').textContent =
+    `u/${_feedbackCurrent.author} — "${_feedbackCurrent.title}…" via ${_feedbackCurrent.channel}`;
+  const qCount = _feedbackQueue.length;
+  document.getElementById('feedback-queue-count').textContent =
+    qCount ? `${qCount} more to check after this` : 'Last one';
+  modal.style.display = 'block';
+}
+
+function logFeedback(outcome) {
+  if (!_feedbackCurrent) return;
+
+  // Persist feedback to localStorage for pattern analysis
+  const history = JSON.parse(localStorage.getItem('ts_feedback') || '[]');
+  history.push({
+    ts:      Date.now(),
+    channel: _feedbackCurrent.channel,
+    outcome,
+    niche:   _feedbackCurrent.title
+  });
+  // Keep last 100
+  if (history.length > 100) history.splice(0, history.length - 100);
+  localStorage.setItem('ts_feedback', JSON.stringify(history));
+
+  dismissFeedback();
+  if (_feedbackQueue.length) {
+    setTimeout(showNextFeedback, 600);
+  } else {
+    maybeShowInsights();
+  }
+}
+
+function dismissFeedback() {
+  document.getElementById('modal-feedback').style.display = 'none';
+  _feedbackCurrent = null;
+}
+
+function maybeShowInsights() {
+  const history = JSON.parse(localStorage.getItem('ts_feedback') || '[]');
+  if (history.length < 5) return; // need at least 5 data points
+
+  // Channel breakdown
+  const channels = {};
+  history.forEach(h => {
+    if (!channels[h.channel]) channels[h.channel] = { replied:0, total:0 };
+    channels[h.channel].total++;
+    if (h.outcome === 'replied') channels[h.channel].replied++;
+  });
+
+  const best = Object.entries(channels)
+    .map(([ch, d]) => ({ ch, rate: d.total ? Math.round(d.replied/d.total*100) : 0, total: d.total }))
+    .filter(x => x.total >= 2)
+    .sort((a,b) => b.rate - a.rate)[0];
+
+  if (best) {
+    toast(`Insight: ${best.ch} has ${best.rate}% reply rate (${best.total} sends) — keep using it`, 'ok');
+    // Update persona channel preference
+    const p = loadPersona();
+    p.bestChannel = best.ch;
+    savePersonaData(p);
+  }
+}
+
 /* ── Send SMS (Twilio) ── */
 function showSendSms(outreachId) {
   const to = prompt('Mobile number (e.g. 07700900000 or +447700900000):');

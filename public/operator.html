@@ -267,6 +267,9 @@
           <button class="btn btn-primary" id="btn-feed-refresh" style="width:100%;margin-top:4px">
             <i class="fas fa-satellite-dish"></i> Scan for Leads
           </button>
+          <button class="btn btn-secondary" id="btn-run-batch" style="width:100%;margin-top:6px" onclick="runBatch()">
+            <i class="fas fa-bolt"></i> Run Batch (Top 5)
+          </button>
           <div class="feed-tip-box">
             <b style="color:var(--accent)">Target niche:</b><br>
             Local service businesses — plumbers, electricians, builders, PTs, cleaners.<br>
@@ -403,6 +406,48 @@
       <button class="btn btn-primary" style="flex:1" id="btn-save-lead">Save Lead</button>
       <button class="btn btn-secondary" id="btn-cancel-lead">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- ── BATCH OUTREACH MODAL ── -->
+<div id="modal-batch" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9500;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 16px;">
+  <div class="batch-modal-card">
+    <div class="batch-modal-hdr">
+      <div>
+        <div class="batch-modal-title"><i class="fas fa-bolt"></i> Batch Outreach</div>
+        <div class="batch-modal-sub" id="batch-sub">Composing messages…</div>
+      </div>
+      <button class="api-modal-close" onclick="closeBatch()"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="batch-list" class="batch-list">
+      <div class="composer-loading"><i class="fas fa-circle-notch"></i> Generating messages from your persona…</div>
+    </div>
+    <div class="batch-footer">
+      <span id="batch-ready-count" style="font-size:.72rem;color:var(--muted)"></span>
+      <div style="flex:1"></div>
+      <button class="btn btn-secondary btn-sm" onclick="closeBatch()">Cancel</button>
+      <button class="btn btn-primary" id="btn-fire-all" onclick="fireAll()" style="min-width:140px">
+        <i class="fas fa-paper-plane"></i> Fire All
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── FEEDBACK POPUP ── -->
+<div id="modal-feedback" style="display:none;position:fixed;bottom:24px;right:24px;z-index:10001;">
+  <div class="feedback-card">
+    <div class="feedback-hdr">
+      <i class="fas fa-chart-simple" style="color:var(--accent)"></i>
+      <span id="feedback-title">Did they reply?</span>
+      <button onclick="dismissFeedback()" style="background:none;border:none;color:var(--muted);cursor:pointer;margin-left:auto"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="feedback-lead-name" class="feedback-lead"></div>
+    <div class="feedback-btns">
+      <button class="feedback-btn feedback-yes" onclick="logFeedback('replied')"><i class="fas fa-check"></i> Replied</button>
+      <button class="feedback-btn feedback-no"  onclick="logFeedback('no_reply')"><i class="fas fa-times"></i> No reply</button>
+      <button class="feedback-btn feedback-later" onclick="logFeedback('later')"><i class="fas fa-clock"></i> Too early</button>
+    </div>
+    <div id="feedback-queue-count" style="font-size:.65rem;color:var(--muted);margin-top:8px;text-align:center"></div>
   </div>
 </div>
 
