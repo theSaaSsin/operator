@@ -1139,6 +1139,7 @@ function renderOutreach(queue) {
       <div class="out-actions">
         ${q.status === 'pending'  ? `<button class="btn btn-success btn-sm" onclick="updateOutreach(${q.id},'approved')"><i class="fas fa-check"></i> Approve</button>` : ''}
         ${q.status === 'approved' ? `<button class="btn btn-primary btn-sm" onclick="showSendEmail(${q.id})"><i class="fas fa-envelope"></i> Send Email</button>` : ''}
+        ${q.status === 'approved' ? `<button class="btn btn-secondary btn-sm" onclick="showSendSms(${q.id})"><i class="fas fa-mobile-screen"></i> Send SMS</button>` : ''}
         ${q.status === 'approved' ? `<button class="btn btn-secondary btn-sm" onclick="updateOutreach(${q.id},'sent')"><i class="fas fa-paper-plane"></i> Mark Sent</button>` : ''}
         ${q.status === 'pending'  ? `<button class="btn btn-danger btn-sm"  onclick="updateOutreach(${q.id},'sent')"><i class="fas fa-times"></i> Dismiss</button>` : ''}
       </div>
@@ -1311,7 +1312,8 @@ function analyzePost(title, text, preScore) {
 }
 
 /* ── KEYWORD PILLS ── */
-let activeFeedKw = 'need clients';
+let activeFeedKw       = 'need clients';
+let activeFeedPlatform = 'reddit';
 
 document.querySelectorAll('.kw-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1321,10 +1323,21 @@ document.querySelectorAll('.kw-btn').forEach(btn => {
   });
 });
 
+/* ── PLATFORM TABS ── */
+document.querySelectorAll('.feed-ptab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.feed-ptab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    activeFeedPlatform = tab.dataset.platform;
+  });
+});
+
 document.getElementById('btn-feed-refresh').addEventListener('click', () => {
   const custom = document.getElementById('feed-custom-kw').value.trim();
   const kw = custom || activeFeedKw;
-  fetchFeed(kw);
+  if (activeFeedPlatform === 'twitter')  fetchFeedX(kw);
+  else if (activeFeedPlatform === 'linkedin') fetchFeedLinkedIn(kw);
+  else fetchFeed(kw);
 });
 
 /* ── FETCH + RENDER ── */
@@ -1457,6 +1470,9 @@ function renderFeedCard(post) {
       <button class="btn btn-secondary btn-sm" id="ai-btn-${esc(post.id)}" onclick="aiScorePost('${esc(post.id)}','${esc(post.title).replace(/'/g,'')}','${esc(post.text).replace(/'/g,'').substring(0,300)}')">
         <i class="fas fa-brain"></i> AI Score
       </button>
+      <button class="btn btn-secondary btn-sm" id="email-btn-${esc(post.id)}" onclick="findEmail('${esc(post.id)}','${esc(post.author)}','')">
+        <i class="fas fa-at"></i> Find Email
+      </button>
       <a class="btn btn-secondary btn-sm" href="${esc(post.url)}" target="_blank" rel="noopener">
         <i class="fas fa-arrow-up-right-from-square"></i> Open Post
       </a>
@@ -1522,5 +1538,145 @@ async function saveFeedLead(id, author, niche, url, title, score) {
   } catch { toast('Could not save lead', 'err'); }
 }
 
+/* ══════════════════════════════════
+   API STATUS CHECKER
+══════════════════════════════════ */
+async function checkApiStatus() {
+  try {
+    const res  = await fetch(API + '/status');
+    const data = await res.json();
+    if (!data.ok) return;
+    const s = data.services;
+    const bar = document.getElementById('api-status-bar');
+    if (!bar) return;
+    const items = [
+      { key: 'supabase',  label: 'DB',       icon: 'fa-database' },
+      { key: 'claude',    label: 'AI',        icon: 'fa-brain' },
+      { key: 'resend',    label: 'Email',     icon: 'fa-envelope' },
+      { key: 'hunter',    label: 'Hunter',    icon: 'fa-magnifying-glass' },
+      { key: 'twilio',    label: 'SMS',       icon: 'fa-mobile-screen' },
+      { key: 'twitter',   label: 'X/Twitter', icon: 'fa-x-twitter' }
+    ];
+    bar.innerHTML = items.map(i =>
+      `<span class="api-dot ${s[i.key] ? 'api-on' : 'api-off'}" title="${i.label}: ${s[i.key] ? 'connected' : 'key missing'}">
+        <i class="fas ${i.icon}"></i> ${i.label}
+      </span>`
+    ).join('');
+  } catch { /* silent */ }
+}
+
+/* ── X/Twitter Feed ── */
+async function fetchFeedX(keyword) {
+  const grid = document.getElementById('feed-grid');
+  const meta = document.getElementById('feed-meta');
+  grid.innerHTML = '<div class="feed-loading"><i class="fas fa-circle-notch"></i>Scanning X/Twitter for leads...</div>';
+  meta.textContent = '';
+  try {
+    const res  = await fetch(API + '/feed-x?q=' + encodeURIComponent(keyword));
+    const data = await res.json();
+    if (!data.ok) {
+      grid.innerHTML = `<div class="feed-empty"><i class="fas fa-x-twitter"></i><p>${esc(data.error || 'Twitter unavailable')}</p>${data.hint ? `<p style="font-size:.7rem;opacity:.5">${esc(data.hint)}</p>` : ''}</div>`;
+      return;
+    }
+    if (!data.posts.length) {
+      grid.innerHTML = '<div class="feed-empty"><i class="fas fa-x-twitter"></i><p>No matching posts — try a different keyword</p></div>';
+      return;
+    }
+    meta.textContent = `${data.posts.length} posts from X/Twitter · "${keyword}"`;
+    grid.innerHTML = data.posts.map(p => renderFeedCard(p)).join('');
+  } catch {
+    grid.innerHTML = '<div class="feed-empty"><i class="fas fa-triangle-exclamation"></i><p>X/Twitter fetch failed</p></div>';
+  }
+}
+
+/* ── LinkedIn Dork Feed ── */
+async function fetchFeedLinkedIn(keyword) {
+  const grid = document.getElementById('feed-grid');
+  const meta = document.getElementById('feed-meta');
+  const niche = document.getElementById('feed-custom-kw')?.value?.trim() || '';
+  grid.innerHTML = '<div class="feed-loading"><i class="fas fa-circle-notch"></i>Scanning LinkedIn via Google...</div>';
+  meta.textContent = '';
+  try {
+    const res  = await fetch(API + '/feed-linkedin?q=' + encodeURIComponent(keyword) + '&niche=' + encodeURIComponent(niche));
+    const data = await res.json();
+    if (!data.ok) {
+      grid.innerHTML = `<div class="feed-empty"><i class="fab fa-linkedin"></i><p>${esc(data.error || 'LinkedIn search unavailable')}</p>${data.hint ? `<p style="font-size:.7rem;opacity:.5">${esc(data.hint)}</p>` : ''}</div>`;
+      return;
+    }
+    if (!data.posts.length) {
+      grid.innerHTML = '<div class="feed-empty"><i class="fab fa-linkedin"></i><p>No LinkedIn posts found — try different keywords</p></div>';
+      return;
+    }
+    meta.textContent = `${data.posts.length} LinkedIn posts found · "${keyword}"`;
+    grid.innerHTML = data.posts.map(p => renderFeedCard(p)).join('');
+  } catch {
+    grid.innerHTML = '<div class="feed-empty"><i class="fas fa-triangle-exclamation"></i><p>LinkedIn search failed</p></div>';
+  }
+}
+
+/* ── Find Email (Hunter.io) ── */
+async function findEmail(postId, authorName, domain) {
+  const btn = document.getElementById('email-btn-' + postId);
+  if (!btn) return;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+  try {
+    const name   = authorName.replace(/^u\//, '').replace(/_/g, ' ');
+    const d      = domain || prompt('Enter their website domain (e.g. plumbingco.co.uk):');
+    if (!d) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-at"></i> Find Email'; return; }
+    const res    = await fetch(API + '/find-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, domain: d })
+    });
+    const data = await res.json();
+    if (data.ok && data.email) {
+      btn.innerHTML = `<i class="fas fa-check"></i> ${esc(data.email)}`;
+      btn.style.color = 'var(--success)';
+      btn.onclick = () => navigator.clipboard.writeText(data.email).then(() => toast('Email copied', 'ok'));
+      toast('Email found: ' + data.email, 'ok');
+    } else if (data.ok && data.emails?.length) {
+      const e = data.emails[0].email;
+      btn.innerHTML = `<i class="fas fa-check"></i> ${esc(e)}`;
+      btn.style.color = 'var(--success)';
+      btn.onclick = () => navigator.clipboard.writeText(e).then(() => toast('Email copied', 'ok'));
+      toast('Email found: ' + e, 'ok');
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-at"></i> Find Email';
+      toast(data.error || 'No email found', 'err');
+    }
+  } catch {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-at"></i> Find Email';
+    toast('Email lookup failed', 'err');
+  }
+}
+
+/* ── Send SMS (Twilio) ── */
+function showSendSms(outreachId) {
+  const to = prompt('Mobile number (e.g. 07700900000 or +447700900000):');
+  if (!to) return;
+  sendSms(outreachId, to);
+}
+
+async function sendSms(outreachId, to) {
+  toast('Sending SMS...', 'ok');
+  try {
+    const queue = (await (await fetch(API + '/outreach')).json()).queue || [];
+    const item  = queue.find(q => q.id === outreachId);
+    if (!item) { toast('Message not found', 'err'); return; }
+    const res  = await fetch(API + '/send-sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, message: item.message, outreach_id: outreachId })
+    });
+    const data = await res.json();
+    if (data.ok) { toast('SMS sent!', 'ok'); loadOutreach(); }
+    else toast(data.error || 'SMS failed — check Twilio config', 'err');
+  } catch { toast('SMS send failed', 'err'); }
+}
+
 /* ── INIT ── */
 loadClients();
+checkApiStatus();

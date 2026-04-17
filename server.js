@@ -26,9 +26,14 @@ const supabase  = createClient(
 const anthropic = process.env.ANTHROPIC_API_KEY
   ? new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY })
   : null;
-const resend    = process.env.RESEND_API_KEY
+const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
+
+// API availability flags — everything degrades gracefully when key missing
+const HAS_HUNTER  = !!process.env.HUNTER_API_KEY;
+const HAS_TWILIO  = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER);
+const HAS_TWITTER = !!process.env.TWITTER_BEARER_TOKEN;
 
 // ── Helpers ───────────────────────────────────────────────
 function body(req) {
@@ -191,6 +196,165 @@ Return JSON: {"messages": [{"label": "Cold DM", "body": "..."}, {"label": "Follo
       }
 
       json(res, { ok: true, email_id: result.data?.id });
+    } catch (e) {
+      json(res, { ok: false, error: e.message }, 500);
+    }
+  },
+
+  // ── API Status ───────────────────────────────────────
+  'GET /api/status': (_, res) => {
+    json(res, {
+      ok: true,
+      services: {
+        supabase:    !!process.env.SUPABASE_URL,
+        claude:      !!process.env.ANTHROPIC_API_KEY,
+        resend:      !!process.env.RESEND_API_KEY,
+        hunter:      HAS_HUNTER,
+        twilio:      HAS_TWILIO,
+        twitter:     HAS_TWITTER
+      }
+    });
+  },
+
+  // ── Hunter.io — find email from name + domain ─────────
+  'POST /api/find-email': async (req, res) => {
+    if (!HAS_HUNTER) return json(res, { ok: false, error: 'HUNTER_API_KEY not set', hint: 'Free at hunter.io — 25 searches/mo' }, 400);
+    const { name, domain, company } = await body(req);
+    if (!domain && !company) return json(res, { ok: false, error: 'domain or company required' }, 400);
+
+    try {
+      // If we have a full name, use email-finder; otherwise domain-search
+      let url;
+      if (name && (domain || company)) {
+        const parts  = (name || '').trim().split(' ');
+        const first  = parts[0] || '';
+        const last   = parts.slice(1).join(' ') || '';
+        const dom    = domain || '';
+        url = `https://api.hunter.io/v2/email-finder?domain=${encodeURIComponent(dom)}&first_name=${encodeURIComponent(first)}&last_name=${encodeURIComponent(last)}&api_key=${process.env.HUNTER_API_KEY}`;
+      } else {
+        const dom = domain || '';
+        url = `https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(dom)}&limit=5&api_key=${process.env.HUNTER_API_KEY}`;
+      }
+
+      const r    = await fetch(url);
+      const data = await r.json();
+
+      if (data.errors) return json(res, { ok: false, error: data.errors[0]?.details || 'Hunter error' });
+
+      // email-finder returns data.data.email; domain-search returns data.data.emails[]
+      const email   = data.data?.email || data.data?.emails?.[0]?.value || null;
+      const score   = data.data?.score || data.data?.emails?.[0]?.confidence || 0;
+      const emails  = data.data?.emails?.map(e => ({ email: e.value, score: e.confidence, type: e.type })) || [];
+
+      json(res, { ok: true, email, score, emails, credits_left: data.meta?.requests_remaining });
+    } catch (e) {
+      json(res, { ok: false, error: e.message }, 500);
+    }
+  },
+
+  // ── Twitter/X Lead Scraping ───────────────────────────
+  'GET /api/feed-x': async (req, res) => {
+    if (!HAS_TWITTER) return json(res, { ok: false, posts: [], error: 'TWITTER_BEARER_TOKEN not set', hint: 'Free Basic tier at developer.twitter.com — 100 reads/mo' }, 400);
+    const qs = req.url.includes('?') ? req.url.split('?')[1] : '';
+    const kw = decodeURIComponent((qs.match(/q=([^&]*)/) || [])[1] || 'need clients');
+
+    // Build query — target small biz pain signals, exclude retweets/replies
+    const query = `(${kw} OR "no clients" OR "need more clients" OR "struggling to get customers") -is:retweet -is:reply lang:en`;
+
+    try {
+      const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&max_results=20&tweet.fields=created_at,public_metrics,author_id&expansions=author_id&user.fields=username,name,public_metrics`;
+      const r   = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${process.env.TWITTER_BEARER_TOKEN}` }
+      });
+      const data = await r.json();
+
+      if (data.errors || !data.data) return json(res, { ok: false, posts: [], error: data.title || 'Twitter API error' });
+
+      const usersMap = {};
+      (data.includes?.users || []).forEach(u => { usersMap[u.id] = u; });
+
+      const posts = (data.data || []).map(t => {
+        const user = usersMap[t.author_id] || {};
+        return {
+          id:        t.id,
+          title:     t.text.substring(0, 120),
+          text:      t.text.substring(0, 500),
+          author:    user.username || t.author_id,
+          name:      user.name || '',
+          url:       `https://twitter.com/${user.username}/status/${t.id}`,
+          created:   Math.floor(new Date(t.created_at).getTime() / 1000),
+          score:     t.public_metrics?.like_count || 0,
+          followers: user.public_metrics?.followers_count || 0,
+          platform:  'twitter',
+          comments:  []
+        };
+      });
+
+      json(res, { ok: true, posts, keyword: kw });
+    } catch (e) {
+      json(res, { ok: false, posts: [], error: e.message }, 500);
+    }
+  },
+
+  // ── LinkedIn Google-dork Lead Search ──────────────────
+  // No LinkedIn API needed — uses SerpAPI to dork Google for LinkedIn posts
+  'GET /api/feed-linkedin': async (req, res) => {
+    const qs  = req.url.includes('?') ? req.url.split('?')[1] : '';
+    const kw  = decodeURIComponent((qs.match(/q=([^&]*)/) || [])[1] || 'need clients');
+    const niche = decodeURIComponent((qs.match(/niche=([^&]*)/) || [])[1] || '');
+
+    if (!process.env.SERPAPI_KEY) {
+      return json(res, { ok: false, posts: [], error: 'SERPAPI_KEY not set', hint: 'Free 100 searches/mo at serpapi.com' }, 400);
+    }
+
+    const query = `site:linkedin.com/posts "${kw}" ${niche} -job -hiring`;
+    try {
+      const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=10&api_key=${process.env.SERPAPI_KEY}`;
+      const r   = await fetch(url);
+      const data = await r.json();
+
+      const posts = (data.organic_results || []).map((result, i) => ({
+        id:        'li_' + i,
+        title:     result.title || '',
+        text:      result.snippet || '',
+        author:    (result.title || '').split(' on LinkedIn')[0].split(' - ')[0].trim(),
+        url:       result.link || '',
+        created:   Math.floor(Date.now() / 1000),
+        score:     0,
+        platform:  'linkedin',
+        comments:  []
+      })).filter(p => p.text.length > 20);
+
+      json(res, { ok: true, posts, keyword: kw });
+    } catch (e) {
+      json(res, { ok: false, posts: [], error: e.message }, 500);
+    }
+  },
+
+  // ── Twilio SMS Outreach ───────────────────────────────
+  'POST /api/send-sms': async (req, res) => {
+    if (!HAS_TWILIO) return json(res, { ok: false, error: 'Twilio not configured', hint: 'Free trial at twilio.com — $15 credit' }, 400);
+    const { to, message, outreach_id } = await body(req);
+    if (!to || !message) return json(res, { ok: false, error: 'to + message required' }, 400);
+
+    const phone = to.startsWith('+') ? to : '+44' + to.replace(/^0/, '');
+
+    try {
+      const creds  = Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64');
+      const params = new URLSearchParams({ To: phone, From: process.env.TWILIO_FROM_NUMBER, Body: message.substring(0, 1600) });
+      const r = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`,
+        { method: 'POST', headers: { 'Authorization': `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body: params }
+      );
+      const data = await r.json();
+
+      if (data.status === 'failed' || data.code) return json(res, { ok: false, error: data.message || 'SMS failed' });
+
+      if (outreach_id) {
+        await supabase.from('outreach_queue').update({ status: 'sent' }).eq('id', outreach_id);
+      }
+
+      json(res, { ok: true, sid: data.sid, status: data.status });
     } catch (e) {
       json(res, { ok: false, error: e.message }, 500);
     }

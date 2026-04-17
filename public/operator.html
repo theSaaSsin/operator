@@ -43,7 +43,11 @@
   <div id="main">
     <div id="topbar">
       <div id="topbar-title">Client Creator</div>
-      <div id="topbar-meta" id="topbar-meta">TheSaaSsin Operator &nbsp;·&nbsp; <span id="clock"></span></div>
+      <div id="topbar-meta">
+        <div id="api-status-bar" style="display:flex;gap:8px;align-items:center;"></div>
+        <span style="margin:0 8px;opacity:.3">|</span>
+        TheSaaSsin &nbsp;·&nbsp; <span id="clock"></span>
+      </div>
     </div>
 
     <div id="content">
@@ -205,8 +209,15 @@
         <div class="feed-sidebar">
           <div class="feed-header">
             <h2>Lead Feed</h2>
-            <span class="feed-badge">Reddit</span>
           </div>
+
+          <!-- Platform tabs -->
+          <div class="feed-platform-tabs">
+            <button class="feed-ptab active" data-platform="reddit"><i class="fab fa-reddit-alien"></i> Reddit</button>
+            <button class="feed-ptab" data-platform="twitter"><i class="fab fa-x-twitter"></i> X</button>
+            <button class="feed-ptab" data-platform="linkedin"><i class="fab fa-linkedin"></i> LinkedIn</button>
+          </div>
+
           <div class="feed-kw-section">
             <div class="feed-kw-label">Quick Keywords</div>
             <div class="kw-pills">
@@ -228,7 +239,7 @@
             <i class="fas fa-satellite-dish"></i> Scan for Leads
           </button>
           <div class="feed-tip-box">
-            <b style="color:var(--accent)">Your niche target:</b><br>
+            <b style="color:var(--accent)">Target niche:</b><br>
             Local service businesses — plumbers, electricians, builders, PTs, cleaners.<br>
             <span style="color:var(--muted)">High urgency · Fast cash · Low tech</span>
           </div>
@@ -240,8 +251,8 @@
           <div class="feed-grid" id="feed-grid">
             <div class="feed-empty">
               <i class="fas fa-satellite-dish"></i>
-              <p>Scan Reddit for live leads who need clients right now</p>
-              <p style="font-size:.72rem;margin-top:4px;opacity:.5">Searches 8 business subreddits simultaneously</p>
+              <p>Scan Reddit, X, or LinkedIn for live leads right now</p>
+              <p style="font-size:.72rem;margin-top:4px;opacity:.5">Reddit requires no key · X + LinkedIn need free API keys</p>
             </div>
           </div>
         </div>
