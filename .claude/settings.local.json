@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"require\\('./server.js'\\)\")",
+      "Bash(node --check public/operator.js)",
+      "Bash(node --check server.js)",
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(node -c public/operator.js)",
+      "Bash(node -c server.js)"
+    ]
+  }
+}

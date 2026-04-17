@@ -301,6 +301,122 @@ function buildAllPlatformsCopy(platforms, payload, profile) {
   return platforms.map(plat => buildPlatformCopy(plat, payload, profile)).filter(Boolean);
 }
 
+/* ── PAIN-MATCHED DELIVERABLE ──
+   When Client Creator is invoked from a scraped lead, produce a
+   ready-to-send artefact pack targeting that lead's specific pain. */
+const PAIN_DELIVERABLES = {
+  no_clients:         { artefact: 'Emergency lead-gen demo page',  sections: ['DM opener','Demo page headline','3 post hooks','Follow-up sequence'] },
+  low_conversions:    { artefact: 'Rebuilt landing page mock',     sections: ['Audit DM','New headline','New CTA','Conversion-fix post'] },
+  outreach_gap:       { artefact: 'Personalised DM sequence',      sections: ['Opener DM','Follow-up DM','Breakup DM','Reply-trigger hook'] },
+  web_presence_gap:   { artefact: 'One-page site draft',           sections: ['DM opener','Site headline','About paragraph','Booking CTA'] },
+  low_visibility:     { artefact: 'Local SEO audit',               sections: ['DM opener','Top 3 fixes','GMB checklist','Review-request template'] },
+  referrals_dried_up: { artefact: 'Inbound funnel starter',        sections: ['DM opener','Lead magnet hook','Reactivation DM','Post to restart referrals'] },
+  time_overwhelm:     { artefact: 'Automation starter pack',       sections: ['DM opener','3 tasks to automate','Quick-win template','Time-audit post'] },
+  ads_waste:          { artefact: 'Ads audit + capture flow',      sections: ['DM opener','Audit bullets','Capture-page headline','Retargeting sequence'] },
+  proposal_ghosting:  { artefact: 'Proposal rescue sequence',      sections: ['DM opener','Follow-up 1','Follow-up 2','Breakup message'] },
+  growth_gap:         { artefact: 'Growth diagnosis pack',         sections: ['DM opener','Top 3 leverage points','30-day action list','Proof post'] }
+};
+
+function buildLeadDeliverable(ctx, meta) {
+  const a     = ctx.analysis;
+  const lead  = ctx.lead;
+  const spec  = PAIN_DELIVERABLES[a.painKey] || PAIN_DELIVERABLES.growth_gap;
+  const niche = a.niche || meta.niche || 'your business';
+  const who   = 'u/' + lead.author;
+
+  const sections = [
+    { label: 'DM Opener (send first)',
+      body: a.opener || `Saw your post on r/${lead.subreddit} — I work with ${niche.toLowerCase()} owners in exactly this situation. I can put a quick preview together for you. Worth a look?` },
+    { label: 'Pain-Framed Hook',
+      body: `"${a.painLabel}" — ${a.painChallenge}. Fix = ${a.demoFocus}.` },
+    { label: 'Demo Page Headline',
+      body: painHeadline(a.painKey, niche) },
+    { label: 'Demo Page Sub-headline',
+      body: painSubline(a.painKey, niche) },
+    { label: 'Demo Page CTA',
+      body: painCTA(a.painKey) },
+    { label: 'Social Post Hook (for proof)',
+      body: `How I helped a ${niche.toLowerCase()} owner stop "${a.painLabel.toLowerCase()}" in 7 days — the one system that changed it →` },
+    { label: 'Follow-up DM (48h later)',
+      body: `Hey ${who.split('/')[1] || 'there'} — did the note land? Happy to drop the preview over with zero strings. Just reply "yes" and I'll send it across.` },
+    { label: 'Breakup DM (7d later)',
+      body: `No worries if timing's off — I'll close the loop here. If "${a.painLabel.toLowerCase()}" is still on the table later, you've got my handle.` }
+  ];
+
+  return { artefact: spec.artefact, painKey: a.painKey, painLabel: a.painLabel, lead: who, subreddit: lead.subreddit, url: lead.url, sections };
+}
+
+function painHeadline(key, niche) {
+  const n = niche.toLowerCase();
+  return {
+    no_clients:         `${niche} owners: stop waiting for the phone to ring`,
+    low_conversions:    `Your site is getting traffic — here's why it isn't converting`,
+    outreach_gap:       `Cold outreach that actually gets replies (for ${n}s)`,
+    web_presence_gap:   `A proper online home for your ${n} business — live in 48h`,
+    low_visibility:     `Be the ${n} Google shows first in your area`,
+    referrals_dried_up: `When referrals slow down, here's what takes their place`,
+    time_overwhelm:     `Buy back 10 hours a week — built for ${n} operators`,
+    ads_waste:          `Stop losing ad clicks. Start capturing them.`,
+    proposal_ghosting:  `Proposals going cold? Here's the follow-up that fixes it`,
+    growth_gap:         `${niche} systems that unlock the next stage`
+  }[key] || `${niche} systems that unlock the next stage`;
+}
+function painSubline(key, niche) {
+  return {
+    no_clients:         `A simple system that brings enquiries in on autopilot — no ads required to start.`,
+    low_conversions:    `We rebuild the page around the offer and the buyer — conversions usually double.`,
+    outreach_gap:       `Personalised sequences that reference the prospect's actual situation, not a template.`,
+    web_presence_gap:   `One page, one offer, one CTA — built to convert, not to impress.`,
+    low_visibility:     `Local SEO + Google Profile set up properly so you show up where buyers look.`,
+    referrals_dried_up: `Build an inbound pipeline so a quiet month isn't a panic month.`,
+    time_overwhelm:     `Automate the admin, keep the craft — more clients, fewer hours.`,
+    ads_waste:          `A capture + follow-up flow so every ad click has somewhere to land.`,
+    proposal_ghosting:  `A 3-step sequence that brings cold quotes back to life.`,
+    growth_gap:         `Diagnosis first, build second — nothing generic.`
+  }[key] || 'A system that fits your offer and your buyers.';
+}
+function painCTA(key) {
+  return {
+    no_clients:         'Show me the acquisition system',
+    low_conversions:    'Audit my landing page',
+    outreach_gap:       'Send me the sequence',
+    web_presence_gap:   'Build my one-pager',
+    low_visibility:     'Audit my local SEO',
+    referrals_dried_up: 'Start my inbound pipeline',
+    time_overwhelm:     'Automate my admin',
+    ads_waste:          'Fix my ad funnel',
+    proposal_ghosting:  'Rescue my proposals',
+    growth_gap:         'Book the diagnosis call'
+  }[key] || 'Start the demo';
+}
+
+function renderLeadDeliverable(ctx, meta) {
+  const bar = document.getElementById('pkg-bar');
+  if (!bar) return;
+  const d = buildLeadDeliverable(ctx, meta);
+  const card = `
+    <div class="plat-copy-card" style="border-color:var(--accent);background:linear-gradient(180deg,rgba(255,42,42,.08),transparent)">
+      <div class="plat-copy-header">
+        <i class="fas fa-bullseye" style="color:var(--accent)"></i>
+        <span>Lead Demo: ${esc(d.artefact)}</span>
+        <span class="plat-dims">${esc(d.lead)} · r/${esc(d.subreddit)} · ${esc(d.painLabel)}</span>
+      </div>
+      <div class="plat-copy-body">
+        ${d.sections.map(s => `
+          <div class="plat-asset-row">
+            <div class="plat-asset-label">${esc(s.label)}</div>
+            <div class="plat-asset-value">${esc(s.body)}
+              <button class="plat-copy-btn" onclick="navigator.clipboard.writeText(${JSON.stringify(s.body)}).then(()=>toast('Copied','ok'))">copy</button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  bar.insertAdjacentHTML('afterbegin', card);
+  // Switch to Package tab so user sees it
+  const tab = document.querySelector('.preview-tab[data-tab="package"]');
+  if (tab) tab.click();
+}
+
 function renderPlatformOutputs(platformOutputs) {
   const bar = document.getElementById('pkg-bar');
   if (!bar) return;
@@ -473,6 +589,11 @@ document.getElementById('btn-generate').addEventListener('click', () => {
   /* 5. Platform copy → Package tab */
   const platformOutputs = buildAllPlatformsCopy(platforms, { name, niche, offer, goal, loc }, creatorProfile);
   renderPlatformOutputs(platformOutputs);
+
+  /* 5b. If routed from a lead → prepend pain-matched deliverable */
+  if (window.__activeLeadContext) {
+    renderLeadDeliverable(window.__activeLeadContext, { name, niche, profile });
+  }
 
   /* 6. Package summary → show in Package tab */
   showPackageSummary(buildPackageSummary({ name, profile, style }));
@@ -1458,39 +1579,102 @@ function scorePost(title, text, isComment = false) {
 }
 
 /* ── ANALYSIS ENGINE ── */
+/* ── PAIN PROFILE ENUM — drives outreach + demo generation ── */
+const PAIN_PROFILES = {
+  no_clients:         { label: 'No consistent client flow',      challenge: 'Not enough new enquiries or bookings coming in',          demoFocus: 'full acquisition system — page, CRM, outreach' },
+  low_conversions:    { label: 'Traffic but no conversions',     challenge: 'Getting visitors but none of them become clients',         demoFocus: 'rebuilt landing page with clear offer + CTA' },
+  outreach_gap:       { label: 'Cold outreach not converting',   challenge: 'Sending messages but getting zero replies',                demoFocus: 'personalised outreach sequence + reply-trigger DM' },
+  web_presence_gap:   { label: 'No online presence',             challenge: 'No site or shop for prospects to find and trust',          demoFocus: 'one-page site with booking form + social proof' },
+  low_visibility:     { label: 'Nobody can find them',           challenge: 'Invisible on search — no inbound discovery',               demoFocus: 'local SEO page + Google profile optimisation' },
+  referrals_dried_up: { label: 'Referrals dried up',             challenge: 'Previously word-of-mouth — that pipeline has stopped',      demoFocus: 'inbound funnel + reactivation sequence for past clients' },
+  time_overwhelm:     { label: 'Drowning in admin',              challenge: 'Too busy doing the work to do the growth',                 demoFocus: 'CRM + follow-up automation to buy back hours' },
+  ads_waste:          { label: 'Ads burning cash',               challenge: 'Spending on ads without a capture system',                 demoFocus: 'lead-capture page + follow-up to stop losing clicks' },
+  proposal_ghosting:  { label: 'Proposals going cold',           challenge: 'Quoting but prospects ghost or stall',                     demoFocus: 'proposal follow-up sequence with re-engagement hooks' },
+  growth_gap:         { label: 'General growth gap',             challenge: 'Plateau — needs a system to unlock next stage',            demoFocus: 'acquisition system tailored to their offer' }
+};
+
+function detectPainKey(t) {
+  if (/ads|paid|ppc|facebook ad|google ad|meta ad/.test(t) && /spend|wast|burn|money|budget/.test(t)) return 'ads_waste';
+  if (/cold (email|outreach|dm)|no (reply|response|replies)/.test(t)) return 'outreach_gap';
+  if (/no website|no site|need.{0,10}(website|site)/.test(t)) return 'web_presence_gap';
+  if (/website|landing page|traffic but no|visitors but/.test(t)) return 'low_conversions';
+  if (/seo|rank|google rank|search result|can'?t be found/.test(t)) return 'low_visibility';
+  if (/referral|word of mouth|dried up/.test(t)) return 'referrals_dried_up';
+  if (/proposal|quote|follow.?up|ghost/.test(t)) return 'proposal_ghosting';
+  if (/overwhelm|no time|too busy|burn(ing)? out|swamped/.test(t)) return 'time_overwhelm';
+  if (/no (clients|customers|work|bookings|enquiries|leads|sales)|slow|quiet|dead|dry/.test(t)) return 'no_clients';
+  return 'growth_gap';
+}
+
 function analyzePost(title, text, preScore) {
   const t = (title + ' ' + text).toLowerCase();
   const urgency = preScore !== undefined ? preScore : scorePost(title, text);
 
-  // Niche detection
-  const niche = /plumb|pipe|boiler|heating|gas safe/.test(t)       ? 'Plumber'
-    : /electrician|wiring|fuse|eicr|niceic/.test(t)                ? 'Electrician'
-    : /builder|construction|renovation|extension|loft/.test(t)     ? 'Builder'
-    : /pt |personal train|fitness coach|gym|fat loss|body/.test(t) ? 'PT / Fitness'
-    : /consultant|freelanc|strateg|advisor|coach|mentor/.test(t)   ? 'Consultant'
-    : /marketing|agency|seo|ads|social media|lead gen/.test(t)     ? 'Marketing Agency'
-    : /saas|software|app |platform|startup|founder/.test(t)        ? 'SaaS / Tech'
+  const DESPERATION = ['losing money','about to close','shutting down','can\'t afford','desperate','last chance','giving up','out of money'];
+  const isDesparate = DESPERATION.some(k => t.includes(k)) || urgency >= 85;
+  const hasFinancialPain = /£|€|\$|broke|debt|bills|rent|mortgage/.test(t);
+
+  // Niche detection (expanded)
+  const niche = /plumb|pipe|boiler|heating|gas safe/.test(t)           ? 'Plumber'
+    : /electrician|wiring|fuse|eicr|niceic|sparky/.test(t)             ? 'Electrician'
+    : /builder|construction|renovation|extension|loft|joiner/.test(t)  ? 'Builder'
+    : /pt |personal train|fitness coach|gym|fat loss|body/.test(t)     ? 'PT / Fitness'
+    : /dentist|dental|teeth|orthodont/.test(t)                         ? 'Dentist'
+    : /solicitor|lawyer|legal|conveyancing/.test(t)                    ? 'Solicitor'
+    : /accountant|bookkeep|tax|vat/.test(t)                            ? 'Accountant'
+    : /cleaner|cleaning|janitorial/.test(t)                            ? 'Cleaning Business'
+    : /landscap|garden|lawn|tree surgeon/.test(t)                      ? 'Landscaper'
+    : /roofer|roofing|guttering/.test(t)                               ? 'Roofer'
+    : /painter|decorator|plastering/.test(t)                           ? 'Painter / Decorator'
+    : /hvac|air conditioning/.test(t)                                  ? 'HVAC'
+    : /mortgage|financial advis|ifa |wealth/.test(t)                   ? 'Financial Advisor'
+    : /physio|chiropract|osteopath|massage therap/.test(t)             ? 'Therapist / Health'
+    : /restaurant|cafe|catering|hospitality/.test(t)                   ? 'Restaurant / Hospitality'
+    : /consultant|freelanc|strateg|advisor|coach|mentor/.test(t)       ? 'Consultant'
+    : /marketing|agency|seo|ads|social media|lead gen/.test(t)         ? 'Marketing Agency'
+    : /saas|software|app |platform|startup|founder|tech/.test(t)       ? 'SaaS / Tech'
+    : /ecomm|shopify|store|dropship|amazon seller/.test(t)             ? 'eCommerce'
+    : /photographer|videographer|wedding photo/.test(t)                ? 'Photographer'
+    : /designer|graphic|brand|logo|web design|ux/.test(t)              ? 'Designer'
+    : /copywriter|content writer|content creator|blogger/.test(t)      ? 'Copywriter'
+    : /virtual assistant|va |admin support/.test(t)                    ? 'Virtual Assistant'
+    : /estate agent|realtor|real estate|property/.test(t)              ? 'Estate Agent'
     : 'Business Owner';
 
+  // Pain profile
+  const painKey     = detectPainKey(t);
+  const pain        = PAIN_PROFILES[painKey];
+  const painLabel   = pain.label;
+  const painChallenge = pain.challenge;
+  const demoFocus   = pain.demoFocus;
+
+  // Lead type — what commercial role this person plays
+  const leadType = /agency|agencies|smm|social media manag|freelanc|consultant|coach|operator/.test(t) ? 'operator'
+    : /partner|refer|collaborat|white ?label|reseller/.test(t) ? 'partner'
+    : 'direct';
+
   // Approach
-  const approach = urgency >= 70 ? 'Direct offer — they need help now, lead with a result'
-    : urgency >= 40              ? 'Empathy first — acknowledge the problem, then offer'
+  const approach = isDesparate   ? 'Lead with empathy + proof — they need to hear someone\'s done this before'
+    : urgency >= 70              ? 'Direct offer — they need help now, lead with a specific result'
+    : urgency >= 40              ? 'Empathy first — acknowledge the pain, then show the demo'
     :                              'Question first — qualify before pitching';
 
-  // Opener
-  const opener = urgency >= 70
-    ? `Saw your post — I help ${niche.toLowerCase()} businesses fix exactly this. Built a quick preview for you. Worth a 15-min look?`
-    : `Saw this and it resonated — most ${niche.toLowerCase()} businesses I work with hit the same wall. Happy to show you what changed for them?`;
+  // Opener — pain-specific
+  const opener = isDesparate
+    ? `Read your post — I fix this exact situation for ${niche.toLowerCase()} owners. I can show you what's missing, no pitch. Want me to break it down?`
+    : urgency >= 70
+    ? `Saw your post — I build ${demoFocus.split(' —')[0]} for ${niche.toLowerCase()}s. Can put together a preview today. Worth a look?`
+    : `Saw this and recognised it — "${painLabel}" usually isn't the service, it's the system behind it. Want to see what a fix looks like?`;
 
-  // Tip
-  const tip = urgency >= 70 ? 'Message within the hour — high-intent window closes fast'
-    : urgency >= 40          ? 'Start with empathy, not a pitch — ask one question first'
-    :                          'Low signal — qualify harder before investing time here';
+  const tip = isDesparate ? '🔥 Desperation signal — message NOW, lead with "I\'ve fixed this exact situation"'
+    : urgency >= 70       ? '⚡ High intent — message within the hour'
+    : urgency >= 40       ? '💬 Empathy first — acknowledge the pain before any pitch'
+    :                       '🔍 Qualify first — one specific question before investing time';
 
-  const urgencyLabel = urgency >= 70 ? 'High' : urgency >= 40 ? 'Medium' : 'Low';
-  const urgencyColor = urgency >= 70 ? '#22c55e' : urgency >= 40 ? '#f59e0b' : '#8888a0';
+  const urgencyLabel = urgency >= 85 ? 'Critical' : urgency >= 70 ? 'High' : urgency >= 40 ? 'Medium' : 'Low';
+  const urgencyColor = urgency >= 85 ? '#ef4444' : urgency >= 70 ? '#22c55e' : urgency >= 40 ? '#f59e0b' : '#8888a0';
 
-  return { urgency, urgencyLabel, urgencyColor, niche, approach, opener, tip };
+  return { urgency, urgencyLabel, urgencyColor, niche, approach, opener, tip, painKey, painLabel, painChallenge, demoFocus, leadType, isDesparate, hasFinancialPain };
 }
 
 /* ── KEYWORD PILLS ── */
@@ -1524,19 +1708,13 @@ async function fetchFeed(keyword) {
       return;
     }
 
-    // Whitelist — only accept posts from target business subs
-    const TARGET_SUBS = new Set([
-      'smallbusiness','entrepreneur','sidehustle','freelance','sales',
-      'startups','sweatystartup','entrepreneurridealong','forhire',
-      'entrepreneur_ride_along','businessowners','growmybusiness',
-      'digital_marketing','marketinghelp','agency'
-    ]);
-    const businessPosts = data.posts.filter(p => TARGET_SUBS.has(p.subreddit.toLowerCase()));
+    // Server already restricts to known business subs — trust that, drop client whitelist
+    const businessPosts = data.posts;
 
-    // Score posts
+    // Score posts (lowered threshold from 40 → 25 — was dropping brilliant leads)
     const scoredPosts = businessPosts
       .map(p => ({ ...p, _score: scorePost(p.title, p.text), _source: 'post' }))
-      .filter(p => p._score >= 40);
+      .filter(p => p._score >= 25);
 
     // Extract high-signal comments as additional lead candidates
     const commentLeads = [];
@@ -1544,7 +1722,7 @@ async function fetchFeed(keyword) {
       if (!post.comments || !post.comments.length) continue;
       for (const comment of post.comments) {
         const cs = scorePost('', comment, true);
-        if (cs >= 40) {
+        if (cs >= 25) {
           commentLeads.push({
             id:        post.id + '_c' + commentLeads.length,
             title:     post.title,
@@ -1622,8 +1800,20 @@ function renderFeedCard(post) {
         <span class="analysis-val">${esc(a.niche)}</span>
       </div>
       <div class="feed-analysis-row">
-        <span class="analysis-label">Approach</span>
-        <span class="analysis-val">${esc(a.approach)}</span>
+        <span class="analysis-label">Pain</span>
+        <span class="analysis-val" style="color:#ff7a7a;font-weight:600">${esc(a.painLabel)}</span>
+      </div>
+      <div class="feed-analysis-row">
+        <span class="analysis-label">Challenge</span>
+        <span class="analysis-val">${esc(a.painChallenge)}</span>
+      </div>
+      <div class="feed-analysis-row">
+        <span class="analysis-label">Demo Focus</span>
+        <span class="analysis-val" style="color:var(--accent)">${esc(a.demoFocus)}</span>
+      </div>
+      <div class="feed-analysis-row">
+        <span class="analysis-label">Lead Type</span>
+        <span class="analysis-val">${a.leadType === 'direct' ? '💰 Direct Client' : a.leadType === 'operator' ? '🛠 Operator/Agency' : '🤝 Partner'}</span>
       </div>
       <div class="feed-tip">💡 ${esc(a.tip)}</div>
     </div>
@@ -1634,8 +1824,11 @@ function renderFeedCard(post) {
       </div>
     </div>
     <div class="feed-actions">
-      <button class="btn btn-secondary btn-sm" onclick="saveFeedLead('${esc(post.id)}','${esc(post.author)}','${esc(a.niche)}','${esc(post.url)}','${esc(post.title).replace(/'/g,'')}',${a.urgency})">
+      <button class="btn btn-secondary btn-sm" onclick='saveFeedLead(${JSON.stringify({id:post.id,author:post.author,url:post.url,title:post.title,subreddit:post.subreddit,analysis:a}).replace(/'/g,"&apos;")})'>
         <i class="fas fa-user-plus"></i> Save Lead
+      </button>
+      <button class="btn btn-primary btn-sm" onclick='buildDemoForLead(${JSON.stringify({id:post.id,author:post.author,url:post.url,title:post.title,subreddit:post.subreddit,analysis:a}).replace(/'/g,"&apos;")})'>
+        <i class="fas fa-hammer"></i> Build Demo
       </button>
       <a class="btn btn-secondary btn-sm" href="${esc(post.url)}" target="_blank" rel="noopener">
         <i class="fas fa-arrow-up-right-from-square"></i> Open Post
@@ -1644,30 +1837,53 @@ function renderFeedCard(post) {
   </div>`;
 }
 
-async function saveFeedLead(id, author, niche, url, title, score) {
+async function saveFeedLead(p) {
+  const a = p.analysis || {};
   try {
     await fetch(API + '/leads', {
       method: 'POST',
       body: JSON.stringify({
-        name:     'u/' + author,
-        business: niche + ' (Reddit)',
-        status:   'new',
-        score:    score,
-        source:   url,
-        notes:    title,
-        niche:    niche
+        name:          'u/' + p.author,
+        business:      a.niche + ' (r/' + p.subreddit + ')',
+        status:        'new',
+        score:         a.urgency || 0,
+        source:        p.url,
+        notes:         p.title,
+        niche:         a.niche,
+        platform:      'reddit',
+        subreddit:     p.subreddit,
+        postTitle:     p.title,
+        leadType:      a.leadType,
+        painKey:       a.painKey,
+        painLabel:     a.painLabel,
+        painChallenge: a.painChallenge,
+        demoFocus:     a.demoFocus,
+        opener:        a.opener
       })
     });
-    // Visual feedback — grey out the saved card
-    const card = document.getElementById('fc-' + id);
+    const card = document.getElementById('fc-' + p.id);
     if (card) {
       card.style.opacity = '0.45';
-      card.style.pointerEvents = 'none';
       const btn = card.querySelector('.btn');
       if (btn) btn.innerHTML = '<i class="fas fa-check"></i> Saved';
     }
-    toast('Lead saved to CRM', 'ok');
+    toast('Lead saved with pain profile: ' + a.painLabel, 'ok');
   } catch { toast('Could not save lead', 'err'); }
+}
+
+/* ── BUILD DEMO — route lead into Client Creator prefilled with pain ── */
+function buildDemoForLead(p) {
+  const a = p.analysis || {};
+  switchPanel('client');
+  setTimeout(() => {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+    set('f-name',  'u/' + p.author + ' (demo)');
+    set('f-niche', a.niche);
+    set('f-offer', a.demoFocus);
+    set('f-notes', `Source: ${p.url}\nPain (${a.painKey}): ${a.painLabel}\nChallenge: ${a.painChallenge}\nDemo focus: ${a.demoFocus}\nPost: ${p.title}\nOpener: ${a.opener}`);
+    window.__activeLeadContext = { lead: p, analysis: a };
+    toast('Loaded into Client Creator — Generate to build a pain-matched demo', 'ok');
+  }, 120);
 }
 
 /* ══════════════════════════════════
