@@ -1189,6 +1189,423 @@ function esc(str) {
 }
 
 /* ══════════════════════════════════
+   SMART ONBOARD WIZARD
+══════════════════════════════════ */
+const WIZ_STEPS = 4;
+let _wizState = {};
+let _wizStep  = 0;
+
+const WIZ_NICHES = [
+  { id:'trade',      icon:'🔧', label:'Trade / Site',    sub:'Plumber, electrician, builder, roofer, HVAC' },
+  { id:'fitness',    icon:'💪', label:'Fitness / Health', sub:'PT, gym, yoga, physio, nutritionist' },
+  { id:'cleaning',   icon:'🧹', label:'Cleaning / Care',  sub:'Domestic, commercial, landscaping, care' },
+  { id:'consulting', icon:'📊', label:'Consulting',       sub:'Strategy, finance, HR, legal, operations' },
+  { id:'agency',     icon:'📱', label:'Marketing / Agency', sub:'SEO, ads, social, design, PR' },
+  { id:'saas',       icon:'💻', label:'SaaS / Tech',      sub:'Software, app, platform, automation' },
+  { id:'ecommerce',  icon:'🛒', label:'E-commerce',       sub:'DTC brand, dropship, marketplace seller' },
+  { id:'coach',      icon:'🎯', label:'Coach / Educator',  sub:'Life coach, tutor, course creator' },
+  { id:'other',      icon:'✦',  label:'Other / Mixed',    sub:'Freelancer, creative, multi-service' }
+];
+
+const WIZ_SIZES = [
+  { id:'solo',   icon:'👤', label:'Solo / Freelance', sub:'Just me — need to fill my own calendar' },
+  { id:'small',  icon:'👥', label:'2–10 people',      sub:'Small team, growing but not yet stable' },
+  { id:'medium', icon:'🏢', label:'10–50 people',     sub:'Established, scaling to next level' },
+  { id:'large',  icon:'🏛️', label:'50+ people',       sub:'Enterprise, division or department' }
+];
+
+const WIZ_LOCATIONS = [
+  { id:'uk',      icon:'🇬🇧', label:'United Kingdom' },
+  { id:'us',      icon:'🇺🇸', label:'United States' },
+  { id:'aus',     icon:'🇦🇺', label:'Australia' },
+  { id:'canada',  icon:'🇨🇦', label:'Canada' },
+  { id:'eu',      icon:'🇪🇺', label:'Europe' },
+  { id:'global',  icon:'🌍', label:'Global / Remote' }
+];
+
+const WIZ_CHALLENGES = [
+  { id:'no_clients',  icon:'😤', label:'Not enough clients', sub:'Pipeline is empty or unreliable' },
+  { id:'no_system',   icon:'🔄', label:'No repeatable system', sub:'It works sometimes but not consistently' },
+  { id:'low_conv',    icon:'📉', label:'Leads but no conversions', sub:'People enquire but don\'t buy' },
+  { id:'retention',   icon:'🚪', label:'Clients don\'t stay', sub:'High churn, one-time buyers' },
+  { id:'visibility',  icon:'👁️', label:'Nobody knows I exist', sub:'No brand, no online presence' },
+  { id:'scaling',     icon:'📈', label:'Can\'t scale beyond me', sub:'Bottlenecked — can\'t grow without burning out' }
+];
+
+const WIZ_GOALS = [
+  { id:'10clients',   label:'10 new clients in 30 days',       timeline:'30 days' },
+  { id:'replace',     label:'Replace my salary (£3–5k/mo)',    timeline:'60–90 days' },
+  { id:'10k',         label:'Hit £10k/month revenue',          timeline:'90 days' },
+  { id:'fullbook',    label:'Fully booked calendar',           timeline:'30–60 days' },
+  { id:'automate',    label:'Automate client acquisition',     timeline:'60 days' },
+  { id:'launch',      label:'Launch & get first 5 clients',    timeline:'14 days' }
+];
+
+/* ── Decision Engine ── */
+function buildStrategy(state) {
+  const { niche, size, location, challenge, goal, bizName, targetClient } = state;
+
+  // Channel priority per niche
+  const channelMap = {
+    trade:      { primary:'reddit', secondary:'facebook', tone:'aggressive', kws:['need plumber','looking for electrician','boiler repair','emergency trade','no jobs','need more work'] },
+    fitness:    { primary:'reddit', secondary:'instagram', tone:'friendly',   kws:['personal trainer','weight loss help','fitness coach','want to get fit','gym motivation'] },
+    cleaning:   { primary:'reddit', secondary:'facebook', tone:'professional',kws:['cleaning service','cleaner needed','commercial cleaning','domestic cleaner'] },
+    consulting: { primary:'linkedin', secondary:'twitter', tone:'professional',kws:['business consultant','strategy help','struggling to grow','revenue plateau'] },
+    agency:     { primary:'reddit', secondary:'linkedin', tone:'professional',kws:['need marketing','facebook ads help','seo help','agency results','lead generation'] },
+    saas:       { primary:'twitter', secondary:'linkedin', tone:'professional',kws:['SaaS founder','startup growth','churn problem','product market fit'] },
+    ecommerce:  { primary:'reddit', secondary:'twitter',  tone:'professional',kws:['ecommerce growth','conversion rate','DTC brand','shopify help'] },
+    coach:      { primary:'reddit', secondary:'facebook', tone:'friendly',    kws:['life coach','business coach','need a coach','accountability partner'] },
+    other:      { primary:'reddit', secondary:'linkedin', tone:'professional',kws:['need clients','struggling freelance','no customers','dead business'] }
+  };
+
+  // Location-aware approach
+  const locationHint = {
+    uk:     'Use UK spelling. Reference local platforms: Checkatrade, Bark.com, Facebook Marketplace UK.',
+    us:     'Use USD references. Platforms: Thumbtack, Angi, Yelp, Craigslist.',
+    aus:    'Use AUD. Platforms: hipages, ServiceSeeking, Airtasker.',
+    canada: 'Use CAD. Platforms: Kijiji, HomeStars, Facebook Marketplace CA.',
+    eu:     'Use local language cues where relevant. Reference GDPR compliance for outreach.',
+    global: 'Focus on digital-first platforms: LinkedIn, Twitter, Reddit. Remote-friendly framing.'
+  };
+
+  // Challenge → outreach angle
+  const challengeAngle = {
+    no_clients:  'Lead with proof of results. Make the volume claim: "10 leads in 7 days."',
+    no_system:   'Lead with consistency: "A system that runs every day, not when you have time."',
+    low_conv:    'Lead with conversion: "Turn the leads you already have into booked jobs."',
+    retention:   'Lead with lifetime value: "Stop losing clients after the first job."',
+    visibility:  'Lead with presence: "Get found before they even post an ad."',
+    scaling:     'Lead with leverage: "Get clients without you having to be on every call."'
+  };
+
+  // Goal → urgency framing
+  const goalFrame = {
+    '10clients':  { urgency:'high',   cta:'Book a call this week',     expected:'5–10 qualified leads in first 7 days' },
+    'replace':    { urgency:'medium', cta:'Start your free trial',     expected:'£3–5k pipeline built in 60 days' },
+    '10k':        { urgency:'medium', cta:'See a 30-day growth plan',  expected:'£10k revenue model mapped in first session' },
+    'fullbook':   { urgency:'high',   cta:'Get your calendar filled',  expected:'3–5 bookings in first week' },
+    'automate':   { urgency:'low',    cta:'Set it running for free',   expected:'Automated lead flow within 14 days' },
+    'launch':     { urgency:'high',   cta:'Get your first 5 clients',  expected:'First client within 14 days or money back' }
+  };
+
+  const ch      = channelMap[niche]    || channelMap.other;
+  const locHint = locationHint[location] || locationHint.global;
+  const angle   = challengeAngle[challenge] || 'Lead with results and make it specific to their niche.';
+  const gf      = goalFrame[goal]      || goalFrame['10clients'];
+
+  // Size adjustments
+  const sizeNote = size === 'solo'
+    ? 'Speak to a single person — personal, direct, no corporate language.'
+    : size === 'small'
+    ? 'Acknowledge they\'re building a team — show scalable systems.'
+    : 'Position as enterprise-ready with case studies and ROI framing.';
+
+  // Module recommendations
+  const modules = {
+    leadGen:   true,
+    outreach:  true,
+    landing:   ['solo','small'].includes(size),
+    crm:       true,
+    followup:  true,
+    booking:   ['trade','fitness','cleaning','coach'].includes(niche),
+    emailSeq:  challenge !== 'visibility',
+    sms:       ['trade','fitness','cleaning'].includes(niche) && ['uk','us','aus'].includes(location)
+  };
+
+  // Execution steps
+  const steps = [
+    {
+      title: `Scan ${ch.primary === 'reddit' ? 'Reddit' : ch.primary === 'linkedin' ? 'LinkedIn' : 'X/Twitter'} for live leads`,
+      detail: `Keywords: ${ch.kws.slice(0,3).join(', ')}. Filter to "${locationHint[location] ? location.toUpperCase() : 'relevant'}" posts from the last 7 days. Target 10–20 quality leads per scan.`
+    },
+    {
+      title: 'AI score + personalise each message',
+      detail: `${angle} Tone: ${ch.tone}. ${sizeNote}`
+    },
+    {
+      title: `Send outreach via ${modules.sms ? 'SMS + Reddit DM' : 'Reddit DM + email'}`,
+      detail: `First message under 80 words. One clear CTA: "${gf.cta}". Follow up once at 48hrs if no reply.`
+    },
+    {
+      title: 'Track replies in CRM → move to booked',
+      detail: `Pipeline: New → Contacted → Replied → Booked. Auto-score bumps up on reply. ${locHint}`
+    }
+  ];
+  if (modules.landing) {
+    steps.push({
+      title: 'Deploy a landing page for credibility',
+      detail: `Niche-matched page with your offer, proof, and booking form. Built automatically from your client profile in seconds.`
+    });
+  }
+
+  return { ch, modules, steps, gf, angle, locHint, sizeNote };
+}
+
+/* ── Wizard Render Helpers ── */
+function wiz_renderTileGrid(items, stateKey, cols = 3) {
+  return `<div class="wiz-grid cols-${cols}">${items.map(it => `
+    <div class="wiz-tile${_wizState[stateKey] === it.id ? ' selected' : ''}"
+         onclick="wizSelect('${stateKey}','${it.id}',this)">
+      <span class="wiz-tile-icon">${it.icon || ''}</span>
+      <span class="wiz-tile-label">${esc(it.label)}</span>
+      ${it.sub ? `<span class="wiz-tile-sub">${esc(it.sub)}</span>` : ''}
+    </div>`).join('')}
+  </div>`;
+}
+
+function wizSelect(key, val, el) {
+  _wizState[key] = val;
+  const parent = el.closest('.wiz-grid');
+  parent.querySelectorAll('.wiz-tile').forEach(t => t.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function wiz_stepContent(step) {
+  if (step === 0) return `
+    <div class="wiz-q">What's the client's business niche?</div>
+    <div class="wiz-sub">Pick the closest match — this drives every keyword, channel, and message the system generates.</div>
+    ${wiz_renderTileGrid(WIZ_NICHES, 'niche', 3)}`;
+
+  if (step === 1) return `
+    <div class="wiz-q">Their situation</div>
+    <div class="wiz-sub">Size and location shape the strategy — a solo UK plumber gets different channels than a US SaaS team.</div>
+    <div style="margin-bottom:18px">
+      <div class="wiz-sub" style="margin-bottom:8px;font-weight:700;color:var(--text)">Team size</div>
+      ${wiz_renderTileGrid(WIZ_SIZES, 'size', 2)}
+    </div>
+    <div>
+      <div class="wiz-sub" style="margin-bottom:8px;font-weight:700;color:var(--text)">Location / Market</div>
+      ${wiz_renderTileGrid(WIZ_LOCATIONS, 'location', 3)}
+    </div>`;
+
+  if (step === 2) return `
+    <div class="wiz-q">What's their biggest challenge right now?</div>
+    <div class="wiz-sub">This shapes the outreach angle — every message is written to address this specific pain.</div>
+    ${wiz_renderTileGrid(WIZ_CHALLENGES, 'challenge', 2)}
+    <div style="margin-top:20px">
+      <div class="wiz-q" style="font-size:.9rem">What does success look like?</div>
+      <div class="wiz-sub">Pick the goal — the system will reverse-engineer the execution plan from here.</div>
+      <div class="wiz-grid cols-2" style="margin-top:12px">${WIZ_GOALS.map(g => `
+        <div class="wiz-tile${_wizState.goal === g.id ? ' selected' : ''}"
+             onclick="wizSelect('goal','${g.id}',this)" style="flex-direction:row;text-align:left;gap:10px;padding:10px 12px;">
+          <div style="flex:1">
+            <div class="wiz-tile-label">${esc(g.label)}</div>
+            <div class="wiz-tile-sub">Timeline: ${esc(g.timeline)}</div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+
+  if (step === 3) return `
+    <div class="wiz-q">Last details — then we build the plan</div>
+    <div class="wiz-sub">A few quick fields to personalise the generated messages and landing page.</div>
+    <div class="wiz-row">
+      <label>Client business name</label>
+      <input type="text" id="wiz-bizname" placeholder="e.g. Apex Plumbing" value="${esc(_wizState.bizName || '')}">
+    </div>
+    <div class="wiz-row">
+      <label>Their core offer (one line)</label>
+      <input type="text" id="wiz-offer" placeholder="e.g. Emergency plumbing, 24/7, South London" value="${esc(_wizState.offer || '')}">
+    </div>
+    <div class="wiz-row">
+      <label>Who are their ideal clients? (optional)</label>
+      <input type="text" id="wiz-target" placeholder="e.g. Homeowners and landlords in South London" value="${esc(_wizState.targetClient || '')}">
+    </div>
+    <div class="wiz-row">
+      <label>Any extra context? (optional)</label>
+      <textarea id="wiz-notes" placeholder="e.g. Recently went solo, used to work for big firm, wants to specialise in boilers">${esc(_wizState.notes || '')}</textarea>
+    </div>`;
+}
+
+function wiz_resultContent(strategy) {
+  const { ch, modules, steps, gf } = strategy;
+  const niche    = WIZ_NICHES.find(n => n.id === _wizState.niche)    || {};
+  const loc      = WIZ_LOCATIONS.find(l => l.id === _wizState.location) || {};
+  const challenge= WIZ_CHALLENGES.find(c => c.id === _wizState.challenge) || {};
+  const goal     = WIZ_GOALS.find(g => g.id === _wizState.goal)      || {};
+
+  const moduleList = [
+    { id:'leadGen',  label:'Lead Scanning',    on: modules.leadGen },
+    { id:'outreach', label:'Outreach Composer', on: modules.outreach },
+    { id:'crm',      label:'CRM Pipeline',     on: modules.crm },
+    { id:'followup', label:'Follow-up System', on: modules.followup },
+    { id:'landing',  label:'Landing Page',     on: modules.landing },
+    { id:'booking',  label:'Booking System',   on: modules.booking },
+    { id:'sms',      label:'SMS Outreach',      on: modules.sms },
+    { id:'emailSeq', label:'Email Sequence',    on: modules.emailSeq }
+  ];
+
+  return `<div class="wiz-result">
+    <div class="wiz-result-hero">
+      <div class="wiz-result-tag">Strategy built for ${niche.icon || ''} ${niche.label || ''} · ${loc.icon || ''} ${loc.label || ''}</div>
+      <div class="wiz-result-title">${esc(_wizState.bizName || 'This client')}'s Acquisition System</div>
+      <div class="wiz-result-sub">Challenge: <b>${challenge.label || ''}</b> · Goal: <b>${goal.label || ''}</b> (${goal.timeline || ''})</div>
+      <div class="wiz-result-sub" style="margin-top:4px">Primary channel: <b>${ch.primary}</b> · Tone: <b>${ch.tone}</b> · Outreach angle: <b>${strategy.angle.split('.')[0]}</b></div>
+      <div class="wiz-modules">${moduleList.map(m =>
+        `<span class="wiz-module${m.on ? '' : ' off'}">${m.on ? '✓' : '○'} ${m.label}</span>`).join('')}
+      </div>
+    </div>
+    <div>
+      <div class="wiz-sub" style="font-weight:700;color:var(--text);margin-bottom:8px">Execution plan</div>
+      <div class="wiz-steps-list">${steps.map((s, i) => `
+        <div class="wiz-exec-step">
+          <div class="wiz-exec-n">${i+1}</div>
+          <div>
+            <div class="wiz-exec-title">${esc(s.title)}</div>
+            <div class="wiz-exec-detail">${esc(s.detail)}</div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="wiz-kw-row">
+      ${ch.kws.map(k => `<button class="kw-btn" onclick="void(0)">${esc(k)}</button>`).join('')}
+    </div>
+    <div class="wiz-expected">
+      <strong>Expected result</strong>
+      ${esc(gf.expected)}
+    </div>
+    <button class="btn-lock-in" onclick="lockInAndFire()">
+      <i class="fas fa-bolt"></i> Lock In &amp; Fire — Start Scanning Now
+    </button>
+  </div>`;
+}
+
+/* ── Wizard Flow ── */
+function openWizard() {
+  _wizState = {};
+  _wizStep  = 0;
+  document.getElementById('wizard-overlay').style.display = 'flex';
+  renderWizardStep();
+}
+
+function closeWizard() {
+  document.getElementById('wizard-overlay').style.display = 'none';
+}
+
+function renderWizardStep() {
+  // Step track
+  const track = document.getElementById('wizard-step-track');
+  const labels = ['Niche', 'Situation', 'Challenge', 'Details'];
+  track.innerHTML = labels.map((l, i) => {
+    const cls = i < _wizStep ? 'done' : i === _wizStep ? 'active' : '';
+    const lineCls = i < _wizStep ? 'done' : '';
+    return (i > 0 ? `<div class="wiz-step-line ${lineCls}"></div>` : '') +
+           `<div class="wiz-step ${cls}" title="${l}">${i < _wizStep ? '✓' : i+1}</div>`;
+  }).join('');
+
+  document.getElementById('wizard-body').innerHTML = wiz_stepContent(_wizStep);
+  document.getElementById('wiz-back').style.display = _wizStep > 0 ? 'inline-flex' : 'none';
+
+  const nextBtn = document.getElementById('wiz-next');
+  nextBtn.style.display = 'inline-flex';
+  nextBtn.innerHTML = _wizStep === WIZ_STEPS - 1
+    ? '<i class="fas fa-wand-magic-sparkles"></i> Build Strategy'
+    : 'Next <i class="fas fa-arrow-right"></i>';
+}
+
+function wizardBack() {
+  if (_wizStep > 0) { _wizStep--; renderWizardStep(); }
+}
+
+function wizardNext() {
+  // Capture step-3 text fields
+  if (_wizStep === 3) {
+    _wizState.bizName      = (document.getElementById('wiz-bizname')?.value || '').trim();
+    _wizState.offer        = (document.getElementById('wiz-offer')?.value   || '').trim();
+    _wizState.targetClient = (document.getElementById('wiz-target')?.value  || '').trim();
+    _wizState.notes        = (document.getElementById('wiz-notes')?.value   || '').trim();
+  }
+
+  // Validate required selections
+  const required = ['niche','size','location','challenge','goal'];
+  if (_wizStep < 3) {
+    const stepKeys = [['niche'],['size','location'],['challenge','goal']][_wizStep];
+    const missing  = stepKeys.filter(k => !_wizState[k]);
+    if (missing.length) { toast('Pick an option to continue', 'err'); return; }
+  }
+
+  if (_wizStep < WIZ_STEPS - 1) {
+    _wizStep++;
+    renderWizardStep();
+  } else {
+    // Build strategy + show result
+    if (!_wizState.bizName) _wizState.bizName = WIZ_NICHES.find(n=>n.id===_wizState.niche)?.label || 'New Client';
+    const strategy = buildStrategy(_wizState);
+    document.getElementById('wizard-body').innerHTML = wiz_resultContent(strategy);
+    document.getElementById('wizard-step-track').innerHTML =
+      `<span style="font-size:.75rem;font-weight:700;color:var(--success)"><i class="fas fa-check"></i> Strategy built</span>`;
+    document.getElementById('wiz-next').style.display = 'none';
+    document.getElementById('wiz-back').style.display = 'none';
+  }
+}
+
+async function lockInAndFire() {
+  const niche    = WIZ_NICHES.find(n => n.id === _wizState.niche) || {};
+  const strategy = buildStrategy(_wizState);
+  const ch       = strategy.ch;
+
+  // Build client payload
+  const payload = {
+    businessName: _wizState.bizName || niche.label || 'New Client',
+    niche:        niche.label || _wizState.niche,
+    offer:        _wizState.offer || `${niche.label} services`,
+    goal:         WIZ_GOALS.find(g=>g.id===_wizState.goal)?.label || 'leads',
+    location:     WIZ_LOCATIONS.find(l=>l.id===_wizState.location)?.label || '',
+    notes:        [_wizState.targetClient, _wizState.notes].filter(Boolean).join(' | '),
+    tone:         ch.tone,
+    systemComponents: {
+      landing:  strategy.modules.landing,
+      crm:      strategy.modules.crm,
+      outreach: strategy.modules.outreach,
+      followup: strategy.modules.followup,
+      booking:  strategy.modules.booking
+    }
+  };
+
+  // Save client
+  try {
+    const r = await fetch(API + '/clients', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (d.client) { selectedClient = d.client; loadClients(); }
+  } catch {}
+
+  // Close wizard and fire Lead Feed with strategy keywords
+  closeWizard();
+
+  // Switch to Lead Feed
+  navItems.forEach(n => n.classList.remove('active'));
+  panels.forEach(p => p.classList.remove('active'));
+  const feedNav = document.querySelector('[data-panel="feed"]');
+  if (feedNav) feedNav.classList.add('active');
+  const feedPanel = document.getElementById('panel-feed');
+  if (feedPanel) feedPanel.classList.add('active');
+  topbarTitle.textContent = 'Lead Feed';
+
+  // Pre-fill keyword + scan
+  activeFeedKw = ch.kws[0] || 'need clients';
+  const kwInput = document.getElementById('feed-custom-kw');
+  if (kwInput) kwInput.value = ch.kws[0] || '';
+
+  // Platform tab
+  activeFeedPlatform = ch.primary === 'linkedin' ? 'linkedin'
+    : ch.primary === 'twitter' ? 'twitter' : 'reddit';
+  document.querySelectorAll('.feed-ptab').forEach(t =>
+    t.classList.toggle('active', t.dataset.platform === activeFeedPlatform));
+
+  toast(`${_wizState.bizName || 'Client'} locked in — scanning for leads...`, 'ok');
+
+  // Auto-scan
+  setTimeout(() => {
+    if (activeFeedPlatform === 'twitter') fetchFeedX(activeFeedKw);
+    else if (activeFeedPlatform === 'linkedin') fetchFeedLinkedIn(activeFeedKw);
+    else fetchFeed(activeFeedKw);
+  }, 300);
+}
+
+/* ══════════════════════════════════
    PERSONA
 ══════════════════════════════════ */
 function loadPersona() {

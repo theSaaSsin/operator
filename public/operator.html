@@ -59,11 +59,36 @@
       <!-- ── PANEL: CLIENT CREATOR ── -->
       <div class="panel active" id="panel-client">
 
+        <!-- ── SMART WIZARD OVERLAY ── -->
+        <div id="wizard-overlay" class="wizard-overlay" style="display:none">
+          <div class="wizard-card">
+            <div class="wizard-hdr">
+              <div class="wizard-step-track" id="wizard-step-track"></div>
+              <button class="wizard-close" onclick="closeWizard()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="wizard-body" id="wizard-body"></div>
+            <div class="wizard-footer">
+              <button class="btn btn-secondary" id="wiz-back" onclick="wizardBack()" style="display:none">
+                <i class="fas fa-arrow-left"></i> Back
+              </button>
+              <div style="flex:1"></div>
+              <button class="btn btn-primary" id="wiz-next" onclick="wizardNext()">
+                Next <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- LEFT: form + client list -->
         <div class="client-left">
           <div class="panel-header">
             <h2>New Client</h2>
-            <button class="btn btn-secondary btn-sm" id="btn-clear-form">Clear</button>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-primary btn-sm" id="btn-smart-onboard" onclick="openWizard()">
+                <i class="fas fa-wand-magic-sparkles"></i> Smart Onboard
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btn-clear-form">Clear</button>
+            </div>
           </div>
           <div class="form-body">
             <div class="field">

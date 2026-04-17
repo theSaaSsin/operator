@@ -55,7 +55,10 @@
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(f\\\\\"{i+1}. r/{c['data']['subreddit']} — {c['data']['title'][:80]} — https://reddit.com{c['data']['permalink']}\\\\\"\\) for i,c in enumerate\\(d['data']['children'][:10]\\)]\")",
       "Bash(curl -s \"https://www.reddit.com/r/PlumbingUK+ElectriciansUK+tradesmenuk+selfemployed+smallbusinessuk/search.json?q=need%20more%20work%20OR%20no%20jobs%20OR%20struggling%20for%20clients&restrict_sr=1&sort=new&limit=15\" -H \"User-Agent: TheSaaSsin/1.0\")",
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(f\\\\\"{i+1}. r/{c['data']['subreddit']} | u/{c['data']['author']} | {c['data']['title'][:90]}\\\\\"\\) for i,c in enumerate\\(d['data']['children'][:15]\\)]\")",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(node -e \"require\\('./server.js'\\)\")",
+      "Bash(node --check server.js)",
+      "Bash(node --check public/operator.js)"
     ]
   }
 }
