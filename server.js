@@ -35,6 +35,10 @@ const HAS_HUNTER  = !!process.env.HUNTER_API_KEY;
 const HAS_TWILIO  = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER);
 const HAS_TWITTER = !!process.env.TWITTER_BEARER_TOKEN;
 
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? require('stripe')(process.env.STRIPE_SECRET_KEY)
+  : null;
+
 // ── Helpers ───────────────────────────────────────────────
 function body(req) {
   return new Promise(res => {
@@ -53,6 +57,22 @@ const ROUTES = {
 
   // Health check for Railway
   'GET /api/health': (_, res) => json(res, { ok: true, ts: Date.now() }),
+
+  // ── Demo pages ────────────────────────────────────────
+  'GET /demo': (_, res) => {
+    fs.readFile(path.join(PUBLIC, 'demo.html'), (err, data) => {
+      if (err) { res.writeHead(404); res.end('Not found'); return; }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(data);
+    });
+  },
+  'GET /demo/success': (_, res) => {
+    fs.readFile(path.join(PUBLIC, 'demo-success.html'), (err, data) => {
+      if (err) { res.writeHead(404); res.end('Not found'); return; }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(data);
+    });
+  },
 
   // ── Reddit Lead Feed ──────────────────────────────────
   'GET /api/feed': async (req, res) => {
@@ -201,6 +221,64 @@ Return JSON: {"messages": [{"label": "Cold DM", "body": "..."}, {"label": "Follo
     }
   },
 
+  // ── Stripe Checkout ──────────────────────────────────
+  'POST /api/checkout': async (req, res) => {
+    if (!stripe) return json(res, { ok: false, error: 'STRIPE_SECRET_KEY not set' }, 400);
+    const { email, plan = 'monthly' } = await body(req);
+    const origin = process.env.APP_URL || `http://localhost:${PORT}`;
+
+    try {
+      const session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        payment_method_types: ['card'],
+        customer_email: email || undefined,
+        line_items: [{
+          price_data: {
+            currency: 'gbp',
+            product_data: {
+              name: 'TheSaaSsin Operator',
+              description: 'AI lead engine — Reddit, X, LinkedIn scanning + outreach automation',
+              images: []
+            },
+            unit_amount: 4900,          // £49.00
+            recurring: { interval: 'month' }
+          },
+          quantity: 1
+        }],
+        subscription_data: {
+          trial_period_days: 14,
+          metadata: { plan, source: 'demo_page' }
+        },
+        success_url: `${origin}/demo/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url:  `${origin}/demo`
+      });
+      json(res, { ok: true, url: session.url });
+    } catch (e) {
+      json(res, { ok: false, error: e.message }, 500);
+    }
+  },
+
+  // ── Stripe Webhook ────────────────────────────────────
+  'POST /api/webhook': async (req, res) => {
+    if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) {
+      res.writeHead(200); res.end('ok'); return;
+    }
+    let rawBody = '';
+    req.on('data', c => rawBody += c);
+    await new Promise(r => req.on('end', r));
+    const sig = req.headers['stripe-signature'];
+    try {
+      const event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+      if (event.type === 'customer.subscription.created' || event.type === 'checkout.session.completed') {
+        const sub = event.data.object;
+        console.log(`[Stripe] New subscriber: ${sub.customer_email || sub.customer} — ${event.type}`);
+      }
+      res.writeHead(200); res.end('ok');
+    } catch (e) {
+      res.writeHead(400); res.end(`Webhook error: ${e.message}`);
+    }
+  },
+
   // ── API Status ───────────────────────────────────────
   'GET /api/status': (_, res) => {
     json(res, {
@@ -211,7 +289,8 @@ Return JSON: {"messages": [{"label": "Cold DM", "body": "..."}, {"label": "Follo
         resend:      !!process.env.RESEND_API_KEY,
         hunter:      HAS_HUNTER,
         twilio:      HAS_TWILIO,
-        twitter:     HAS_TWITTER
+        twitter:     HAS_TWITTER,
+        stripe:      !!process.env.STRIPE_SECRET_KEY
       }
     });
   },
