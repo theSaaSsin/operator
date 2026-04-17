@@ -25,6 +25,6 @@ Videos/
 .bash_history
 
 # Sensitive data — keep local only
-data/clients.json
-data/leads.json
-data/outreach_queue.json
+data/
+.env
+node_modules/

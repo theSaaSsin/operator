@@ -22,6 +22,10 @@
       <div class="nav-item active" data-panel="client">
         <i class="fas fa-user-plus"></i> Client Creator
       </div>
+      <div class="nav-section">Acquire</div>
+      <div class="nav-item" data-panel="feed">
+        <i class="fas fa-satellite-dish"></i> Lead Feed
+      </div>
       <div class="nav-section">Manage</div>
       <div class="nav-item" data-panel="crm">
         <i class="fas fa-chart-line"></i> CRM / Leads
@@ -192,6 +196,53 @@
               <p>Fill in the form and click Generate System</p>
             </div>
             <iframe id="preview-frame" style="display:none"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: LEAD FEED ── -->
+      <div class="panel" id="panel-feed">
+        <div class="feed-sidebar">
+          <div class="feed-header">
+            <h2>Lead Feed</h2>
+            <span class="feed-badge">Reddit</span>
+          </div>
+          <div class="feed-kw-section">
+            <div class="feed-kw-label">Quick Keywords</div>
+            <div class="kw-pills">
+              <button class="kw-btn active" data-kw="need clients">need clients</button>
+              <button class="kw-btn" data-kw="no customers">no customers</button>
+              <button class="kw-btn" data-kw="struggling to get leads">get leads</button>
+              <button class="kw-btn" data-kw="how to find clients">find clients</button>
+              <button class="kw-btn" data-kw="no bookings">no bookings</button>
+              <button class="kw-btn" data-kw="dead month">dead month</button>
+              <button class="kw-btn" data-kw="slow business">slow business</button>
+              <button class="kw-btn" data-kw="need more work">need more work</button>
+            </div>
+          </div>
+          <div class="feed-kw-section">
+            <div class="feed-kw-label">Custom Search</div>
+            <input type="text" id="feed-custom-kw" class="feed-kw-input" placeholder="e.g. plumber need clients London">
+          </div>
+          <button class="btn btn-primary" id="btn-feed-refresh" style="width:100%;margin-top:4px">
+            <i class="fas fa-satellite-dish"></i> Scan for Leads
+          </button>
+          <div class="feed-tip-box">
+            <b style="color:var(--accent)">Your niche target:</b><br>
+            Local service businesses — plumbers, electricians, builders, PTs, cleaners.<br>
+            <span style="color:var(--muted)">High urgency · Fast cash · Low tech</span>
+          </div>
+        </div>
+        <div class="feed-main">
+          <div class="feed-meta-bar">
+            <span id="feed-meta" style="font-size:.75rem;color:var(--muted)">Hit "Scan for Leads" to find live prospects</span>
+          </div>
+          <div class="feed-grid" id="feed-grid">
+            <div class="feed-empty">
+              <i class="fas fa-satellite-dish"></i>
+              <p>Scan Reddit for live leads who need clients right now</p>
+              <p style="font-size:.72rem;margin-top:4px;opacity:.5">Searches 8 business subreddits simultaneously</p>
+            </div>
           </div>
         </div>
       </div>

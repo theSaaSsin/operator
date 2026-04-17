@@ -1,7 +1,9 @@
 /* ── TheSaaSsin Operator Panel — operator.js ── */
 'use strict';
 
-const API = 'http://localhost:4000/api';
+const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? `http://localhost:${window.location.port || 4000}/api`
+  : `${window.location.origin}/api`;
 
 /* ── CLOCK ── */
 (function clock() {
@@ -1136,7 +1138,8 @@ function renderOutreach(queue) {
       <div class="out-card-body">${esc(q.message || '')}</div>
       <div class="out-actions">
         ${q.status === 'pending'  ? `<button class="btn btn-success btn-sm" onclick="updateOutreach(${q.id},'approved')"><i class="fas fa-check"></i> Approve</button>` : ''}
-        ${q.status === 'approved' ? `<button class="btn btn-primary btn-sm" onclick="updateOutreach(${q.id},'sent')"><i class="fas fa-paper-plane"></i> Mark Sent</button>` : ''}
+        ${q.status === 'approved' ? `<button class="btn btn-primary btn-sm" onclick="showSendEmail(${q.id})"><i class="fas fa-envelope"></i> Send Email</button>` : ''}
+        ${q.status === 'approved' ? `<button class="btn btn-secondary btn-sm" onclick="updateOutreach(${q.id},'sent')"><i class="fas fa-paper-plane"></i> Mark Sent</button>` : ''}
         ${q.status === 'pending'  ? `<button class="btn btn-danger btn-sm"  onclick="updateOutreach(${q.id},'sent')"><i class="fas fa-times"></i> Dismiss</button>` : ''}
       </div>
     </div>`).join('');
@@ -1144,10 +1147,38 @@ function renderOutreach(queue) {
 
 async function updateOutreach(id, status) {
   try {
-    await fetch(API + '/outreach', { method: 'PATCH', body: JSON.stringify({ id, status }) });
+    await fetch(API + '/outreach', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status })
+    });
     toast('Outreach updated', 'ok');
     loadOutreach();
   } catch { toast('Update failed', 'err'); }
+}
+
+function showSendEmail(outreachId) {
+  const to = prompt('Recipient email address:');
+  if (!to || !to.includes('@')) { toast('Invalid email', 'err'); return; }
+  const subject = prompt('Subject line:', 'Quick question for you') || 'Quick question for you';
+  sendOutreachEmail(outreachId, to, subject);
+}
+
+async function sendOutreachEmail(outreachId, to, subject) {
+  toast('Sending...', 'ok');
+  try {
+    const queue = (await (await fetch(API + '/outreach')).json()).queue || [];
+    const item  = queue.find(q => q.id === outreachId);
+    if (!item) { toast('Message not found', 'err'); return; }
+    const res  = await fetch(API + '/send-outreach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, subject, message: item.message, outreach_id: outreachId })
+    });
+    const data = await res.json();
+    if (data.ok) { toast('Email sent!', 'ok'); loadOutreach(); }
+    else toast(data.error || 'Send failed', 'err');
+  } catch { toast('Send failed', 'err'); }
 }
 
 /* ── HELPERS ── */
@@ -1303,7 +1334,7 @@ async function fetchFeed(keyword) {
   grid.innerHTML = '<div class="feed-loading"><i class="fas fa-circle-notch"></i>Scanning Reddit for leads...</div>';
   meta.textContent = '';
   try {
-    const res  = await fetch(API.replace('/api','') + '/api/feed?q=' + encodeURIComponent(keyword));
+    const res  = await fetch(API + '/feed?q=' + encodeURIComponent(keyword));
     const data = await res.json();
     if (!data.ok || !data.posts.length) {
       grid.innerHTML = '<div class="feed-empty"><i class="fas fa-inbox"></i><p>No posts found — try a different keyword</p></div>';
@@ -1423,25 +1454,60 @@ function renderFeedCard(post) {
       <button class="btn btn-secondary btn-sm" onclick="saveFeedLead('${esc(post.id)}','${esc(post.author)}','${esc(a.niche)}','${esc(post.url)}','${esc(post.title).replace(/'/g,'')}',${a.urgency})">
         <i class="fas fa-user-plus"></i> Save Lead
       </button>
+      <button class="btn btn-secondary btn-sm" id="ai-btn-${esc(post.id)}" onclick="aiScorePost('${esc(post.id)}','${esc(post.title).replace(/'/g,'')}','${esc(post.text).replace(/'/g,'').substring(0,300)}')">
+        <i class="fas fa-brain"></i> AI Score
+      </button>
       <a class="btn btn-secondary btn-sm" href="${esc(post.url)}" target="_blank" rel="noopener">
         <i class="fas fa-arrow-up-right-from-square"></i> Open Post
       </a>
     </div>
+    <div id="ai-result-${esc(post.id)}" style="display:none;margin-top:8px;padding:10px 12px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px;font-size:.78rem;color:var(--text)"></div>
   </div>`;
+}
+
+async function aiScorePost(postId, title, text) {
+  const btn    = document.getElementById('ai-btn-' + postId);
+  const result = document.getElementById('ai-result-' + postId);
+  if (!btn || !result) return;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Scoring...';
+  try {
+    const res  = await fetch(API + '/score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, text })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      const color = data.score >= 70 ? '#22c55e' : data.score >= 40 ? '#f59e0b' : '#8888a0';
+      result.style.display = 'block';
+      result.innerHTML = `<b style="color:${color}">Claude Score: ${data.score}/100</b> · <i>${data.intent}</i><br><span style="color:var(--muted)">${data.reason}</span>${data.suggested_opener ? `<br><span style="color:var(--accent);margin-top:4px;display:block">💬 "${data.suggested_opener}"</span>` : ''}`;
+      btn.innerHTML = '<i class="fas fa-check"></i> Scored';
+    } else {
+      btn.innerHTML = '<i class="fas fa-brain"></i> AI Score';
+      btn.disabled = false;
+      toast(data.error || 'Score failed — check ANTHROPIC_API_KEY', 'err');
+    }
+  } catch {
+    btn.innerHTML = '<i class="fas fa-brain"></i> AI Score';
+    btn.disabled = false;
+    toast('AI scoring failed', 'err');
+  }
 }
 
 async function saveFeedLead(id, author, niche, url, title, score) {
   try {
     await fetch(API + '/leads', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name:     'u/' + author,
         business: niche + ' (Reddit)',
         status:   'new',
         score:    score,
-        source:   url,
-        notes:    title,
-        niche:    niche
+        url:      url,
+        title:    title,
+        platform: 'reddit'
       })
     });
     // Visual feedback — grey out the saved card
