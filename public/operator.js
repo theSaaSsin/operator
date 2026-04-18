@@ -27,7 +27,83 @@ function toast(msg, type) {
 const panels = document.querySelectorAll('.panel');
 const navItems = document.querySelectorAll('.nav-item');
 const topbarTitle = document.getElementById('topbar-title');
-const TITLES = { client: 'Brand Studio', outputs: 'Outputs · Brand Assets', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue', followups: 'Follow-ups · 48hr Engine', explorer: 'Keyword Lab · Find New Targets', revenue: 'Revenue & Pipeline', settings: 'Persona & API Keys', workflow: 'Daily Workflow' };
+const TITLES = { client: 'Brand Studio', outputs: 'Outputs · Brand Assets', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue', followups: 'Follow-ups · 48hr Engine', explorer: 'Keyword Lab · Find New Targets', revenue: 'Revenue & Pipeline', settings: 'Persona & API Keys', workflow: 'Daily Workflow', toolkit: 'Tool Kit · AI Stack' };
+
+/* ═══════════════════════════════════════════════════════════════════
+ * TOOL KIT — live registry of AI tools (Scrapling · ModelsLab · Groq…)
+ * ═════════════════════════════════════════════════════════════════ */
+async function loadToolKit() {
+  const grid = document.getElementById('toolkit-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1"><i class="fas fa-spinner fa-spin"></i> Loading tools…</div>';
+  try {
+    const r = await fetch((window.OP_CONFIG?.API || '/api') + '/tools');
+    const data = await r.json();
+    if (!data.ok) throw new Error('registry fetch failed');
+    renderToolKit(data.tools);
+    data.tools.forEach(t => pingTool(t.id));
+  } catch (e) {
+    grid.innerHTML = `<div style="padding:40px;text-align:center;color:#ff5d73;grid-column:1/-1">Failed to load Tool Kit: ${e.message}</div>`;
+  }
+}
+function renderToolKit(tools) {
+  const grid = document.getElementById('toolkit-grid');
+  grid.innerHTML = tools.map(t => `
+    <div class="tk-card" data-tool-id="${t.id}" style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;transition:all .3s">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:40px;height:40px;background:rgba(233,180,76,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#e9b44c"><i class="fas ${t.icon||'fa-cube'}"></i></div>
+          <div>
+            <div style="font-weight:700;font-size:1rem">${t.label}</div>
+            <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">${t.kind}</div>
+          </div>
+        </div>
+        <span class="tk-status" id="tk-status-${t.id}" style="font-size:.7rem;font-weight:600;padding:3px 10px;border-radius:100px;background:rgba(255,255,255,.06);color:var(--muted)">…</span>
+      </div>
+      <p style="font-size:.85rem;color:var(--muted);margin:0 0 14px;line-height:1.4;min-height:40px">${t.tagline}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+        ${(t.capabilities||[]).slice(0,4).map(c => `<span style="font-size:.65rem;background:rgba(233,180,76,.08);color:#e9b44c;padding:3px 8px;border-radius:4px;font-family:monospace">${c}</span>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px">
+        ${t.kind==='pinokio'
+          ? `<button class="btn btn-secondary btn-sm" onclick="tkQuickScan('${t.id}')" style="flex:1"><i class="fas fa-play"></i> Quick scan</button>`
+          : `<button class="btn btn-secondary btn-sm" onclick="tkConfigure('${t.id}','${t.envKey||''}')" style="flex:1"><i class="fas fa-key"></i> ${t.configured?'Reconfigure':'Add API key'}</button>`}
+        ${t.docs ? `<a href="${t.docs}" target="_blank" class="btn btn-secondary btn-sm" title="Docs" style="padding:6px 10px"><i class="fas fa-book"></i></a>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+async function pingTool(id) {
+  const el = document.getElementById('tk-status-' + id);
+  if (!el) return;
+  try {
+    const r = await fetch((window.OP_CONFIG?.API || '/api') + '/tools/health?id=' + id);
+    const d = await r.json();
+    let color='var(--muted)',bg='rgba(255,255,255,.06)',label=d.status||'?';
+    if (d.status==='online')        { color='#c8ff00'; bg='rgba(200,255,0,.12)';  label='● ONLINE'; }
+    else if (d.status==='offline')  { color='#ff5d73'; bg='rgba(255,93,115,.12)'; label='○ OFFLINE'; }
+    else if (d.status==='configured'){ color='#c8ff00'; bg='rgba(200,255,0,.12)'; label='✓ READY'; }
+    else if (d.status==='needs-key'){ color='#e9b44c'; bg='rgba(233,180,76,.12)'; label='! KEY NEEDED'; }
+    el.textContent=label; el.style.color=color; el.style.background=bg;
+  } catch (e) { el.textContent='ERR'; }
+}
+function tkQuickScan(id) {
+  if (id === 'scrapling') {
+    const kw = prompt('Keyword for stealth Reddit scan:', 'need clients');
+    if (!kw) return;
+    alert(`Scanning with Scrapling for "${kw}"…\n\nLead Feed will light up if sidecar is running (port 5001).`);
+  }
+}
+function tkConfigure(id, envKey) {
+  goPanel('settings');
+  setTimeout(() => {
+    const notice = document.createElement('div');
+    notice.innerHTML = `Set <code style="background:#0a0a0a;padding:2px 8px;border-radius:4px">${envKey}</code> in your .env to enable <b>${id}</b>.`;
+    notice.style.cssText = 'position:fixed;top:80px;right:20px;background:#e9b44c;color:#0a0a0a;padding:14px 20px;border-radius:10px;font-weight:600;z-index:9999;box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:340px';
+    document.body.appendChild(notice);
+    setTimeout(()=>notice.remove(), 5000);
+  }, 300);
+}
 
 navItems.forEach(item => {
   item.addEventListener('click', () => {
@@ -45,6 +121,7 @@ navItems.forEach(item => {
     if (target === 'explorer') initExplorerPanel();
     if (target === 'revenue') initRevenuePanel();
     if (target === 'outputs') initOutputsPanel();
+    if (target === 'toolkit') loadToolKit();
   });
 });
 

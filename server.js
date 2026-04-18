@@ -10,6 +10,7 @@ const Anthropic  = require('@anthropic-ai/sdk');
 const { Resend } = require('resend');
 const makeStorage   = require('./storage');
 const { generateBrand } = require('./brand');
+const toolRegistry  = require('./tools/registry');
 
 const PORT   = process.env.PORT || 4000;
 const PUBLIC = path.join(__dirname, 'public');
@@ -64,6 +65,72 @@ const ROUTES = {
 
   // Health check for Railway
   'GET /api/health': (_, res) => json(res, { ok: true, ts: Date.now() }),
+
+  // ── Tool Kit registry ────────────────────────────────────
+  'GET /api/tools': (_req, res) => json(res, { ok: true, tools: toolRegistry.publicList() }),
+
+  // Health ping for a tool — checks local sidecars, pings cloud APIs with light call
+  'GET /api/tools/health': async (req, res) => {
+    const qs = new URLSearchParams(req.url.split('?')[1] || '');
+    const id = qs.get('id');
+    const tool = toolRegistry.get(id);
+    if (!tool) return json(res, { ok: false, error: 'unknown tool' }, 404);
+    if (tool.kind === 'pinokio' && tool.healthUrl) {
+      try {
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort(), 2000);
+        const r = await fetch(tool.healthUrl, { signal: ctrl.signal });
+        clearTimeout(to);
+        const data = await r.json().catch(() => ({}));
+        return json(res, { ok: true, status: 'online', data });
+      } catch (e) {
+        return json(res, { ok: true, status: 'offline', error: e.message });
+      }
+    }
+    // cloud tool: configured = has env key
+    return json(res, {
+      ok: true,
+      status: tool.envKey && process.env[tool.envKey] ? 'configured' : 'needs-key',
+      envKey: tool.envKey,
+    });
+  },
+
+  // Generic proxy — Operator frontend → sidecar (avoids CORS headaches)
+  'POST /api/tools/scrapling/scan': async (req, res) => {
+    const data = await body(req);
+    try {
+      const url = `http://127.0.0.1:5001${data.path || '/scan/generic'}`;
+      const r = await fetch(url, {
+        method: data.method || 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: data.method === 'GET' ? undefined : JSON.stringify(data.body || {}),
+      });
+      const out = await r.json().catch(() => ({}));
+      json(res, { ok: r.ok, ...out });
+    } catch (e) {
+      json(res, { ok: false, error: e.message, hint: 'Is Scrapling sidecar running? pinokio → install & start.' }, 502);
+    }
+  },
+
+  // ModelsLab proxy — image/video/voice gen on demand
+  'POST /api/tools/modelslab/run': async (req, res) => {
+    const data = await body(req);
+    const key = process.env.MODELSLAB_API_KEY;
+    if (!key) return json(res, { ok: false, error: 'MODELSLAB_API_KEY not set' }, 400);
+    const endpoint = data.endpoint || 'realtime/text2img';
+    const url = `https://modelslab.com/api/v6/${endpoint}`;
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, ...(data.payload || {}) }),
+      });
+      const out = await r.json().catch(() => ({}));
+      json(res, { ok: r.ok, ...out });
+    } catch (e) {
+      json(res, { ok: false, error: e.message }, 502);
+    }
+  },
 
   // ── Brand Engine ─────────────────────────────────────────
   'POST /api/generate-brand': async (req, res) => {
@@ -831,6 +898,55 @@ Rules:
   }
 };
 
+// ── Privacy Gate ──────────────────────────────────────────
+// Operator is private by default. Set OPERATOR_PASSWORD in .env to gate.
+// PUBLIC carve-outs: /studio.html (marketing), /api/public/*, /api/health, static assets used by studio.
+const OPERATOR_PASSWORD = process.env.OPERATOR_PASSWORD || '';
+const PRIVATE_MODE      = process.env.OPERATOR_PRIVATE !== 'false'; // default ON
+const PUBLIC_PATHS = [
+  '/studio.html',
+  '/favicon.ico',
+  '/config.js',
+  '/demo.html',
+  '/demo-success.html',
+  '/api/health',
+  '/api/public/',
+  '/login',
+  '/logout',
+];
+function isPublicPath(url) {
+  const p = url.split('?')[0];
+  if (p === '/' && !PRIVATE_MODE) return true;
+  return PUBLIC_PATHS.some(pub => pub.endsWith('/') ? p.startsWith(pub) : p === pub);
+}
+function parseCookies(req) {
+  const raw = req.headers.cookie || '';
+  return Object.fromEntries(raw.split(';').map(s => s.trim().split('=')).filter(x => x[0]));
+}
+function isAuthed(req) {
+  if (!PRIVATE_MODE) return true;
+  if (!OPERATOR_PASSWORD) return true; // no password set = open (dev mode)
+  const cookies = parseCookies(req);
+  return cookies.op_auth === OPERATOR_PASSWORD;
+}
+
+const LOGIN_PAGE = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Operator · Private</title>
+<style>
+body{margin:0;font-family:-apple-system,Inter,sans-serif;background:#0a0a0a;color:#f5f2ec;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.box{background:#121212;border:1px solid #1f1f1f;border-radius:20px;padding:48px;max-width:400px;width:90%;text-align:center}
+h1{font-family:'Anton',Impact,sans-serif;font-size:42px;margin:0 0 10px;letter-spacing:-.01em;text-transform:uppercase}
+p{color:#a5a19a;font-size:14px;margin:0 0 28px}
+input{width:100%;padding:14px 18px;background:#0a0a0a;border:1px solid #1f1f1f;border-radius:100px;color:#f5f2ec;font-size:15px;margin-bottom:14px;box-sizing:border-box;outline:none;transition:border-color .3s}
+input:focus{border-color:#e9b44c}
+button{width:100%;padding:14px;background:#e9b44c;color:#0a0a0a;border:none;border-radius:100px;font-weight:600;font-size:15px;cursor:pointer;transition:background .3s}
+button:hover{background:#f5f2ec}
+.err{color:#ff5d73;font-size:13px;margin-top:10px;min-height:18px}
+.dot{display:inline-block;width:10px;height:10px;background:#e9b44c;border-radius:50%;margin-right:8px;animation:p 2s infinite}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
+</style></head><body><div class="box"><h1><span class="dot"></span>Operator</h1><p>Private. Enter password to continue.</p>
+<form method="post" action="/login"><input name="pw" type="password" placeholder="Password" autofocus><button type="submit">Unlock</button></form>
+<div class="err" id="e">__ERR__</div></div></body></html>`;
+
 // ── HTTP Server ───────────────────────────────────────────
 http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -838,11 +954,52 @@ http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
+  // Login routes (always available)
+  if (req.method === 'POST' && req.url === '/login') {
+    let d = '';
+    req.on('data', c => d += c);
+    req.on('end', () => {
+      const params = new URLSearchParams(d);
+      const pw = params.get('pw') || '';
+      if (!OPERATOR_PASSWORD || pw === OPERATOR_PASSWORD) {
+        res.writeHead(302, {
+          'Set-Cookie': `op_auth=${encodeURIComponent(pw)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
+          'Location': '/operator.html',
+        });
+        res.end();
+      } else {
+        res.writeHead(401, { 'Content-Type': 'text/html' });
+        res.end(LOGIN_PAGE.replace('__ERR__', 'Wrong password.'));
+      }
+    });
+    return;
+  }
+  if (req.url === '/logout') {
+    res.writeHead(302, {
+      'Set-Cookie': 'op_auth=; Path=/; Max-Age=0',
+      'Location': '/studio.html',
+    });
+    res.end();
+    return;
+  }
+
+  // Gate check
+  if (!isPublicPath(req.url) && !isAuthed(req)) {
+    if (req.url.startsWith('/api/')) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'unauthorized', login: '/login' }));
+      return;
+    }
+    res.writeHead(401, { 'Content-Type': 'text/html' });
+    res.end(LOGIN_PAGE.replace('__ERR__', ''));
+    return;
+  }
+
   const key = `${req.method} ${req.url.split('?')[0]}`;
   if (ROUTES[key]) return ROUTES[key](req, res);
 
-  // Static files
-  let filePath = req.url === '/' ? '/operator.html' : req.url;
+  // Static files — root now serves studio.html (public marketing), /operator.html is gated
+  let filePath = req.url === '/' ? '/studio.html' : req.url;
   filePath = path.join(PUBLIC, filePath.split('?')[0]);
   const ext = path.extname(filePath);
   fs.readFile(filePath, (err, data) => {
@@ -850,4 +1007,8 @@ http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': MIME[ext] || 'text/plain' });
     res.end(data);
   });
-}).listen(PORT, () => console.log(`TheSaaSsin Operator → http://localhost:${PORT}`));
+}).listen(PORT, () => {
+  console.log(`TheSaaSsin Operator → http://localhost:${PORT}`);
+  if (PRIVATE_MODE && OPERATOR_PASSWORD) console.log(`  🔒 Private mode ON · password gate active`);
+  else if (PRIVATE_MODE && !OPERATOR_PASSWORD) console.log(`  ⚠️  Private mode ON but no OPERATOR_PASSWORD set — set one in .env to enforce`);
+});

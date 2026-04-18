@@ -67,7 +67,9 @@
       "WebSearch",
       "WebFetch(domain:www.instagram.com)",
       "WebFetch(domain:dexter.copilot.live)",
-      "WebFetch(domain:preview--pixel-dream-studio-67.lovable.app)"
+      "WebFetch(domain:preview--pixel-dream-studio-67.lovable.app)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:pinokio.computer)"
     ]
   }
 }

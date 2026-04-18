@@ -49,6 +49,10 @@
       <div class="nav-item" data-panel="revenue">
         <i class="fas fa-sack-dollar"></i> Revenue
       </div>
+      <div class="nav-section">AI Stack</div>
+      <div class="nav-item" data-panel="toolkit">
+        <i class="fas fa-toolbox"></i> Tool Kit
+      </div>
       <div class="nav-section">Account</div>
       <div class="nav-item" data-panel="settings">
         <i class="fas fa-sliders"></i> Persona &amp; Keys
@@ -685,6 +689,22 @@
               <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted);font-size:.8rem">No leads yet</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- ── PANEL: TOOL KIT (AI Stack) ── -->
+      <div class="panel" id="panel-toolkit">
+        <div style="padding:30px;max-width:1280px;margin:0 auto">
+          <div style="display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap;margin-bottom:28px">
+            <div>
+              <h2 style="font-size:1.6rem;margin:0 0 6px 0"><i class="fas fa-toolbox" style="color:#e9b44c"></i> Tool Kit</h2>
+              <p style="color:var(--muted);margin:0;max-width:620px">All your AI &amp; scraping tools in one place. Single API keys, unified output. Install local sidecars via Pinokio.</p>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="loadToolKit()"><i class="fas fa-rotate"></i> Refresh</button>
+          </div>
+          <div id="toolkit-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px">
+            <div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1">Loading tools…</div>
+          </div>
         </div>
       </div>
 
