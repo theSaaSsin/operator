@@ -8,7 +8,8 @@ const fs         = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 const Anthropic  = require('@anthropic-ai/sdk');
 const { Resend } = require('resend');
-const makeStorage = require('./storage');
+const makeStorage   = require('./storage');
+const { generateBrand } = require('./brand');
 
 const PORT   = process.env.PORT || 4000;
 const PUBLIC = path.join(__dirname, 'public');
@@ -63,6 +64,25 @@ const ROUTES = {
 
   // Health check for Railway
   'GET /api/health': (_, res) => json(res, { ok: true, ts: Date.now() }),
+
+  // ── Brand Engine ─────────────────────────────────────────
+  'POST /api/generate-brand': async (req, res) => {
+    const data = await body(req);
+    try {
+      const brand = generateBrand({
+        name:       data.businessName || data.name || 'Brand',
+        niche:      data.niche || '',
+        offer:      data.offer || '',
+        goal:       data.goal || 'leads',
+        location:   data.location || '',
+        tone:       data.tone || 'professional',
+        primaryHex: (data.style && data.style.primary) || data.primaryHex || null,
+      });
+      json(res, { ok: true, brand });
+    } catch (e) {
+      json(res, { ok: false, error: e.message }, 500);
+    }
+  },
 
   // ── Public routes (no auth — called from deployed landing pages) ──
   'GET /api/public/health': (_, res) => json(res, { ok: true }),

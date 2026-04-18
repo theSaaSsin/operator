@@ -53,14 +53,18 @@ navItems.forEach(item => {
 ══════════════════════════════════ */
 let _opGeneratedHTML = '';
 let _opClientName    = '';
+let _opBrand         = null;   // full brand object from /api/generate-brand
 
 function initOutputsPanel() {
-  // Wire tab buttons
   document.querySelectorAll('.op-tab').forEach(btn => {
     btn.onclick = () => switchOpTab(btn.dataset.tab);
   });
-  // Show landing preview if we have generated HTML
   if (_opGeneratedHTML) showOpLandingPreview(_opGeneratedHTML, _opClientName);
+  if (_opBrand) {
+    renderOpLogoKit(_opBrand.logos, _opBrand.palette);
+    renderOpPitchDoc(_opBrand.pitchDoc, _opClientName);
+    renderOpPaletteStrip(_opBrand.palette);
+  }
 }
 
 function switchOpTab(tab) {
@@ -68,6 +72,7 @@ function switchOpTab(tab) {
   document.querySelectorAll('.op-content').forEach(c => c.classList.toggle('active', c.id === 'op-' + tab));
 }
 
+// ── Landing preview ───────────────────────────────────────
 function showOpLandingPreview(html, clientName) {
   _opGeneratedHTML = html;
   _opClientName    = clientName || '';
@@ -93,6 +98,128 @@ function opDownloadLanding() {
 function opCopyLanding() {
   if (!_opGeneratedHTML) return;
   navigator.clipboard.writeText(_opGeneratedHTML).then(() => toast('HTML copied to clipboard', 'ok'));
+}
+
+// ── Logo Kit ──────────────────────────────────────────────
+function renderOpLogoKit(logos, palette) {
+  if (!logos || !logos.all) return;
+  const tab = document.getElementById('op-logo');
+  if (!tab) return;
+
+  const swatches = Object.entries({
+    Primary: palette.primary,
+    Secondary: palette.secondary,
+    Background: palette.bg,
+    Text: palette.text,
+    Muted: palette.muted,
+  }).map(([n, c]) => `<div class="lk-swatch" style="background:${c}" title="${n}: ${c}">
+    <span class="lk-swatch-name">${n}</span>
+    <span class="lk-swatch-hex">${c}</span>
+  </div>`).join('');
+
+  const cards = logos.all.map(logo => `
+    <div class="lk-card" data-logo-id="${logo.id}">
+      <div class="lk-preview ${logo.type === 'monogram' ? 'lk-preview--mono' : ''}" style="background:${logo.type === 'monogram' ? 'transparent' : palette.bg2}">
+        ${logo.svg}
+      </div>
+      <div class="lk-card-foot">
+        <span class="lk-card-label">${logo.label}</span>
+        <button class="lk-dl-btn" onclick="opDownloadSvg('${logo.id}')" title="Download SVG">
+          <i class="fas fa-download"></i>
+        </button>
+      </div>
+    </div>`).join('');
+
+  tab.innerHTML = `
+    <div class="lk-wrap">
+      <div class="lk-header">
+        <div class="lk-title">Logo Kit <span class="lk-sub">· 6 variants · SVG · ${_opClientName || 'Brand'}</span></div>
+        <button class="btn btn-primary btn-sm" onclick="opDownloadAllLogos()">
+          <i class="fas fa-download"></i> Download All SVGs
+        </button>
+      </div>
+      <div class="lk-grid">${cards}</div>
+      <div class="lk-section-hdr"><i class="fas fa-palette"></i> Brand Palette</div>
+      <div class="lk-swatches">${swatches}</div>
+    </div>`;
+}
+
+function opDownloadSvg(logoId) {
+  if (!_opBrand) return;
+  const logo = _opBrand.logos.all.find(l => l.id === logoId);
+  if (!logo) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([logo.svg], { type: 'image/svg+xml' }));
+  a.download = (_opClientName || 'brand').toLowerCase().replace(/\s+/g, '-') + '-' + logoId + '.svg';
+  a.click();
+}
+
+function opDownloadAllLogos() {
+  if (!_opBrand) return;
+  _opBrand.logos.all.forEach(l => opDownloadSvg(l.id));
+}
+
+// ── Pitch doc ─────────────────────────────────────────────
+function renderOpPitchDoc(pitchHtml, clientName) {
+  if (!pitchHtml) return;
+  const tab = document.getElementById('op-pitch');
+  if (!tab) return;
+  tab.innerHTML = `
+    <div class="op-pitch-wrap">
+      <div class="op-pitch-toolbar">
+        <span class="op-pitch-name">${esc(clientName || '')} · Pitch Document</span>
+        <button class="btn btn-secondary btn-sm" onclick="opDownloadPitch()">
+          <i class="fas fa-download"></i> Download HTML
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="opPrintPitch()">
+          <i class="fas fa-print"></i> Save as PDF
+        </button>
+      </div>
+      <iframe id="op-pitch-frame" class="op-pitch-frame" srcdoc="${pitchHtml.replace(/"/g, '&quot;')}"></iframe>
+    </div>`;
+}
+
+function opDownloadPitch() {
+  if (!_opBrand) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([_opBrand.pitchDoc], { type: 'text/html' }));
+  a.download = (_opClientName || 'pitch').toLowerCase().replace(/\s+/g, '-') + '-proposal.html';
+  a.click();
+}
+
+function opPrintPitch() {
+  const f = document.getElementById('op-pitch-frame');
+  if (f && f.contentWindow) f.contentWindow.print();
+}
+
+// ── Palette strip (on landing tab) ───────────────────────
+function renderOpPaletteStrip(palette) {
+  const strip = document.getElementById('op-palette-strip');
+  if (!strip || !palette) return;
+  strip.innerHTML = Object.entries({
+    Primary: palette.primary, Secondary: palette.secondary,
+    BG: palette.bg, Text: palette.text
+  }).map(([n, c]) => `<span class="op-pal-dot" style="background:${c}" title="${n}: ${c}"></span>`).join('');
+  strip.style.display = 'flex';
+}
+
+// Called from Brand Studio generate — populates all Outputs tabs
+async function generateBrandKit(clientData) {
+  try {
+    const r = await fetch(API + '/generate-brand', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(clientData)
+    });
+    const data = await r.json();
+    if (!data.ok) return;
+    _opBrand = data.brand;
+    renderOpLogoKit(_opBrand.logos, _opBrand.palette);
+    renderOpPitchDoc(_opBrand.pitchDoc, clientData.businessName || clientData.name || '');
+    renderOpPaletteStrip(_opBrand.palette);
+    // Show a toast nudge
+    toast('Brand kit ready — check Outputs panel', 'ok');
+  } catch { /* silently skip if API fails */ }
 }
 
 /* ══════════════════════════════════
@@ -315,8 +442,10 @@ document.getElementById('btn-generate').addEventListener('click', () => {
   /* 1. Landing page */
   generatedHTML = buildLandingPage({ name, niche, offer, goal, loc, profile, style });
   showPreview(generatedHTML);
-  // Mirror to Outputs panel so it's ready when the user navigates there
   showOpLandingPreview(generatedHTML, name);
+
+  /* 1b. Brand kit (logos + palette + pitch doc) — fire and forget */
+  generateBrandKit({ businessName: name, niche, offer, goal, location: loc, tone: style.tone, style });
 
   /* 2. Full outreach sequence → outreach queue (only if system component enabled) */
   const sequence = buildOutreachSequence({ name, niche, offer, loc, profile, style });

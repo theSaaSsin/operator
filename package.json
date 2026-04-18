@@ -12,9 +12,12 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@supabase/supabase-js": "^2.49.4",
     "dotenv": "^17.4.2",
+    "fflate": "^0.8.2",
     "resend": "^4.5.1",
-    "stripe": "^22.0.2"
+    "stripe": "^22.0.2",
+    "tinycolor2": "^1.6.0"
   }
 }
