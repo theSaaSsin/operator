@@ -3668,6 +3668,263 @@ function removeWin(i) {
   updateRevenueProgress();
 }
 
+/* ══════════════════════════════════
+   GUIDED TOUR ENGINE
+══════════════════════════════════ */
+const TOUR_STEPS = [
+  {
+    id: 'welcome',
+    panel: 'workflow',
+    target: null,
+    title: 'Welcome to your client-acquisition engine',
+    body: "I'll walk you through the full flow — persona → leads → fire → follow-up → revenue. 90 seconds. You can skip anytime.",
+    cta: "Let's go"
+  },
+  {
+    id: 'workflow',
+    panel: 'workflow',
+    target: '.wf-steps',
+    title: 'Step 0 · Your daily mission',
+    body: "This panel is your command centre. Five steps a day = consistent bookings. We'll hit every one together now.",
+    cta: 'Next'
+  },
+  {
+    id: 'persona',
+    panel: 'settings',
+    target: '#p-name',
+    title: 'Step 1 · Set your persona',
+    body: 'The AI writes every message as <b>you</b>. Drop your name, offer, and target market — then hit <code>Save</code>. Do it now, I\'ll wait.',
+    cta: 'Saved — next'
+  },
+  {
+    id: 'api',
+    panel: 'settings',
+    target: '#api-keys-grid',
+    title: 'Step 2 · Add a Claude AI key (optional)',
+    body: "Works without a key (uses templates), but Claude makes messages 3× more human. <code>Free $5 credit</code> at console.anthropic.com. Paste the key here.",
+    cta: "Got it"
+  },
+  {
+    id: 'explorer',
+    panel: 'explorer',
+    target: '#btn-kx-generate',
+    title: 'Step 3 · Generate fresh targets',
+    body: 'Hit <code>Generate 15</code> — Claude builds subreddit + keyword combos matched to your offer. Click any card\'s <b>Scan Now</b> to pull live leads.',
+    cta: 'Next'
+  },
+  {
+    id: 'feed',
+    panel: 'feed',
+    target: '#btn-feed-refresh',
+    title: 'Step 4 · Scan the lead feed',
+    body: "Reddit scanning is free and needs no key. You'll get ranked posts — high-urgency complaints about no clients / dead months. The real gold.",
+    cta: 'Next'
+  },
+  {
+    id: 'batch',
+    panel: 'feed',
+    target: '#btn-run-batch',
+    title: 'Step 5 · Auto-compose top 5',
+    body: "<code>Run Batch</code> scores every lead, picks the 5 highest-intent, and writes a personalised message for each in your voice. Review, edit, fire.",
+    cta: 'Next'
+  },
+  {
+    id: 'followups',
+    panel: 'followups',
+    target: '.fu-threshold-row',
+    title: 'Step 6 · 48-hour follow-up engine',
+    body: "Silent leads convert 20–30% on a second nudge. This panel auto-surfaces every sent message that needs one — AI drafts a fresh angle, you review and fire.",
+    cta: 'Next'
+  },
+  {
+    id: 'crm',
+    panel: 'crm',
+    target: null,
+    title: 'Step 7 · Move them through the pipeline',
+    body: "Every reply lands here. Drag leads through New → Contacted → Qualified → Closed. One booked call = £49–£500+ depending on your offer.",
+    cta: 'Next'
+  },
+  {
+    id: 'revenue',
+    panel: 'revenue',
+    target: '.rev-stats',
+    title: 'Step 8 · Watch the money stack',
+    body: "Live Stripe MRR, pipeline value, weekly goal bar. <code>Log a win</code> every time you close — momentum compounds fast.",
+    cta: 'Next'
+  },
+  {
+    id: 'finish',
+    panel: 'workflow',
+    target: null,
+    title: "You're trained. Go make money.",
+    body: "Your daily routine: Workflow tab → Scan → Batch → Fire → Follow-ups at 48h. Rinse, scale. Hit the <b>?</b> icon top-right to replay this tour anytime.",
+    cta: 'Start my first scan'
+  }
+];
+
+let _tourIdx = 0;
+let _tourActive = false;
+let _tourResizeBound = false;
+
+function _tourEl(sel) { return sel ? document.querySelector(sel) : null; }
+
+function _tourRemoveChrome() {
+  document.querySelectorAll('.tour-backdrop,.tour-spotlight,.tour-tooltip').forEach(n => n.remove());
+}
+
+function _tourPlaceSpotlight(target) {
+  const rect = target.getBoundingClientRect();
+  const pad = 8;
+  const sp = document.createElement('div');
+  sp.className = 'tour-spotlight';
+  sp.style.top    = (rect.top  - pad) + 'px';
+  sp.style.left   = (rect.left - pad) + 'px';
+  sp.style.width  = (rect.width  + pad * 2) + 'px';
+  sp.style.height = (rect.height + pad * 2) + 'px';
+  document.body.appendChild(sp);
+  return sp;
+}
+
+function _tourPlaceTooltip(target, step) {
+  const total = TOUR_STEPS.length;
+  const tip = document.createElement('div');
+  tip.className = 'tour-tooltip' + (target ? '' : ' centred');
+
+  const dots = TOUR_STEPS.map((_, i) =>
+    `<span class="tour-dot ${i === _tourIdx ? 'active' : i < _tourIdx ? 'done' : ''}"></span>`
+  ).join('');
+
+  tip.innerHTML = `
+    <div class="tour-step-badge">
+      <span>Guided Tour</span>
+      <span class="tour-count">${_tourIdx + 1} / ${total}</span>
+    </div>
+    <div class="tour-tip-title">${step.title}</div>
+    <div class="tour-tip-body">${step.body}</div>
+    <div class="tour-dots">${dots}</div>
+    <div class="tour-ftr">
+      <button class="tour-skip" onclick="endTour()">Skip tour</button>
+      <div class="tour-navs">
+        ${_tourIdx > 0 ? '<button class="tour-btn" onclick="prevTourStep()"><i class=\"fas fa-arrow-left\"></i> Back</button>' : ''}
+        <button class="tour-btn primary" onclick="nextTourStep()">${step.cta || 'Next'} ${_tourIdx < total - 1 ? '<i class=\"fas fa-arrow-right\"></i>' : '<i class=\"fas fa-check\"></i>'}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(tip);
+
+  if (!target) return tip;
+
+  // Position: below the target if space, otherwise above; clamp to viewport
+  const rect = target.getBoundingClientRect();
+  const tipW = tip.offsetWidth  || 360;
+  const tipH = tip.offsetHeight || 240;
+  const vpW  = window.innerWidth;
+  const vpH  = window.innerHeight;
+  const gap  = 16;
+
+  let left = rect.left + rect.width / 2 - tipW / 2;
+  left = Math.max(16, Math.min(left, vpW - tipW - 16));
+
+  let top = rect.bottom + gap;
+  if (top + tipH > vpH - 16) {
+    top = rect.top - tipH - gap;
+    if (top < 16) top = Math.max(16, Math.min(vpH - tipH - 16, (vpH - tipH) / 2));
+  }
+  tip.style.top  = top  + 'px';
+  tip.style.left = left + 'px';
+  tip.style.transform = 'none';
+  return tip;
+}
+
+function _tourRender() {
+  const step = TOUR_STEPS[_tourIdx];
+  if (!step) return endTour();
+
+  _tourRemoveChrome();
+
+  // Navigate to the right panel
+  if (step.panel) {
+    const nav = document.querySelector(`.nav-item[data-panel="${step.panel}"]`);
+    if (nav && !nav.classList.contains('active')) nav.click();
+  }
+
+  // Give the panel a tick to render, then place the chrome
+  setTimeout(() => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'tour-backdrop';
+    backdrop.addEventListener('click', () => { /* ignore — force use of buttons */ });
+    document.body.appendChild(backdrop);
+
+    const target = _tourEl(step.target);
+    if (target) {
+      target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      setTimeout(() => {
+        _tourPlaceSpotlight(target);
+        _tourPlaceTooltip(target, step);
+      }, 280);
+    } else {
+      _tourPlaceTooltip(null, step);
+    }
+  }, step.panel ? 220 : 0);
+}
+
+function startTour(force) {
+  if (!force && localStorage.getItem('ts_tour_done') === '1') return;
+  _tourIdx = 0;
+  _tourActive = true;
+  localStorage.setItem('ts_tour_active', '1');
+  if (!_tourResizeBound) {
+    _tourResizeBound = true;
+    window.addEventListener('resize', () => { if (_tourActive) _tourRender(); });
+  }
+  _tourRender();
+}
+
+function nextTourStep() {
+  if (_tourIdx >= TOUR_STEPS.length - 1) {
+    endTour(true);
+    // After finish, send them to Lead Feed for a real scan
+    goPanel('feed');
+    setTimeout(() => { activeFeedKw = 'need clients'; fetchFeed('need clients'); }, 200);
+    return;
+  }
+  _tourIdx++;
+  _tourRender();
+}
+
+function prevTourStep() {
+  if (_tourIdx <= 0) return;
+  _tourIdx--;
+  _tourRender();
+}
+
+function endTour(completed) {
+  _tourActive = false;
+  _tourRemoveChrome();
+  localStorage.removeItem('ts_tour_active');
+  if (completed) localStorage.setItem('ts_tour_done', '1');
+  else if (confirm('Skip the tour? You can restart it anytime from the ? icon top-right.')) {
+    localStorage.setItem('ts_tour_done', '1');
+  }
+}
+
+// Auto-start the tour after first-run completes (wrap existing firstRunComplete)
+const _tourOrigFirstRun = typeof firstRunComplete === 'function' ? firstRunComplete : null;
+if (_tourOrigFirstRun) {
+  window.firstRunComplete = function () {
+    _tourOrigFirstRun();
+    setTimeout(() => startTour(true), 800);
+  };
+}
+
+// If not a first-run but tour hasn't been seen, nudge on next paint
+window.addEventListener('load', () => {
+  const hasPersona = !!(loadPersona().name || loadPersona().offer);
+  const seen       = localStorage.getItem('ts_tour_done') === '1';
+  if (hasPersona && !seen) {
+    setTimeout(() => startTour(false), 600);
+  }
+});
+
 /* ── INIT ── */
 loadClients();
 checkApiStatus();
