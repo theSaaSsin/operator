@@ -2836,6 +2836,57 @@ async function sendSms(outreachId, to) {
   } catch { toast('SMS send failed', 'err'); }
 }
 
+/* ══════════════════════════════════
+   FIRST RUN
+══════════════════════════════════ */
+function firstRunComplete() {
+  const name  = (document.getElementById('fr-name')?.value  || '').trim();
+  const offer = (document.getElementById('fr-offer')?.value || '').trim();
+  if (!name && !offer) { toast('Fill in at least one field', 'err'); return; }
+
+  // Save to persona
+  const p = loadPersona();
+  if (name)  p.name  = name;
+  if (offer) p.offer = offer;
+  if (!p.tone) p.tone = 'professional';
+  savePersonaData(p);
+
+  // Hide first-run
+  const fr = document.getElementById('first-run');
+  if (fr) fr.style.display = 'none';
+
+  // Switch to Lead Feed and auto-scan
+  navItems.forEach(n => n.classList.remove('active'));
+  panels.forEach(p => p.classList.remove('active'));
+  const feedNav = document.querySelector('[data-panel="feed"]');
+  if (feedNav) feedNav.classList.add('active');
+  const feedPanel = document.getElementById('panel-feed');
+  if (feedPanel) feedPanel.classList.add('active');
+  topbarTitle.textContent = 'Lead Feed';
+
+  toast('Welcome ' + (name || 'Operator') + ' — scanning for leads…', 'ok');
+  setTimeout(() => fetchFeed('need clients'), 400);
+}
+
+// Enter key submits first-run form
+document.addEventListener('DOMContentLoaded', () => {
+  ['fr-name','fr-offer'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') firstRunComplete();
+    });
+  });
+});
+
 /* ── INIT ── */
 loadClients();
 checkApiStatus();
+
+// Show first-run if no persona saved yet
+(function checkFirstRun() {
+  const p  = loadPersona();
+  const fr = document.getElementById('first-run');
+  if (!fr) return;
+  if (!p.name && !p.offer) {
+    fr.style.display = 'flex';
+  }
+})();

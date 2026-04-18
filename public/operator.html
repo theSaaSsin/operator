@@ -507,6 +507,32 @@
   <div id="composer-status" class="composer-status"></div>
 </div>
 
+<!-- ── FIRST RUN SCREEN ── -->
+<div id="first-run" style="display:none;position:fixed;inset:0;background:#07070e;z-index:20000;align-items:center;justify-content:center;">
+  <div style="width:420px;max-width:92vw;display:flex;flex-direction:column;gap:0;text-align:center;">
+    <div style="font-size:1.1rem;font-weight:800;letter-spacing:-.02em;margin-bottom:32px">The<span style="color:#ff2a2a">SaaS</span>sin <span style="font-weight:400;opacity:.4;font-size:.8rem">Operator</span></div>
+    <div style="font-size:1.5rem;font-weight:800;margin-bottom:8px;line-height:1.25">Set up in 30 seconds.<br>Find leads in 60.</div>
+    <div style="font-size:.82rem;color:#6b6b80;margin-bottom:32px">Two fields. Then the system scans Reddit for live prospects in your niche.</div>
+    <div style="display:flex;flex-direction:column;gap:12px;text-align:left;margin-bottom:20px">
+      <div>
+        <label style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#6b6b80;display:block;margin-bottom:5px">Your name</label>
+        <input id="fr-name" type="text" placeholder="e.g. Josh" autofocus
+          style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:11px 14px;color:#f0f0f5;font-size:.9rem;font-family:inherit;outline:none;">
+      </div>
+      <div>
+        <label style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#6b6b80;display:block;margin-bottom:5px">What do you sell / do?</label>
+        <input id="fr-offer" type="text" placeholder="e.g. AI lead generation for UK tradesmen"
+          style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:11px 14px;color:#f0f0f5;font-size:.9rem;font-family:inherit;outline:none;">
+      </div>
+    </div>
+    <button id="fr-btn" onclick="firstRunComplete()"
+      style="background:#ff2a2a;color:#fff;border:none;border-radius:8px;padding:14px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;width:100%">
+      <i class="fas fa-satellite-dish"></i> Start scanning for leads
+    </button>
+    <div style="font-size:.68rem;color:#6b6b80;margin-top:14px">No account needed &nbsp;·&nbsp; Reddit scanning is free &nbsp;·&nbsp; Add API keys anytime in Settings</div>
+  </div>
+</div>
+
 <div id="toast"></div>
 <script src="operator.js"></script>
 </body>
