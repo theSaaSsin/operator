@@ -66,7 +66,8 @@
       "Bash(node -e \"require\\('dotenv'\\).config\\(\\); require\\('./storage'\\)\")",
       "WebSearch",
       "WebFetch(domain:www.instagram.com)",
-      "WebFetch(domain:dexter.copilot.live)"
+      "WebFetch(domain:dexter.copilot.live)",
+      "WebFetch(domain:preview--pixel-dream-studio-67.lovable.app)"
     ]
   }
 }
