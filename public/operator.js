@@ -27,7 +27,7 @@ function toast(msg, type) {
 const panels = document.querySelectorAll('.panel');
 const navItems = document.querySelectorAll('.nav-item');
 const topbarTitle = document.getElementById('topbar-title');
-const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue', settings: 'Persona & API Keys' };
+const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue', settings: 'Persona & API Keys', workflow: 'Daily Workflow' };
 
 navItems.forEach(item => {
   item.addEventListener('click', () => {
@@ -40,6 +40,7 @@ navItems.forEach(item => {
     if (target === 'crm') loadLeads();
     if (target === 'outreach') loadOutreach();
     if (target === 'settings') initSettingsPanel();
+    if (target === 'workflow') initWorkflowPanel();
   });
 });
 
@@ -2876,6 +2877,102 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+/* ══════════════════════════════════
+   WORKFLOW PANEL
+══════════════════════════════════ */
+function goPanel(name) {
+  navItems.forEach(n => n.classList.remove('active'));
+  panels.forEach(p => p.classList.remove('active'));
+  const nav = document.querySelector(`[data-panel="${name}"]`);
+  const panel = document.getElementById('panel-' + name);
+  if (nav) nav.classList.add('active');
+  if (panel) panel.classList.add('active');
+  topbarTitle.textContent = TITLES[name] || name;
+  if (name === 'crm') loadLeads();
+  if (name === 'outreach') loadOutreach();
+  if (name === 'settings') initSettingsPanel();
+  if (name === 'workflow') initWorkflowPanel();
+}
+
+function goScan(keyword) {
+  goPanel('feed');
+  const kw = document.getElementById('keyword-input');
+  if (kw) kw.value = keyword;
+  setTimeout(() => fetchFeed(keyword), 200);
+}
+
+function goRunBatch() {
+  goPanel('feed');
+  setTimeout(() => runBatch(), 300);
+}
+
+async function loadWorkflowStats() {
+  try {
+    const [outreach, leads] = await Promise.all([
+      fetch(API + '/outreach').then(r => r.json()),
+      fetch(API + '/leads').then(r => r.json())
+    ]);
+    const queue    = outreach.queue || [];
+    const allLeads = leads.leads   || [];
+    const today    = new Date().toISOString().slice(0, 10);
+    const todaySent  = queue.filter(q => (q.created_at || '').startsWith(today)).length;
+    const todayLeads = Object.keys(feedPostCache).length;
+    const replied    = JSON.parse(localStorage.getItem('ts_feedback') || '[]')
+      .filter(f => f.outcome === 'replied' && (f.ts || '').startsWith(today)).length;
+    const pipeline   = allLeads.filter(l => l.status === 'qualified' || l.status === 'contacted').length;
+    document.getElementById('wf-n-scanned').textContent  = todayLeads || '—';
+    document.getElementById('wf-n-sent').textContent     = todaySent  || '—';
+    document.getElementById('wf-n-replied').textContent  = replied    || '—';
+    document.getElementById('wf-n-pipeline').textContent = pipeline   || '—';
+  } catch { /* stats unavailable */ }
+}
+
+function updateSetupChecklist() {
+  const p = loadPersona();
+  let done = 0;
+  function check(id, condition) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const icon = el.querySelector('.wf-check-icon');
+    if (condition) {
+      el.classList.add('done');
+      if (icon) { icon.className = 'wf-check-icon complete'; icon.innerHTML = '<i class="fas fa-check"></i>'; }
+      done++;
+    } else {
+      el.classList.remove('done');
+      if (icon) { icon.className = 'wf-check-icon pending'; icon.innerHTML = icon.innerHTML; }
+    }
+  }
+  check('wfc-persona', !!(p.name && p.offer));
+  check('wfc-claude',  !!_apiStatus.claude);
+  check('wfc-stripe',  !!_apiStatus.stripe);
+  check('wfc-deploy',  !!localStorage.getItem('ts_deployed'));
+  const badge = document.getElementById('wf-setup-badge');
+  if (badge) badge.textContent = `${done} / 4`;
+}
+
+function showDeploySteps() {
+  const box = document.getElementById('wf-deploy-steps');
+  const btn = document.getElementById('wfc-deploy-btn');
+  if (!box) return;
+  const visible = box.style.display !== 'none';
+  box.style.display = visible ? 'none' : 'flex';
+  if (btn) btn.textContent = visible ? 'How to' : 'Hide';
+}
+
+function markDeployed() {
+  localStorage.setItem('ts_deployed', '1');
+  const box = document.getElementById('wf-deploy-steps');
+  if (box) box.style.display = 'none';
+  updateSetupChecklist();
+  toast('Deployed! Share your Railway URL with leads.', 'ok');
+}
+
+function initWorkflowPanel() {
+  loadWorkflowStats();
+  updateSetupChecklist();
+}
 
 /* ── INIT ── */
 loadClients();
