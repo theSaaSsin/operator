@@ -27,7 +27,7 @@ function toast(msg, type) {
 const panels = document.querySelectorAll('.panel');
 const navItems = document.querySelectorAll('.nav-item');
 const topbarTitle = document.getElementById('topbar-title');
-const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue', settings: 'Persona & API Keys', workflow: 'Daily Workflow' };
+const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue', followups: 'Follow-ups · 48hr Engine', settings: 'Persona & API Keys', workflow: 'Daily Workflow' };
 
 navItems.forEach(item => {
   item.addEventListener('click', () => {
@@ -41,6 +41,7 @@ navItems.forEach(item => {
     if (target === 'outreach') loadOutreach();
     if (target === 'settings') initSettingsPanel();
     if (target === 'workflow') initWorkflowPanel();
+    if (target === 'followups') initFollowUpsPanel();
   });
 });
 
@@ -2893,6 +2894,7 @@ function goPanel(name) {
   if (name === 'outreach') loadOutreach();
   if (name === 'settings') initSettingsPanel();
   if (name === 'workflow') initWorkflowPanel();
+  if (name === 'followups') initFollowUpsPanel();
 }
 
 function goScan(keyword) {
@@ -2991,6 +2993,297 @@ async function initWorkflowPanel() {
   }
   loadWorkflowStats();
   updateSetupChecklist();
+}
+
+/* ══════════════════════════════════
+   FOLLOW-UPS · 48hr ENGINE
+══════════════════════════════════ */
+let _fuThresholdHrs = 48;
+let _fuQueueCache   = [];  // last loaded queue
+let _fuBinding      = false;
+
+function _fuFormatAge(ms) {
+  const m = Math.floor(ms / 60000);
+  if (m < 60)   return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24)   return h + 'h ago';
+  const d = Math.floor(h / 24);
+  return d + 'd ago';
+}
+
+function _fuAgeClass(ms) {
+  const h = ms / 3600000;
+  if (h < 24) return '';
+  if (h < 72) return 'urgent';
+  return 'cold';
+}
+
+function _fuChannelFromLabel(label) {
+  const l = (label || '').toLowerCase();
+  if (l.includes('email')) return 'email';
+  if (l.includes('sms'))   return 'sms';
+  return 'copy';  // reddit / manual
+}
+
+function _fuBindOnce() {
+  if (_fuBinding) return;
+  _fuBinding = true;
+  document.querySelectorAll('.fu-thr').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.fu-thr').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _fuThresholdHrs = Number(btn.dataset.hrs) || 0;
+      renderFollowUps();
+    });
+  });
+  document.getElementById('btn-fu-draft-all')?.addEventListener('click', draftAllFollowUps);
+}
+
+async function initFollowUpsPanel() {
+  _fuBindOnce();
+  const list = document.getElementById('fu-list');
+  if (list) list.innerHTML = '<div class="composer-loading"><i class="fas fa-circle-notch"></i> Loading outreach history…</div>';
+  try {
+    const r = await fetch(API + '/outreach');
+    const d = await r.json();
+    _fuQueueCache = d.queue || [];
+  } catch {
+    _fuQueueCache = [];
+  }
+  renderFollowUps();
+}
+
+function _fuBuildCandidates() {
+  const now = Date.now();
+  const thresholdMs = _fuThresholdHrs * 3600000;
+
+  // Index of original IDs that already have a follow-up
+  const followedUpIds = new Set();
+  let sentCount = 0;
+  for (const q of _fuQueueCache) {
+    const label = q.label || '';
+    const m = label.match(/Follow-up\s*#(\d+)/i);
+    if (m) {
+      followedUpIds.add(Number(m[1]));
+      if (q.status === 'sent') sentCount++;
+    }
+  }
+
+  const skipped = new Set(JSON.parse(localStorage.getItem('ts_fu_skipped') || '[]'));
+
+  // Originals = status sent, not itself a follow-up, older than threshold, not already followed up, not skipped
+  const candidates = _fuQueueCache.filter(q => {
+    if (q.status !== 'sent') return false;
+    if ((q.label || '').match(/Follow-up\s*#/i)) return false;
+    if (followedUpIds.has(q.id)) return false;
+    if (skipped.has(q.id)) return false;
+    const created = q.createdAt ? new Date(q.createdAt).getTime() : 0;
+    if (!created) return false;
+    return (now - created) >= thresholdMs;
+  });
+
+  // Newest first
+  candidates.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return { candidates, sentCount };
+}
+
+function renderFollowUps() {
+  const list = document.getElementById('fu-list');
+  if (!list) return;
+  const { candidates, sentCount } = _fuBuildCandidates();
+
+  document.getElementById('fu-n-ready').textContent = candidates.length;
+  document.getElementById('fu-n-done').textContent  = sentCount;
+
+  if (!candidates.length) {
+    list.innerHTML = `
+      <div class="fu-empty">
+        <i class="fas fa-clock-rotate-left"></i>
+        <p>Nothing to follow up at this threshold</p>
+        <p style="font-size:.72rem;opacity:.6;margin-top:4px">Try "All sent" to see every past send · or fire a new batch first</p>
+      </div>`;
+    return;
+  }
+
+  const now = Date.now();
+  list.innerHTML = candidates.map(q => {
+    const age       = now - new Date(q.createdAt).getTime();
+    const ageClass  = _fuAgeClass(age);
+    const ageTxt    = _fuFormatAge(age);
+    const channel   = _fuChannelFromLabel(q.label);
+    const channelBadge = channel === 'email' ? 'Email' : channel === 'sms' ? 'SMS' : 'Reddit/DM';
+    const name      = q.clientName || q.niche || 'Lead';
+    const original  = (q.message || '').replace(/</g, '&lt;').substring(0, 280);
+
+    return `
+      <div class="fu-card" id="fu-card-${q.id}" data-id="${q.id}" data-channel="${channel}" data-recipient="${q.recipientEmail || ''}">
+        <div class="fu-card-hdr">
+          <span class="fu-card-name">${name}</span>
+          <span class="fu-card-badge">${channelBadge}</span>
+          <span class="fu-card-age ${ageClass}"><i class="fas fa-clock"></i> ${ageTxt}</span>
+        </div>
+        <div class="fu-card-original">
+          <div class="fu-card-original-label">Original message</div>
+          ${original}${(q.message || '').length > 280 ? '…' : ''}
+        </div>
+        <div class="fu-draft-wrap" id="fu-draft-${q.id}">
+          <textarea class="fu-draft-textarea" id="fu-msg-${q.id}" placeholder="Follow-up nudge will appear here…"></textarea>
+          <div class="fu-draft-meta"><span id="fu-src-${q.id}"></span><span id="fu-chars-${q.id}">0 chars</span></div>
+        </div>
+        <div class="fu-card-actions">
+          <button class="fu-btn primary" onclick="draftFollowUp(${q.id})"><i class="fas fa-wand-magic-sparkles"></i> Draft Nudge</button>
+          <button class="fu-btn" onclick="sendFollowUp(${q.id})" id="fu-send-${q.id}" style="display:none"><i class="fas fa-paper-plane"></i> Send</button>
+          <button class="fu-btn" onclick="skipFollowUp(${q.id})"><i class="fas fa-ban"></i> Skip</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function _fuGetCandidate(id) {
+  return _fuQueueCache.find(q => q.id === id);
+}
+
+async function draftFollowUp(id) {
+  const q = _fuGetCandidate(id);
+  if (!q) return;
+  const draftWrap = document.getElementById('fu-draft-' + id);
+  const textarea  = document.getElementById('fu-msg-' + id);
+  const sendBtn   = document.getElementById('fu-send-' + id);
+  const srcEl     = document.getElementById('fu-src-' + id);
+  const charsEl   = document.getElementById('fu-chars-' + id);
+  if (!draftWrap || !textarea) return;
+
+  draftWrap.classList.add('visible');
+  textarea.value = 'Generating…';
+  textarea.disabled = true;
+  if (srcEl) srcEl.textContent = '';
+
+  try {
+    const channel = _fuChannelFromLabel(q.label);
+    const r = await fetch(API + '/generate-followup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        originalMessage: q.message || '',
+        leadName:        q.clientName || '',
+        niche:           q.niche || '',
+        channel,
+        persona:         loadPersona()
+      })
+    });
+    const d = await r.json();
+    textarea.value = d.message || '';
+    if (srcEl) srcEl.textContent = d.source === 'ai' ? 'AI-generated · edit freely' : 'Template · edit to personalise';
+  } catch {
+    textarea.value = 'Hey — wanted to circle back on this. No pressure if the timing is off. Worth a quick look?';
+    if (srcEl) srcEl.textContent = 'Fallback · edit before sending';
+  } finally {
+    textarea.disabled = false;
+    if (charsEl) charsEl.textContent = textarea.value.length + ' chars';
+    textarea.addEventListener('input', () => {
+      if (charsEl) charsEl.textContent = textarea.value.length + ' chars';
+    });
+    if (sendBtn) sendBtn.style.display = '';
+  }
+}
+
+async function draftAllFollowUps() {
+  const btn = document.getElementById('btn-fu-draft-all');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Drafting…'; }
+  const ids = Array.from(document.querySelectorAll('.fu-card')).map(c => Number(c.dataset.id));
+  for (const id of ids) {
+    await draftFollowUp(id);
+    await new Promise(r => setTimeout(r, 200));
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Draft All'; }
+}
+
+async function sendFollowUp(id) {
+  const q = _fuGetCandidate(id);
+  if (!q) return;
+  const textarea = document.getElementById('fu-msg-' + id);
+  const card     = document.getElementById('fu-card-' + id);
+  const message  = (textarea?.value || '').trim();
+  if (!message) { toast('Draft the message first', 'err'); return; }
+
+  const channel = _fuChannelFromLabel(q.label);
+
+  // For copy/reddit — copy to clipboard + queue record
+  if (channel === 'copy') {
+    try { await navigator.clipboard.writeText(message); } catch {}
+    await _fuQueueRecord(q, message, 'copy');
+    if (card) { card.classList.add('sent'); card.insertAdjacentHTML('afterbegin', '<div class="fu-sent-flag"><i class="fas fa-check"></i> Follow-up copied + logged — paste into the original thread</div>'); }
+    toast('Follow-up copied to clipboard — paste on Reddit/DM', 'ok');
+    renderFollowUps._refresh?.();
+    return;
+  }
+
+  // Email / SMS need a recipient
+  let recipient = q.recipientEmail || '';
+  if (channel === 'email' && !recipient) {
+    recipient = prompt('Email address for this follow-up:') || '';
+    if (!recipient) return;
+  }
+  if (channel === 'sms' && !recipient) {
+    recipient = prompt('Mobile number (e.g. +447700900000):') || '';
+    if (!recipient) return;
+  }
+
+  try {
+    const endpoint = channel === 'email' ? '/send-outreach' : '/send-sms';
+    const payload  = channel === 'email'
+      ? { to: recipient, subject: 'Re: quick question', message }
+      : { to: recipient, message };
+    const r = await fetch(API + endpoint, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (!d.ok) {
+      if (d.needsKey || (d.error || '').includes('RESEND'))    { openApiSetup('resend'); return; }
+      if ((d.error || '').toLowerCase().includes('twilio'))    { openApiSetup('twilio'); return; }
+      toast(d.error || 'Send failed', 'err');
+      return;
+    }
+    await _fuQueueRecord(q, message, channel);
+    if (card) { card.classList.add('sent'); card.insertAdjacentHTML('afterbegin', '<div class="fu-sent-flag"><i class="fas fa-check"></i> Follow-up sent via ' + channel + '</div>'); }
+    toast('Follow-up sent!', 'ok');
+  } catch {
+    toast('Send failed — check server', 'err');
+  }
+}
+
+async function _fuQueueRecord(original, message, channel) {
+  try {
+    await fetch(API + '/outreach', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientName: original.clientName || '',
+        niche:      original.niche || '',
+        label:      'Follow-up #' + original.id + ' — ' + channel,
+        message,
+        status:     'sent',
+        recipient_email: original.recipientEmail || ''
+      })
+    });
+  } catch {}
+  // Refresh local cache so this lead drops out of "ready" count
+  try {
+    const r = await fetch(API + '/outreach');
+    const d = await r.json();
+    _fuQueueCache = d.queue || [];
+    renderFollowUps();
+  } catch {}
+}
+
+function skipFollowUp(id) {
+  const skipped = JSON.parse(localStorage.getItem('ts_fu_skipped') || '[]');
+  if (!skipped.includes(id)) skipped.push(id);
+  localStorage.setItem('ts_fu_skipped', JSON.stringify(skipped));
+  const card = document.getElementById('fu-card-' + id);
+  if (card) card.remove();
+  const remaining = document.querySelectorAll('.fu-card').length;
+  document.getElementById('fu-n-ready').textContent = remaining;
 }
 
 /* ── INIT ── */

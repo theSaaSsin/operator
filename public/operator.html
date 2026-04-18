@@ -22,7 +22,11 @@
       <div class="nav-item active" data-panel="client">
         <i class="fas fa-user-plus"></i> Client Creator
       </div>
-      <div class="nav-section">Acquire</div>
+      <div class="nav-section">Daily</div>
+      <div class="nav-item" data-panel="workflow">
+        <i class="fas fa-crosshairs"></i> Workflow
+      </div>
+      <div class="nav-section">Tools</div>
       <div class="nav-item" data-panel="feed">
         <i class="fas fa-satellite-dish"></i> Lead Feed
       </div>
@@ -32,6 +36,9 @@
       </div>
       <div class="nav-item" data-panel="outreach">
         <i class="fas fa-paper-plane"></i> Outreach Queue
+      </div>
+      <div class="nav-item" data-panel="followups">
+        <i class="fas fa-clock-rotate-left"></i> Follow-ups
       </div>
       <div class="nav-section">Account</div>
       <div class="nav-item" data-panel="settings">
@@ -55,6 +62,202 @@
     </div>
 
     <div id="content">
+
+      <!-- ── PANEL: WORKFLOW ── -->
+      <div class="panel" id="panel-workflow">
+        <div class="wf-wrap">
+
+          <!-- TODAY'S NUMBERS -->
+          <div class="wf-stats-row" id="wf-stats">
+            <div class="wf-stat"><div class="wf-stat-n" id="wf-n-scanned">—</div><div class="wf-stat-l">Leads found today</div></div>
+            <div class="wf-stat"><div class="wf-stat-n" id="wf-n-sent">—</div><div class="wf-stat-l">Messages sent</div></div>
+            <div class="wf-stat"><div class="wf-stat-n" id="wf-n-replied">—</div><div class="wf-stat-l">Replies tracked</div></div>
+            <div class="wf-stat"><div class="wf-stat-n" id="wf-n-pipeline">—</div><div class="wf-stat-l">In pipeline</div></div>
+          </div>
+
+          <div class="wf-cols">
+
+            <!-- LEFT: DAILY MISSION -->
+            <div class="wf-col">
+              <div class="wf-section-hdr">
+                <i class="fas fa-crosshairs"></i> Daily Mission
+                <span class="wf-badge" id="wf-mission-badge">10 min/day</span>
+              </div>
+
+              <div class="wf-steps">
+
+                <div class="wf-step" id="wfs-1">
+                  <div class="wf-step-left">
+                    <div class="wf-step-num">1</div>
+                    <div>
+                      <div class="wf-step-title">Scan for leads</div>
+                      <div class="wf-step-detail">Pick a keyword → Scan Reddit → 10+ live prospects in 60 seconds. Free, no key needed.</div>
+                      <div class="wf-step-kws">
+                        <span class="wf-kw" onclick="goScan('need clients')">need clients</span>
+                        <span class="wf-kw" onclick="goScan('no bookings')">no bookings</span>
+                        <span class="wf-kw" onclick="goScan('need more work')">need more work</span>
+                        <span class="wf-kw" onclick="goScan('struggling to get customers')">struggling</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button class="wf-go-btn" onclick="goPanel('feed')"><i class="fas fa-satellite-dish"></i> Scan</button>
+                </div>
+
+                <div class="wf-step" id="wfs-2">
+                  <div class="wf-step-left">
+                    <div class="wf-step-num">2</div>
+                    <div>
+                      <div class="wf-step-title">Score + pick top 5</div>
+                      <div class="wf-step-detail">Run Batch — auto-scores every lead, picks the 5 highest-intent, composes a personalised message for each.</div>
+                    </div>
+                  </div>
+                  <button class="wf-go-btn" onclick="goRunBatch()"><i class="fas fa-bolt"></i> Batch</button>
+                </div>
+
+                <div class="wf-step" id="wfs-3">
+                  <div class="wf-step-left">
+                    <div class="wf-step-num">3</div>
+                    <div>
+                      <div class="wf-step-title">Review &amp; fire</div>
+                      <div class="wf-step-detail">Edit any message, pick channel (Reddit DM / Email / SMS), hit Fire All. Done in under 2 minutes.</div>
+                    </div>
+                  </div>
+                  <button class="wf-go-btn" onclick="goRunBatch()"><i class="fas fa-paper-plane"></i> Fire</button>
+                </div>
+
+                <div class="wf-step" id="wfs-4">
+                  <div class="wf-step-left">
+                    <div class="wf-step-num">4</div>
+                    <div>
+                      <div class="wf-step-title">Track replies → pipeline</div>
+                      <div class="wf-step-detail">Any reply goes to CRM. Move them: New → Contacted → Booked. One booked call = £49–£500+ depending on your offer.</div>
+                    </div>
+                  </div>
+                  <button class="wf-go-btn" onclick="goPanel('crm')"><i class="fas fa-chart-line"></i> CRM</button>
+                </div>
+
+                <div class="wf-step" id="wfs-5">
+                  <div class="wf-step-left">
+                    <div class="wf-step-num">5</div>
+                    <div>
+                      <div class="wf-step-title">Follow up at 48 hrs</div>
+                      <div class="wf-step-detail">No reply? One follow-up moves 20–30% of cold leads. Check Outreach Queue → Queued for anyone pending.</div>
+                    </div>
+                  </div>
+                  <button class="wf-go-btn" onclick="goPanel('followups')"><i class="fas fa-clock-rotate-left"></i> Follow Up</button>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- RIGHT: SETUP CHECKLIST + SCALE PLAN -->
+            <div class="wf-col">
+
+              <div class="wf-section-hdr"><i class="fas fa-rocket"></i> One-Time Setup <span class="wf-badge" id="wf-setup-badge">0 / 4</span></div>
+              <div class="wf-checklist" id="wf-checklist">
+                <div class="wf-check-item" id="wfc-persona">
+                  <div class="wf-check-icon pending"><i class="fas fa-circle"></i></div>
+                  <div class="wf-check-body">
+                    <div class="wf-check-title">Set your persona</div>
+                    <div class="wf-check-sub">Name + offer — personalises every message</div>
+                  </div>
+                  <button class="wf-check-btn" onclick="goPanel('settings')">Set up</button>
+                </div>
+                <div class="wf-check-item" id="wfc-claude">
+                  <div class="wf-check-icon pending"><i class="fas fa-brain"></i></div>
+                  <div class="wf-check-body">
+                    <div class="wf-check-title">Claude AI key</div>
+                    <div class="wf-check-sub">Unlocks AI scoring + personalised messages · Free $5 credit</div>
+                  </div>
+                  <button class="wf-check-btn" onclick="openApiSetup('claude')">Add key</button>
+                </div>
+                <div class="wf-check-item" id="wfc-stripe">
+                  <div class="wf-check-icon pending"><i class="fas fa-credit-card"></i></div>
+                  <div class="wf-check-body">
+                    <div class="wf-check-title">Stripe key</div>
+                    <div class="wf-check-sub">Activates the £49/mo checkout on your demo page</div>
+                  </div>
+                  <button class="wf-check-btn" onclick="openApiSetup('stripe')">Add key</button>
+                </div>
+                <div class="wf-check-item" id="wfc-deploy">
+                  <div class="wf-check-icon pending"><i class="fas fa-server"></i></div>
+                  <div class="wf-check-body">
+                    <div class="wf-check-title">Deploy to Railway</div>
+                    <div class="wf-check-sub">Gets you a live URL to share with leads · 5 min</div>
+                  </div>
+                  <button class="wf-check-btn" id="wfc-deploy-btn" onclick="showDeploySteps()">How to</button>
+                </div>
+              </div>
+
+              <!-- DEPLOY STEPS (inline, hidden) -->
+              <div id="wf-deploy-steps" class="wf-deploy-box" style="display:none">
+                <div class="wf-deploy-step"><span class="wf-deploy-n">1</span> Go to <b>railway.app</b> → New Project → Deploy from GitHub</div>
+                <div class="wf-deploy-step"><span class="wf-deploy-n">2</span> Select repo <b>theSaaSsin/operator</b> · Branch: <b>claude/sleepy-swartz-f082ed</b></div>
+                <div class="wf-deploy-step"><span class="wf-deploy-n">3</span> Add env vars: <code>STRIPE_SECRET_KEY</code> + <code>SUPABASE_URL</code> + <code>SUPABASE_ANON_KEY</code></div>
+                <div class="wf-deploy-step"><span class="wf-deploy-n">4</span> Copy the Railway URL → paste as <code>APP_URL</code> env var → redeploy</div>
+                <div class="wf-deploy-step"><span class="wf-deploy-n">5</span> Share <b>your-app.railway.app/demo</b> with leads — that's your sales page</div>
+                <button class="btn btn-secondary btn-sm" style="margin-top:8px;width:100%" onclick="markDeployed()">✓ I've deployed it</button>
+              </div>
+
+              <!-- SCALE PLAN -->
+              <div class="wf-section-hdr" style="margin-top:20px"><i class="fas fa-chart-line"></i> Scale Plan</div>
+              <div class="wf-scale-table">
+                <div class="wf-scale-row hdr">
+                  <span>Daily routine</span><span>Leads/week</span><span>Revenue potential</span>
+                </div>
+                <div class="wf-scale-row">
+                  <span>1 keyword scan · 5 DMs</span><span>5–10</span><span>£49–£200/mo</span>
+                </div>
+                <div class="wf-scale-row">
+                  <span>3 keywords · Run Batch daily</span><span>20–30</span><span>£500–£1k/mo</span>
+                </div>
+                <div class="wf-scale-row">
+                  <span>3 platforms · Email + SMS</span><span>50–80</span><span>£2k–£5k/mo</span>
+                </div>
+                <div class="wf-scale-row highlight">
+                  <span>Onboard clients on same system</span><span>Per client</span><span>£500–£2k/client</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: FOLLOW-UPS ── -->
+      <div class="panel" id="panel-followups">
+        <div class="fu-wrap">
+          <div class="fu-header">
+            <div class="fu-hdr-top">
+              <div>
+                <div class="fu-hdr-title">48hr Follow-up Engine</div>
+                <div class="fu-hdr-sub">Silent leads convert on follow-up 20–30% of the time. Nudge them.</div>
+              </div>
+              <button class="btn btn-primary btn-sm" id="btn-fu-draft-all">
+                <i class="fas fa-wand-magic-sparkles"></i> Draft All
+              </button>
+            </div>
+            <div class="fu-threshold-row">
+              <span class="fu-threshold-label">Show sent older than</span>
+              <button class="fu-thr active" data-hrs="48">48 hrs</button>
+              <button class="fu-thr" data-hrs="24">24 hrs</button>
+              <button class="fu-thr" data-hrs="12">12 hrs</button>
+              <button class="fu-thr" data-hrs="0">All sent</button>
+              <div class="fu-stats-inline">
+                <span><b id="fu-n-ready">0</b> ready</span>
+                <span><b id="fu-n-done">0</b> sent</span>
+              </div>
+            </div>
+          </div>
+          <div class="fu-list" id="fu-list">
+            <div class="fu-empty">
+              <i class="fas fa-clock-rotate-left"></i>
+              <p>No messages to follow up yet</p>
+              <p style="font-size:.72rem;opacity:.6;margin-top:4px">Send a batch → come back in 48 hours · or switch to "All sent" to test now</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- ── PANEL: CLIENT CREATOR ── -->
       <div class="panel active" id="panel-client">

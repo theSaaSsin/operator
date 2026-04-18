@@ -425,6 +425,49 @@ tbody tr:hover td{background:rgba(255,255,255,0.02);}
 .wf-scale-row.hdr{font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
 .wf-scale-row.highlight{background:rgba(255,42,42,.06);color:var(--accent);font-weight:700;}
 
+/* FOLLOW-UPS PANEL */
+.fu-wrap{padding:20px;max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+.fu-header{display:flex;flex-direction:column;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.fu-hdr-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
+.fu-hdr-title{font-size:1.1rem;font-weight:800;color:var(--text);}
+.fu-hdr-sub{font-size:.75rem;color:var(--muted);margin-top:3px;}
+.fu-threshold-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.fu-threshold-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+.fu-thr{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
+.fu-thr:hover{color:var(--text);border-color:rgba(255,255,255,.2);}
+.fu-thr.active{background:var(--accent-d);border-color:var(--accent);color:var(--accent);}
+.fu-stats-inline{margin-left:auto;display:flex;gap:14px;font-size:.72rem;color:var(--muted);}
+.fu-stats-inline b{color:var(--accent);font-weight:800;margin-right:3px;}
+.fu-list{display:flex;flex-direction:column;gap:10px;}
+.fu-empty{text-align:center;padding:60px 20px;color:var(--muted);}
+.fu-empty i{font-size:2.2rem;color:var(--accent);opacity:.4;margin-bottom:14px;}
+.fu-empty p{margin:4px 0;font-size:.85rem;}
+.fu-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s;}
+.fu-card:hover{border-color:rgba(255,42,42,.2);}
+.fu-card-hdr{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.fu-card-name{font-size:.85rem;font-weight:700;color:var(--text);}
+.fu-card-badge{font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:10px;text-transform:uppercase;letter-spacing:.05em;background:rgba(255,42,42,.1);color:var(--accent);}
+.fu-card-age{font-size:.7rem;color:var(--muted);margin-left:auto;display:flex;align-items:center;gap:4px;}
+.fu-card-age.urgent{color:#ffb84d;}
+.fu-card-age.cold{color:#888;}
+.fu-card-original{background:rgba(255,255,255,.03);border-left:2px solid rgba(255,42,42,.3);padding:8px 12px;border-radius:0 6px 6px 0;font-size:.75rem;color:var(--muted);line-height:1.5;max-height:80px;overflow:hidden;position:relative;}
+.fu-card-original::after{content:"";position:absolute;bottom:0;left:0;right:0;height:20px;background:linear-gradient(transparent,var(--surface));pointer-events:none;}
+.fu-card-original-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);font-weight:700;margin-bottom:4px;}
+.fu-draft-wrap{display:none;flex-direction:column;gap:8px;}
+.fu-draft-wrap.visible{display:flex;}
+.fu-draft-textarea{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:7px;padding:10px 12px;color:var(--text);font-size:.82rem;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.5;outline:none;resize:vertical;min-height:90px;transition:border .2s;}
+.fu-draft-textarea:focus{border-color:var(--accent-g);}
+.fu-draft-meta{display:flex;justify-content:space-between;font-size:.65rem;color:var(--muted);}
+.fu-card-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.fu-btn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:6px 12px;font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:5px;}
+.fu-btn:hover{color:var(--text);border-color:rgba(255,255,255,.2);}
+.fu-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.fu-btn.primary:hover{opacity:.88;color:#fff;}
+.fu-btn:disabled{opacity:.5;cursor:not-allowed;}
+.fu-card.sent{opacity:.55;border-color:rgba(0,220,100,.2);}
+.fu-card.sent .fu-card-actions{display:none;}
+.fu-sent-flag{font-size:.7rem;color:#00dc64;font-weight:700;display:flex;align-items:center;gap:5px;}
+
 /* SCROLLBAR */
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:transparent;}

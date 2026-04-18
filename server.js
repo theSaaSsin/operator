@@ -610,6 +610,54 @@ Return JSON only: {"messages": [{"label": "Direct", "body": "..."}, {"label": "E
     const { error } = await supabase.from('outreach_queue').update({ status }).eq('id', id);
     if (error) return json(res, { ok: false, error: error.message }, 500);
     json(res, { ok: true });
+  },
+
+  // ── Follow-up nudge generator ───────────────────────────
+  'POST /api/generate-followup': async (req, res) => {
+    const { originalMessage = '', leadName = '', niche = '', channel = 'reddit', persona = {} } = await body(req);
+
+    const senderName  = persona.name  || 'I';
+    const senderOffer = persona.offer || 'help getting consistent clients';
+
+    // Template fallback — used when no Claude key
+    const firstName = (leadName || '').split(/\s+/)[0];
+    const template =
+      (firstName ? `Hey ${firstName}, ` : 'Hey, ') +
+      `wanted to circle back — no pressure if the timing's off. ` +
+      `Since I messaged, I've been thinking: the fastest win for ${niche || 'folks like you'} is usually just one consistent lead source running in the background. ` +
+      `Happy to show you how it'd look for your situation — 10 mins, zero pitch. Want me to send over a quick example?`;
+
+    if (!anthropic) return json(res, { ok: true, message: template, source: 'template' });
+
+    try {
+      const prompt = `Someone sent this outreach ~48 hours ago and got no reply. Write a short follow-up nudge.
+
+Original message sent:
+"""
+${originalMessage}
+"""
+
+Lead: ${leadName || 'unknown'} · Niche: ${niche || 'small business owner'} · Channel: ${channel}
+Sender: ${senderName} — offer: ${senderOffer}
+
+Rules:
+- 2-3 sentences, under 60 words total
+- Human tone, no "just checking in", no "bumping this"
+- Add ONE new angle of value or a different question than the original
+- Low pressure, end with a soft opt-out or easy yes/no question
+- No emojis, no signature, no subject line
+- Return ONLY the message body, nothing else`;
+
+      const msg = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }]
+      });
+      const body_ = msg.content[0].text.trim().replace(/^["'`]|["'`]$/g, '');
+      json(res, { ok: true, message: body_, source: 'ai' });
+    } catch (e) {
+      json(res, { ok: true, message: template, source: 'template', warning: e.message });
+    }
   }
 };
 
