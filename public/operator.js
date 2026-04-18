@@ -27,7 +27,7 @@ function toast(msg, type) {
 const panels = document.querySelectorAll('.panel');
 const navItems = document.querySelectorAll('.nav-item');
 const topbarTitle = document.getElementById('topbar-title');
-const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue', followups: 'Follow-ups · 48hr Engine', explorer: 'Keyword Lab · Find New Targets', revenue: 'Revenue & Pipeline', settings: 'Persona & API Keys', workflow: 'Daily Workflow' };
+const TITLES = { client: 'Brand Studio', outputs: 'Outputs · Brand Assets', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue', followups: 'Follow-ups · 48hr Engine', explorer: 'Keyword Lab · Find New Targets', revenue: 'Revenue & Pipeline', settings: 'Persona & API Keys', workflow: 'Daily Workflow' };
 
 navItems.forEach(item => {
   item.addEventListener('click', () => {
@@ -44,11 +44,59 @@ navItems.forEach(item => {
     if (target === 'followups') initFollowUpsPanel();
     if (target === 'explorer') initExplorerPanel();
     if (target === 'revenue') initRevenuePanel();
+    if (target === 'outputs') initOutputsPanel();
   });
 });
 
 /* ══════════════════════════════════
-   CLIENT CREATOR
+   OUTPUTS PANEL
+══════════════════════════════════ */
+let _opGeneratedHTML = '';
+let _opClientName    = '';
+
+function initOutputsPanel() {
+  // Wire tab buttons
+  document.querySelectorAll('.op-tab').forEach(btn => {
+    btn.onclick = () => switchOpTab(btn.dataset.tab);
+  });
+  // Show landing preview if we have generated HTML
+  if (_opGeneratedHTML) showOpLandingPreview(_opGeneratedHTML, _opClientName);
+}
+
+function switchOpTab(tab) {
+  document.querySelectorAll('.op-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.op-content').forEach(c => c.classList.toggle('active', c.id === 'op-' + tab));
+}
+
+function showOpLandingPreview(html, clientName) {
+  _opGeneratedHTML = html;
+  _opClientName    = clientName || '';
+  const empty   = document.getElementById('op-landing-empty');
+  const preview = document.getElementById('op-landing-preview');
+  const frame   = document.getElementById('op-preview-frame');
+  const nameEl  = document.getElementById('op-landing-client-name');
+  if (!empty || !preview || !frame) return;
+  if (nameEl) nameEl.textContent = clientName ? clientName + ' · Landing Page' : 'Landing Page';
+  empty.style.display   = 'none';
+  preview.style.display = 'flex';
+  frame.srcdoc = html;
+}
+
+function opDownloadLanding() {
+  if (!_opGeneratedHTML) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([_opGeneratedHTML], { type: 'text/html' }));
+  a.download = (_opClientName || 'landing').toLowerCase().replace(/\s+/g, '-') + '.html';
+  a.click();
+}
+
+function opCopyLanding() {
+  if (!_opGeneratedHTML) return;
+  navigator.clipboard.writeText(_opGeneratedHTML).then(() => toast('HTML copied to clipboard', 'ok'));
+}
+
+/* ══════════════════════════════════
+   CLIENT CREATOR (now Brand Studio)
 ══════════════════════════════════ */
 let selectedClient = null;
 let generatedHTML  = '';
@@ -267,6 +315,8 @@ document.getElementById('btn-generate').addEventListener('click', () => {
   /* 1. Landing page */
   generatedHTML = buildLandingPage({ name, niche, offer, goal, loc, profile, style });
   showPreview(generatedHTML);
+  // Mirror to Outputs panel so it's ready when the user navigates there
+  showOpLandingPreview(generatedHTML, name);
 
   /* 2. Full outreach sequence → outreach queue (only if system component enabled) */
   const sequence = buildOutreachSequence({ name, niche, offer, loc, profile, style });

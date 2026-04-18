@@ -59,7 +59,11 @@
       "Bash(node -e \"require\\('./server.js'\\)\")",
       "Bash(node --check server.js)",
       "Bash(node --check public/operator.js)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(node -c public/operator.js)",
+      "Bash(node -c server.js)",
+      "Bash(node -e \"require\\('./storage'\\)\")",
+      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); require\\('./storage'\\)\")"
     ]
   }
 }

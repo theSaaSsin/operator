@@ -8,6 +8,7 @@ const fs         = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 const Anthropic  = require('@anthropic-ai/sdk');
 const { Resend } = require('resend');
+const makeStorage = require('./storage');
 
 const PORT   = process.env.PORT || 4000;
 const PUBLIC = path.join(__dirname, 'public');
@@ -23,6 +24,7 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_ANON_KEY
 );
+const storage = makeStorage(supabase);
 
 let anthropic, resend, stripe;
 let HAS_HUNTER, HAS_TWILIO, HAS_TWITTER;
@@ -61,6 +63,44 @@ const ROUTES = {
 
   // Health check for Railway
   'GET /api/health': (_, res) => json(res, { ok: true, ts: Date.now() }),
+
+  // ── Public routes (no auth — called from deployed landing pages) ──
+  'GET /api/public/health': (_, res) => json(res, { ok: true }),
+
+  // Lead capture from deployed landing pages — adds to CRM
+  'POST /api/public/capture': async (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    const data = await body(req);
+    const name    = (data.name    || '').toString().trim().substring(0, 120);
+    const email   = (data.email   || '').toString().trim().substring(0, 200);
+    const phone   = (data.phone   || '').toString().trim().substring(0, 30);
+    const message = (data.message || '').toString().trim().substring(0, 1000);
+    const source  = (data.source  || 'landing-page').toString().substring(0, 100);
+
+    if (!name && !email) return json(res, { ok: false, error: 'name or email required' }, 400);
+
+    const record = {
+      id:       Date.now(),
+      name:     name || email,
+      business: data.business || '',
+      status:   'new',
+      score:    30,
+      score_reason: `Inbound via ${source}`,
+      platform: 'inbound',
+      url:      '',
+      title:    message ? message.substring(0, 120) : `Inbound from ${source}`,
+      body:     [message, email && `Email: ${email}`, phone && `Phone: ${phone}`].filter(Boolean).join('\n'),
+      author:   name || email,
+      subreddit: ''
+    };
+
+    const { error } = await storage.leads.create(record);
+    if (error) {
+      console.error('[capture]', error.message);
+      return json(res, { ok: false, error: 'Failed to save lead' }, 500);
+    }
+    json(res, { ok: true, message: 'Thanks! We\'ll be in touch soon.' });
+  },
 
   // ── Demo pages ────────────────────────────────────────
   'GET /demo': (_, res) => {
@@ -494,10 +534,9 @@ Return JSON only: {"messages": [{"label": "Direct", "body": "..."}, {"label": "E
 
   // ── Clients CRUD ──────────────────────────────────────
   'GET /api/clients': async (_, res) => {
-    const { data, error } = await supabase
-      .from('clients').select('*').order('created_at', { ascending: false });
+    const { data, error } = await storage.clients.list();
     if (error) return json(res, { clients: [], error: error.message }, 500);
-    json(res, { clients: (data || []).map(dbToClient) });
+    json(res, { clients: data });
   },
 
   'POST /api/clients': async (req, res) => {
@@ -516,9 +555,9 @@ Return JSON only: {"messages": [{"label": "Direct", "body": "..."}, {"label": "E
       systems:          data.systems || {},
       status:           'active'
     };
-    const { data: created, error } = await supabase.from('clients').insert(record).select().single();
+    const { data: created, error } = await storage.clients.create(record);
     if (error) return json(res, { ok: false, error: error.message }, 500);
-    json(res, { ok: true, client: dbToClient(created) });
+    json(res, { ok: true, client: created });
   },
 
   'PATCH /api/clients': async (req, res) => {
@@ -537,19 +576,17 @@ Return JSON only: {"messages": [{"label": "Direct", "body": "..."}, {"label": "E
       systems:          rest.systems,
       last_updated:     new Date().toISOString()
     };
-    // strip undefined
     Object.keys(update).forEach(k => update[k] === undefined && delete update[k]);
-    const { data: updated, error } = await supabase.from('clients').update(update).eq('id', id).select().single();
+    const { data: updated, error } = await storage.clients.update(id, update);
     if (error) return json(res, { ok: false, error: error.message }, 500);
-    json(res, { ok: true, client: dbToClient(updated) });
+    json(res, { ok: true, client: updated });
   },
 
   // ── Leads CRUD ────────────────────────────────────────
   'GET /api/leads': async (_, res) => {
-    const { data, error } = await supabase
-      .from('leads').select('*').order('score', { ascending: false });
+    const { data, error } = await storage.leads.list();
     if (error) return json(res, { leads: [], error: error.message }, 500);
-    json(res, { leads: (data || []).map(dbToLead) });
+    json(res, { leads: data });
   },
 
   'POST /api/leads': async (req, res) => {
@@ -568,24 +605,23 @@ Return JSON only: {"messages": [{"label": "Direct", "body": "..."}, {"label": "E
       author:   data.author || '',
       subreddit: data.subreddit || ''
     };
-    const { data: created, error } = await supabase.from('leads').insert(record).select().single();
+    const { data: created, error } = await storage.leads.create(record);
     if (error) return json(res, { ok: false, error: error.message }, 500);
     json(res, { ok: true, lead: created });
   },
 
   'PATCH /api/leads': async (req, res) => {
     const { id, ...rest } = await body(req);
-    const { error } = await supabase.from('leads').update(rest).eq('id', id);
+    const { error } = await storage.leads.update(id, rest);
     if (error) return json(res, { ok: false, error: error.message }, 500);
     json(res, { ok: true });
   },
 
   // ── Outreach Queue CRUD ───────────────────────────────
   'GET /api/outreach': async (_, res) => {
-    const { data, error } = await supabase
-      .from('outreach_queue').select('*').order('created_at', { ascending: false });
+    const { data, error } = await storage.outreach.list();
     if (error) return json(res, { queue: [], error: error.message }, 500);
-    json(res, { queue: (data || []).map(dbToOutreach) });
+    json(res, { queue: data });
   },
 
   'POST /api/outreach': async (req, res) => {
@@ -600,14 +636,14 @@ Return JSON only: {"messages": [{"label": "Direct", "body": "..."}, {"label": "E
       lead_id:     data.lead_id || null,
       recipient_email: data.recipient_email || ''
     };
-    const { data: created, error } = await supabase.from('outreach_queue').insert(record).select().single();
+    const { data: created, error } = await storage.outreach.create(record);
     if (error) return json(res, { ok: false, error: error.message }, 500);
     json(res, { ok: true, item: created });
   },
 
   'PATCH /api/outreach': async (req, res) => {
     const { id, status } = await body(req);
-    const { error } = await supabase.from('outreach_queue').update({ status }).eq('id', id);
+    const { error } = await storage.outreach.update(id, { status });
     if (error) return json(res, { ok: false, error: error.message }, 500);
     json(res, { ok: true });
   },
@@ -774,59 +810,6 @@ Rules:
     }
   }
 };
-
-// ── camelCase shims for operator.js compatibility ─────────
-function dbToClient(c) {
-  if (!c) return null;
-  return {
-    id:               c.id,
-    businessName:     c.business_name,
-    niche:            c.niche,
-    offer:            c.offer,
-    goal:             c.goal,
-    location:         c.location,
-    notes:            c.notes,
-    tone:             c.tone,
-    systemComponents: c.system_components,
-    style:            c.style,
-    systems:          c.systems,
-    status:           c.status,
-    createdAt:        c.created_at,
-    lastUpdated:      c.last_updated
-  };
-}
-function dbToLead(l) {
-  if (!l) return null;
-  return {
-    id:           l.id,
-    name:         l.name,
-    business:     l.business,
-    status:       l.status,
-    score:        l.score,
-    score_reason: l.score_reason,
-    platform:     l.platform,
-    url:          l.url,
-    title:        l.title,
-    text:         l.body,
-    author:       l.author,
-    subreddit:    l.subreddit,
-    createdAt:    l.created_at
-  };
-}
-function dbToOutreach(q) {
-  if (!q) return null;
-  return {
-    id:             q.id,
-    clientName:     q.client_name,
-    niche:          q.niche,
-    label:          q.label,
-    message:        q.message,
-    status:         q.status,
-    lead_id:        q.lead_id,
-    recipientEmail: q.recipient_email,
-    createdAt:      q.created_at
-  };
-}
 
 // ── HTTP Server ───────────────────────────────────────────
 http.createServer(async (req, res) => {

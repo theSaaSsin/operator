@@ -20,22 +20,21 @@
     <nav>
       <div class="nav-section">Build</div>
       <div class="nav-item active" data-panel="client">
-        <i class="fas fa-user-plus"></i> Client Creator
+        <i class="fas fa-wand-magic-sparkles"></i> Brand Studio
       </div>
-      <div class="nav-section">Daily</div>
-      <div class="nav-item" data-panel="workflow">
-        <i class="fas fa-crosshairs"></i> Workflow
+      <div class="nav-item" data-panel="outputs">
+        <i class="fas fa-layer-group"></i> Outputs
       </div>
-      <div class="nav-section">Tools</div>
-      <div class="nav-item" data-panel="explorer">
-        <i class="fas fa-compass"></i> Keyword Lab
-      </div>
+      <div class="nav-section">Find</div>
       <div class="nav-item" data-panel="feed">
         <i class="fas fa-satellite-dish"></i> Lead Feed
       </div>
+      <div class="nav-item" data-panel="explorer">
+        <i class="fas fa-compass"></i> Keyword Lab
+      </div>
       <div class="nav-section">Manage</div>
-      <div class="nav-item" data-panel="revenue">
-        <i class="fas fa-sack-dollar"></i> Revenue
+      <div class="nav-item" data-panel="workflow">
+        <i class="fas fa-crosshairs"></i> Daily Workflow
       </div>
       <div class="nav-item" data-panel="crm">
         <i class="fas fa-chart-line"></i> CRM / Leads
@@ -45,6 +44,10 @@
       </div>
       <div class="nav-item" data-panel="followups">
         <i class="fas fa-clock-rotate-left"></i> Follow-ups
+      </div>
+      <div class="nav-section">Monetise</div>
+      <div class="nav-item" data-panel="revenue">
+        <i class="fas fa-sack-dollar"></i> Revenue
       </div>
       <div class="nav-section">Account</div>
       <div class="nav-item" data-panel="settings">
@@ -737,6 +740,119 @@
         <div class="out-list" id="out-list"></div>
       </div>
 
+      <!-- ── PANEL: OUTPUTS ── -->
+      <div class="panel" id="panel-outputs">
+        <div class="op-wrap">
+
+          <div class="op-tabs" id="op-tabs">
+            <button class="op-tab active" data-tab="landing">
+              <i class="fas fa-globe"></i> Landing Page
+            </button>
+            <button class="op-tab" data-tab="logo">
+              <i class="fas fa-trademark"></i> Logo Kit
+              <span class="op-tab-phase">Phase 1</span>
+            </button>
+            <button class="op-tab" data-tab="socials">
+              <i class="fas fa-images"></i> Social Images
+              <span class="op-tab-phase">Phase 4</span>
+            </button>
+            <button class="op-tab" data-tab="pitch">
+              <i class="fas fa-file-invoice"></i> Pitch Doc
+              <span class="op-tab-phase">Phase 1</span>
+            </button>
+            <button class="op-tab" data-tab="export">
+              <i class="fas fa-box-archive"></i> Export
+              <span class="op-tab-phase">Phase 6</span>
+            </button>
+          </div>
+
+          <!-- LANDING -->
+          <div class="op-content active" id="op-landing">
+            <div id="op-landing-preview" style="display:none;height:100%;flex-direction:column;gap:12px">
+              <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+                <span id="op-landing-client-name" style="font-size:.82rem;font-weight:700;color:var(--fg)"></span>
+                <button class="btn btn-secondary btn-sm" id="op-btn-download" onclick="opDownloadLanding()">
+                  <i class="fas fa-download"></i> Download HTML
+                </button>
+                <button class="btn btn-secondary btn-sm" id="op-btn-copy" onclick="opCopyLanding()">
+                  <i class="fas fa-copy"></i> Copy HTML
+                </button>
+              </div>
+              <iframe id="op-preview-frame" style="flex:1;border:none;border-radius:8px;background:#fff"></iframe>
+            </div>
+            <div class="op-empty" id="op-landing-empty">
+              <i class="fas fa-globe"></i>
+              <h3>Landing Page</h3>
+              <p>Generate a brand system from <b>Brand Studio</b> — your page will appear here.</p>
+              <button class="btn btn-primary" onclick="goPanel('client')">
+                <i class="fas fa-wand-magic-sparkles"></i> Open Brand Studio
+              </button>
+              <div class="op-coming-row">
+                <span class="op-phase-badge">Phase 2</span>
+                5 premium templates — Editorial · Agency · Brutalist · Tech/Dark · Minimal
+              </div>
+            </div>
+          </div>
+
+          <!-- LOGO KIT -->
+          <div class="op-content" id="op-logo">
+            <div class="op-empty">
+              <i class="fas fa-trademark"></i>
+              <h3>Logo Kit</h3>
+              <p>Algorithmically-generated SVG logos — wordmark, monogram, and favicon in 6 niche-matched style variants. Instant download, infinitely scalable.</p>
+              <div class="op-coming-row">
+                <span class="op-phase-badge">Coming in Phase 1</span>
+                Wordmark · Monogram · Favicon · 6 style variants · Colour-matched to brand palette
+              </div>
+            </div>
+          </div>
+
+          <!-- SOCIAL IMAGES -->
+          <div class="op-content" id="op-socials">
+            <div class="op-empty">
+              <i class="fas fa-images"></i>
+              <h3>Social Images</h3>
+              <p>Branded social assets generated in seconds — every format, every platform, on-brand automatically.</p>
+              <div class="op-coming-row">
+                <span class="op-phase-badge">Coming in Phase 4</span>
+                IG Post (1080×1080) · IG Story (1080×1920) · LinkedIn Banner · Twitter/X Card · Facebook Cover
+              </div>
+            </div>
+          </div>
+
+          <!-- PITCH DOC -->
+          <div class="op-content" id="op-pitch">
+            <div class="op-empty">
+              <i class="fas fa-file-invoice"></i>
+              <h3>Pitch Document</h3>
+              <p>A printable one-pager in the client's brand voice — problem, solution, timeline, price, guarantee, next step. Print-to-PDF in one click.</p>
+              <div class="op-coming-row">
+                <span class="op-phase-badge">Coming in Phase 1</span>
+                HTML pitch · Print-to-PDF · Brand-matched typography · Editable inline
+              </div>
+            </div>
+          </div>
+
+          <!-- EXPORT -->
+          <div class="op-content" id="op-export">
+            <div class="op-empty">
+              <i class="fas fa-box-archive"></i>
+              <h3>Export &amp; Deploy</h3>
+              <p>One click — everything zipped and deployed live. Your client gets a real URL in 5 seconds.</p>
+              <div class="op-coming-row op-coming-row--multi">
+                <div><span class="op-phase-badge">Coming in Phase 6</span></div>
+                <div class="op-coming-items">
+                  <span><i class="fas fa-file-zipper"></i> ZIP download (landing + logo + socials + pitch + brand.json)</span>
+                  <span><i class="fas fa-cloud-arrow-up"></i> Cloudflare Pages deploy — live URL in 5 sec</span>
+                  <span><i class="fas fa-satellite-dish"></i> Deployed pages auto-capture leads back into your CRM</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
     </div><!-- /content -->
   </div><!-- /main -->
 </div><!-- /app -->
@@ -889,6 +1005,7 @@
 </div>
 
 <div id="toast"></div>
+<script src="config.js"></script>
 <script src="operator.js"></script>
 </body>
 </html>
