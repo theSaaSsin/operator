@@ -63,7 +63,10 @@
       "Bash(node -c public/operator.js)",
       "Bash(node -c server.js)",
       "Bash(node -e \"require\\('./storage'\\)\")",
-      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); require\\('./storage'\\)\")"
+      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); require\\('./storage'\\)\")",
+      "WebSearch",
+      "WebFetch(domain:www.instagram.com)",
+      "WebFetch(domain:dexter.copilot.live)"
     ]
   }
 }
