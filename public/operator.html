@@ -27,6 +27,9 @@
         <i class="fas fa-crosshairs"></i> Workflow
       </div>
       <div class="nav-section">Tools</div>
+      <div class="nav-item" data-panel="explorer">
+        <i class="fas fa-compass"></i> Keyword Lab
+      </div>
       <div class="nav-item" data-panel="feed">
         <i class="fas fa-satellite-dish"></i> Lead Feed
       </div>
@@ -219,6 +222,44 @@
                 </div>
               </div>
 
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: KEYWORD EXPLORER ── -->
+      <div class="panel" id="panel-explorer">
+        <div class="kx-wrap">
+          <div class="kx-header">
+            <div class="kx-hdr-top">
+              <div>
+                <div class="kx-hdr-title">Keyword Lab</div>
+                <div class="kx-hdr-sub">AI generates 15 fresh subreddit + keyword combos tailored to your offer. Click any to scan instantly.</div>
+              </div>
+              <button class="btn btn-primary" id="btn-kx-generate">
+                <i class="fas fa-wand-magic-sparkles"></i> Generate 15
+              </button>
+            </div>
+            <div class="kx-persona-strip" id="kx-persona-strip">
+              <span class="kx-p-label">Your target:</span>
+              <span id="kx-p-offer" class="kx-p-tag">—</span>
+              <span id="kx-p-market" class="kx-p-tag">—</span>
+              <span class="kx-seed-wrap">
+                <input type="text" id="kx-seed" class="kx-seed-input" placeholder="Optional seed idea (e.g. 'plumbers London')">
+              </span>
+            </div>
+          </div>
+
+          <div class="kx-saved-wrap" id="kx-saved-wrap" style="display:none">
+            <div class="kx-section-label"><i class="fas fa-bookmark"></i> Saved combos</div>
+            <div class="kx-saved" id="kx-saved"></div>
+          </div>
+
+          <div class="kx-list" id="kx-list">
+            <div class="kx-empty">
+              <i class="fas fa-compass"></i>
+              <p>Hit <b>Generate 15</b> to get fresh scan targets</p>
+              <p style="font-size:.72rem;opacity:.6;margin-top:4px">Works with or without a Claude key — AI gives richer combos</p>
             </div>
           </div>
         </div>

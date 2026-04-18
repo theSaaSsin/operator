@@ -612,6 +612,64 @@ Return JSON only: {"messages": [{"label": "Direct", "body": "..."}, {"label": "E
     json(res, { ok: true });
   },
 
+  // ── Keyword Explorer: AI-generated scan combos ──────────
+  'POST /api/explore-keywords': async (req, res) => {
+    const { persona = {}, seed = '' } = await body(req);
+    const market = persona.market || 'small service businesses';
+    const offer  = persona.offer  || 'client acquisition system';
+
+    const fallback = [
+      { keyword: 'struggling to get customers',     subreddit: 'smallbusiness',    reason: 'Direct pain — actively searching for a fix' },
+      { keyword: 'no leads coming in',              subreddit: 'entrepreneur',     reason: 'High-intent, revenue pressure' },
+      { keyword: 'dead month',                      subreddit: 'sweatystartup',    reason: 'Trade-specific urgency — owners ready to spend' },
+      { keyword: 'how do you get clients',          subreddit: 'freelance',        reason: 'New operators, willing to pay for shortcuts' },
+      { keyword: 'no bookings',                     subreddit: 'smallbusinessuk',  reason: 'UK service trades — quickest to close locally' },
+      { keyword: 'slow summer',                     subreddit: 'sweatystartup',    reason: 'Seasonal urgency lowers sales resistance' },
+      { keyword: 'tried facebook ads wasted money', subreddit: 'marketinghelp',    reason: 'Burned-by-ads persona — primed for organic lead-gen' },
+      { keyword: 'first client tips',               subreddit: 'sidehustle',       reason: 'Early-stage, high-conversion intent' },
+      { keyword: 'cold email not working',          subreddit: 'sales',            reason: 'Already running outreach, needs better system' },
+      { keyword: 'need work fast',                  subreddit: 'forhire',          reason: 'Cash-flow urgency — immediate buyer' },
+      { keyword: 'growing my agency',               subreddit: 'agency',           reason: 'Agency owners looking for white-label ops' },
+      { keyword: 'starting out freelance',          subreddit: 'entrepreneur_ride_along', reason: 'Low-noise sub with engaged readers' },
+      { keyword: 'no one responding to dms',        subreddit: 'digital_marketing',reason: 'Operators looking for a working outreach system' },
+      { keyword: 'how to scale past 5k',            subreddit: 'growmybusiness',   reason: 'Small-but-stuck owners — willing to pay' },
+      { keyword: 'quitting my business',            subreddit: 'smallbusiness',    reason: 'Last-resort mindset — most desperate, most flexible' }
+    ];
+
+    if (!anthropic) return json(res, { ok: true, combos: fallback, source: 'template' });
+
+    try {
+      const prompt = `You help operators find Reddit prospects who need "${offer}".
+Target market: ${market}.${seed ? '\nSeed idea from operator: ' + seed : ''}
+
+Generate 15 keyword + subreddit combos that match business owners with active pain.
+
+Rules:
+- Keywords = exact PHRASES owners type when struggling ("no bookings this month", "can't find clients", "dead month")
+- Not generic terms ("marketing", "advertising") — always a complaint or question phrase
+- Real subreddits only: smallbusiness, smallbusinessuk, entrepreneur, sweatystartup, sidehustle, freelance, businessowners, digital_marketing, marketinghelp, agency, startups, sales, growmybusiness, entrepreneur_ride_along, forhire
+- Mix: ~40% high-desperation (revenue emergency), ~40% active-search (trying to fix), ~20% goal-oriented (growing)
+- "reason" = one short sentence (max 12 words) why this combo finds buyers
+
+Return JSON only:
+{"combos":[{"keyword":"...","subreddit":"...","reason":"..."}]}`;
+
+      const msg = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: prompt }]
+      });
+      const raw = msg.content[0].text.trim();
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (!m) throw new Error('no JSON');
+      const parsed = JSON.parse(m[0]);
+      const combos = (parsed.combos || []).filter(c => c.keyword && c.subreddit);
+      json(res, { ok: true, combos: combos.length ? combos : fallback, source: combos.length ? 'ai' : 'template' });
+    } catch (e) {
+      json(res, { ok: true, combos: fallback, source: 'fallback', warning: e.message });
+    }
+  },
+
   // ── Follow-up nudge generator ───────────────────────────
   'POST /api/generate-followup': async (req, res) => {
     const { originalMessage = '', leadName = '', niche = '', channel = 'reddit', persona = {} } = await body(req);

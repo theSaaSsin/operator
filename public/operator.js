@@ -27,7 +27,7 @@ function toast(msg, type) {
 const panels = document.querySelectorAll('.panel');
 const navItems = document.querySelectorAll('.nav-item');
 const topbarTitle = document.getElementById('topbar-title');
-const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue', followups: 'Follow-ups · 48hr Engine', settings: 'Persona & API Keys', workflow: 'Daily Workflow' };
+const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue', followups: 'Follow-ups · 48hr Engine', explorer: 'Keyword Lab · Find New Targets', settings: 'Persona & API Keys', workflow: 'Daily Workflow' };
 
 navItems.forEach(item => {
   item.addEventListener('click', () => {
@@ -42,6 +42,7 @@ navItems.forEach(item => {
     if (target === 'settings') initSettingsPanel();
     if (target === 'workflow') initWorkflowPanel();
     if (target === 'followups') initFollowUpsPanel();
+    if (target === 'explorer') initExplorerPanel();
   });
 });
 
@@ -2895,6 +2896,7 @@ function goPanel(name) {
   if (name === 'settings') initSettingsPanel();
   if (name === 'workflow') initWorkflowPanel();
   if (name === 'followups') initFollowUpsPanel();
+  if (name === 'explorer') initExplorerPanel();
 }
 
 function goScan(keyword) {
@@ -3284,6 +3286,143 @@ function skipFollowUp(id) {
   if (card) card.remove();
   const remaining = document.querySelectorAll('.fu-card').length;
   document.getElementById('fu-n-ready').textContent = remaining;
+}
+
+/* ══════════════════════════════════
+   KEYWORD LAB · EXPLORER
+══════════════════════════════════ */
+let _kxCombos       = [];
+let _kxBinding      = false;
+
+function _kxBindOnce() {
+  if (_kxBinding) return;
+  _kxBinding = true;
+  document.getElementById('btn-kx-generate')?.addEventListener('click', generateCombos);
+  document.getElementById('kx-seed')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') generateCombos();
+  });
+}
+
+function initExplorerPanel() {
+  _kxBindOnce();
+  const p = loadPersona();
+  document.getElementById('kx-p-offer').textContent  = p.offer  || 'Set your offer in Settings';
+  document.getElementById('kx-p-market').textContent = p.market || 'Target market not set';
+  renderSavedCombos();
+}
+
+async function generateCombos() {
+  const btn   = document.getElementById('btn-kx-generate');
+  const list  = document.getElementById('kx-list');
+  const seed  = (document.getElementById('kx-seed')?.value || '').trim();
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Generating…'; }
+  if (list) list.innerHTML = '<div class="kx-loading"><i class="fas fa-circle-notch"></i> Claude is mapping fresh subreddit combos for your offer…</div>';
+
+  try {
+    const r = await fetch(API + '/explore-keywords', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ persona: loadPersona(), seed })
+    });
+    const d = await r.json();
+    _kxCombos = d.combos || [];
+    if (!_kxCombos.length) {
+      list.innerHTML = '<div class="kx-empty"><i class="fas fa-triangle-exclamation"></i><p>No combos generated — try a more specific seed</p></div>';
+      return;
+    }
+    renderCombos(d.source);
+    toast(`${_kxCombos.length} ${d.source === 'ai' ? 'AI-tailored' : 'template'} combos ready`, 'ok');
+  } catch {
+    list.innerHTML = '<div class="kx-empty"><i class="fas fa-plug-circle-xmark"></i><p>Couldn\'t reach the server</p></div>';
+    toast('Keyword generation failed', 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate 15'; }
+  }
+}
+
+function renderCombos(source) {
+  const list = document.getElementById('kx-list');
+  if (!list) return;
+  list.innerHTML = _kxCombos.map((c, i) => {
+    const kw  = (c.keyword || '').replace(/</g, '&lt;');
+    const sub = (c.subreddit || '').replace(/</g, '&lt;');
+    const why = (c.reason || '').replace(/</g, '&lt;');
+    return `
+      <div class="kx-card">
+        <div class="kx-card-sub">${sub}</div>
+        <div class="kx-card-kw">${kw}</div>
+        <div class="kx-card-why">${why}</div>
+        <div class="kx-card-actions">
+          <button class="kx-btn primary" onclick="scanCombo(${i})"><i class="fas fa-satellite-dish"></i> Scan Now</button>
+          <button class="kx-btn" onclick="saveCombo(${i})" title="Save"><i class="fas fa-bookmark"></i></button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function scanCombo(i) {
+  const c = _kxCombos[i];
+  if (!c) return;
+  goPanel('feed');
+  activeFeedKw = c.keyword;
+  const input = document.getElementById('feed-custom-kw');
+  if (input) input.value = c.keyword;
+  document.querySelectorAll('.kw-btn').forEach(b => b.classList.remove('active'));
+  // If the combo's subreddit is a Reddit target, let fetchFeed handle the sub whitelist
+  setTimeout(() => fetchFeed(c.keyword), 150);
+  toast(`Scanning r/${c.subreddit} for "${c.keyword}"`, 'ok');
+}
+
+function saveCombo(i) {
+  const c = _kxCombos[i];
+  if (!c) return;
+  const saved = JSON.parse(localStorage.getItem('ts_saved_combos') || '[]');
+  if (saved.some(s => s.keyword === c.keyword && s.subreddit === c.subreddit)) {
+    toast('Already saved', 'err');
+    return;
+  }
+  saved.push({ keyword: c.keyword, subreddit: c.subreddit, reason: c.reason });
+  localStorage.setItem('ts_saved_combos', JSON.stringify(saved));
+  renderSavedCombos();
+  toast('Saved — shortcut added', 'ok');
+}
+
+function renderSavedCombos() {
+  const wrap = document.getElementById('kx-saved-wrap');
+  const box  = document.getElementById('kx-saved');
+  if (!wrap || !box) return;
+  const saved = JSON.parse(localStorage.getItem('ts_saved_combos') || '[]');
+  if (!saved.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  box.innerHTML = saved.map((s, i) => {
+    const kw  = (s.keyword   || '').replace(/</g, '&lt;');
+    const sub = (s.subreddit || '').replace(/</g, '&lt;');
+    return `
+      <span class="kx-saved-pill" onclick="scanSavedCombo(${i})" title="r/${sub} · ${s.reason || ''}">
+        <i class="fas fa-play" style="font-size:.6rem;color:var(--accent)"></i>
+        ${kw}
+        <span class="kx-pill-x" onclick="event.stopPropagation();removeSavedCombo(${i})"><i class="fas fa-times"></i></span>
+      </span>`;
+  }).join('');
+}
+
+function scanSavedCombo(i) {
+  const saved = JSON.parse(localStorage.getItem('ts_saved_combos') || '[]');
+  const c = saved[i];
+  if (!c) return;
+  goPanel('feed');
+  activeFeedKw = c.keyword;
+  const input = document.getElementById('feed-custom-kw');
+  if (input) input.value = c.keyword;
+  document.querySelectorAll('.kw-btn').forEach(b => b.classList.remove('active'));
+  setTimeout(() => fetchFeed(c.keyword), 150);
+}
+
+function removeSavedCombo(i) {
+  const saved = JSON.parse(localStorage.getItem('ts_saved_combos') || '[]');
+  saved.splice(i, 1);
+  localStorage.setItem('ts_saved_combos', JSON.stringify(saved));
+  renderSavedCombos();
 }
 
 /* ── INIT ── */
