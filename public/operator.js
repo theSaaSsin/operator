@@ -27,7 +27,7 @@ function toast(msg, type) {
 const panels = document.querySelectorAll('.panel');
 const navItems = document.querySelectorAll('.nav-item');
 const topbarTitle = document.getElementById('topbar-title');
-const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue', followups: 'Follow-ups · 48hr Engine', explorer: 'Keyword Lab · Find New Targets', settings: 'Persona & API Keys', workflow: 'Daily Workflow' };
+const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue', followups: 'Follow-ups · 48hr Engine', explorer: 'Keyword Lab · Find New Targets', revenue: 'Revenue & Pipeline', settings: 'Persona & API Keys', workflow: 'Daily Workflow' };
 
 navItems.forEach(item => {
   item.addEventListener('click', () => {
@@ -43,6 +43,7 @@ navItems.forEach(item => {
     if (target === 'workflow') initWorkflowPanel();
     if (target === 'followups') initFollowUpsPanel();
     if (target === 'explorer') initExplorerPanel();
+    if (target === 'revenue') initRevenuePanel();
   });
 });
 
@@ -2897,6 +2898,7 @@ function goPanel(name) {
   if (name === 'workflow') initWorkflowPanel();
   if (name === 'followups') initFollowUpsPanel();
   if (name === 'explorer') initExplorerPanel();
+  if (name === 'revenue') initRevenuePanel();
 }
 
 function goScan(keyword) {
@@ -3423,6 +3425,247 @@ function removeSavedCombo(i) {
   saved.splice(i, 1);
   localStorage.setItem('ts_saved_combos', JSON.stringify(saved));
   renderSavedCombos();
+}
+
+/* ══════════════════════════════════
+   REVENUE DASHBOARD
+══════════════════════════════════ */
+let _revBinding = false;
+let _revData    = null;  // last /api/revenue response
+let _revLeads   = [];    // leads cache for pipeline breakdown
+
+function _revCurrency(cur) {
+  const c = (cur || 'gbp').toLowerCase();
+  return c === 'gbp' ? '£' : c === 'eur' ? '€' : c === 'usd' ? '$' : (cur + ' ');
+}
+function _revFmt(amountMinor, cur) {
+  const sym = _revCurrency(cur);
+  const n = (amountMinor || 0) / 100;
+  return sym + n.toLocaleString('en-GB', { maximumFractionDigits: n >= 1000 ? 0 : 2 });
+}
+function _revFmtPounds(pounds, cur) {
+  const sym = _revCurrency(cur);
+  return sym + Number(pounds || 0).toLocaleString('en-GB', { maximumFractionDigits: 0 });
+}
+function _revTimeAgo(ts) {
+  const d = Date.now() - ts * 1000;
+  const h = Math.floor(d / 3600000);
+  if (h < 1)  return Math.max(1, Math.floor(d / 60000)) + 'm ago';
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+function _revBindOnce() {
+  if (_revBinding) return;
+  _revBinding = true;
+  document.getElementById('btn-rev-log-win')?.addEventListener('click', openLogWin);
+  const goalInput = document.getElementById('rev-goal-input');
+  const perInput  = document.getElementById('rev-per-client');
+  goalInput?.addEventListener('input', () => {
+    localStorage.setItem('ts_weekly_goal', goalInput.value);
+    updateRevenueProgress();
+  });
+  perInput?.addEventListener('input', () => {
+    localStorage.setItem('ts_per_client_value', perInput.value);
+    renderPipelineBreakdown();
+    updateRevenueProgress();
+  });
+}
+
+async function initRevenuePanel() {
+  _revBindOnce();
+
+  // Restore settings
+  const goalInput = document.getElementById('rev-goal-input');
+  const perInput  = document.getElementById('rev-per-client');
+  if (goalInput) goalInput.value = localStorage.getItem('ts_weekly_goal') || '500';
+  if (perInput)  perInput.value  = localStorage.getItem('ts_per_client_value') || '500';
+
+  // Parallel: Stripe revenue + leads for pipeline
+  try {
+    const [revR, leadsR] = await Promise.all([
+      fetch(API + '/revenue').then(r => r.json()),
+      fetch(API + '/leads').then(r => r.json())
+    ]);
+    _revData  = revR;
+    _revLeads = leadsR.leads || [];
+  } catch {
+    _revData  = { ok: false, hasStripe: false, mrr: 0, activeSubs: 0, last30dGross: 0, currency: 'gbp', recent: [] };
+    _revLeads = [];
+  }
+
+  renderRevenueStats();
+  renderPipelineBreakdown();
+  renderRevenueFeed();
+  updateRevenueProgress();
+}
+
+function renderRevenueStats() {
+  const d = _revData || {};
+  const cur = d.currency || 'gbp';
+  document.getElementById('rev-mrr').textContent  = d.hasStripe ? _revFmt(d.mrr, cur)           : '—';
+  document.getElementById('rev-30d').textContent  = d.hasStripe ? _revFmt(d.last30dGross, cur)  : '—';
+  document.getElementById('rev-subs').textContent = d.hasStripe ? String(d.activeSubs || 0)     : '—';
+
+  const note = document.getElementById('rev-mrr-note');
+  if (note) note.textContent = d.hasStripe
+    ? (d.warning ? 'Stripe warning: ' + d.warning : 'Live from Stripe')
+    : 'Click API Keys → add Stripe to unlock';
+}
+
+function renderPipelineBreakdown() {
+  const list = document.getElementById('rev-pipe-list');
+  const perClient = Number(localStorage.getItem('ts_per_client_value') || 500);
+  const leads = _revLeads || [];
+  if (!leads.length) {
+    if (list) list.innerHTML = '<div class="rev-pipe-empty">No leads yet — scan the feed and import some</div>';
+    document.getElementById('rev-pipeline').textContent = '—';
+    return;
+  }
+  // Count by status — active pipeline = new + contacted + qualified; won = closed
+  const buckets = { new: 0, contacted: 0, qualified: 0, closed: 0 };
+  for (const l of leads) {
+    const s = (l.status || 'new').toLowerCase();
+    if (buckets[s] !== undefined) buckets[s]++;
+    else buckets.new++;
+  }
+
+  const pipelineValue = (buckets.new + buckets.contacted + buckets.qualified) * perClient;
+  const wonValue      = buckets.closed * perClient;
+  const cur = _revData?.currency || 'gbp';
+  document.getElementById('rev-pipeline').textContent = _revFmtPounds(pipelineValue, cur);
+  document.getElementById('rev-pipe-note').textContent = buckets.closed ? `+ ${_revFmtPounds(wonValue, cur)} closed` : '';
+
+  const rows = [
+    { status: 'new',       count: buckets.new,       val: buckets.new * perClient,       label: 'Cold / new' },
+    { status: 'contacted', count: buckets.contacted, val: buckets.contacted * perClient, label: 'In conversation' },
+    { status: 'qualified', count: buckets.qualified, val: buckets.qualified * perClient, label: 'Qualified' },
+    { status: 'closed',    count: buckets.closed,    val: buckets.closed * perClient,    label: 'Closed / won' }
+  ];
+  if (list) list.innerHTML = rows.map(r => `
+    <div class="rev-pipe-row">
+      <span class="rev-pipe-status ${r.status}">${r.status}</span>
+      <span>${r.label}</span>
+      <span class="rev-pipe-count">${r.count} lead${r.count === 1 ? '' : 's'}</span>
+      <span class="rev-pipe-val">${_revFmtPounds(r.val, cur)}</span>
+    </div>
+  `).join('');
+}
+
+function renderRevenueFeed() {
+  const feed = document.getElementById('rev-feed');
+  if (!feed) return;
+  const wins = JSON.parse(localStorage.getItem('ts_wins') || '[]');
+  const stripeItems = (_revData?.recent || []).map(c => ({
+    source: 'stripe',
+    amount: c.amount,
+    cur:    c.currency,
+    ts:     c.created * 1000,
+    title:  c.description || 'Stripe payment',
+    sub:    c.customer_email || ''
+  }));
+  const winItems = wins.map((w, i) => ({
+    source: 'manual',
+    amount: Math.round(Number(w.amount || 0) * 100),
+    cur:    w.currency || 'gbp',
+    ts:     w.ts || Date.now(),
+    title:  w.source || 'Logged win',
+    sub:    (w.type || '') + ' · manually logged',
+    idx:    i
+  }));
+  const all = [...stripeItems, ...winItems].sort((a, b) => b.ts - a.ts);
+
+  if (!all.length) {
+    feed.innerHTML = `
+      <div class="rev-feed-empty">
+        <i class="fas fa-sack-dollar"></i>
+        <p>No revenue activity yet</p>
+        <p style="font-size:.72rem;opacity:.6;margin-top:4px">Connect Stripe to show live payments · or log wins manually</p>
+      </div>`;
+    return;
+  }
+
+  feed.innerHTML = all.map(x => {
+    const safeTitle = String(x.title).replace(/</g, '&lt;');
+    const safeSub   = String(x.sub).replace(/</g, '&lt;');
+    const delBtn    = x.source === 'manual' ? `<span class="rev-feed-del" onclick="removeWin(${x.idx})" title="Remove"><i class="fas fa-times"></i></span>` : '';
+    return `
+      <div class="rev-feed-row ${x.source}">
+        <div class="rev-feed-icon ${x.source === 'manual' ? 'win' : 'stripe'}">
+          <i class="fas ${x.source === 'manual' ? 'fa-trophy' : 'fa-credit-card'}"></i>
+        </div>
+        <div class="rev-feed-body">
+          <div class="rev-feed-main">${safeTitle}</div>
+          <div class="rev-feed-sub">${safeSub || _revTimeAgo(x.ts / 1000)}${safeSub ? ' · ' + _revTimeAgo(x.ts / 1000) : ''}</div>
+        </div>
+        <div class="rev-feed-amt">${_revFmt(x.amount, x.cur)}</div>
+        ${delBtn}
+      </div>`;
+  }).join('');
+}
+
+function updateRevenueProgress() {
+  const goal = Number(localStorage.getItem('ts_weekly_goal') || 500);
+  const cur  = _revData?.currency || 'gbp';
+
+  // Count earnings this week: Stripe last-30d proportion + manually logged wins in last 7 days
+  const weekAgo = Date.now() - 7 * 86400000;
+  const wins    = JSON.parse(localStorage.getItem('ts_wins') || '[]');
+  const winEarned = wins
+    .filter(w => (w.ts || 0) >= weekAgo)
+    .reduce((s, w) => s + Number(w.amount || 0), 0);
+
+  // Stripe weekly ~ 30d / 30 * 7 (rough)
+  const stripeWeekApprox = _revData?.hasStripe
+    ? Math.round(((_revData.last30dGross || 0) / 100) * (7 / 30))
+    : 0;
+
+  const earned = winEarned + stripeWeekApprox;
+  const pct    = Math.min(100, Math.round(earned / Math.max(1, goal) * 100));
+
+  document.getElementById('rev-progress-fill').style.width = pct + '%';
+  document.getElementById('rev-progress-now').textContent  = _revFmtPounds(earned, cur);
+  document.getElementById('rev-progress-goal').textContent = _revFmtPounds(goal, cur);
+
+  const hint = document.getElementById('rev-goal-hint');
+  if (hint) {
+    if (pct >= 100) hint.textContent = 'Goal smashed. Raise the bar next week.';
+    else if (pct >= 75) hint.textContent = `Almost there — ${_revFmtPounds(goal - earned, cur)} to go`;
+    else if (pct >= 25) hint.textContent = `${pct}% of target · keep firing the batch`;
+    else if (earned > 0) hint.textContent = 'First win logged. Momentum.';
+    else hint.textContent = 'Set a target, log wins below, watch it fill';
+  }
+}
+
+/* ── Log-a-win modal ── */
+function openLogWin() {
+  document.getElementById('rev-modal-win').style.display = 'flex';
+  document.getElementById('win-amount').focus();
+}
+function closeLogWin() {
+  document.getElementById('rev-modal-win').style.display = 'none';
+  document.getElementById('win-amount').value = '';
+  document.getElementById('win-source').value = '';
+}
+function saveLogWin() {
+  const amount = Number(document.getElementById('win-amount').value);
+  const source = document.getElementById('win-source').value.trim();
+  const type   = document.getElementById('win-type').value;
+  if (!amount || amount <= 0) { toast('Enter an amount', 'err'); return; }
+  const wins = JSON.parse(localStorage.getItem('ts_wins') || '[]');
+  wins.push({ amount, source: source || 'Untitled win', type, ts: Date.now(), currency: 'gbp' });
+  localStorage.setItem('ts_wins', JSON.stringify(wins));
+  closeLogWin();
+  renderRevenueFeed();
+  updateRevenueProgress();
+  toast('Win logged — you\'re on the board', 'ok');
+}
+function removeWin(i) {
+  const wins = JSON.parse(localStorage.getItem('ts_wins') || '[]');
+  wins.splice(i, 1);
+  localStorage.setItem('ts_wins', JSON.stringify(wins));
+  renderRevenueFeed();
+  updateRevenueProgress();
 }
 
 /* ── INIT ── */

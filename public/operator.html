@@ -34,6 +34,9 @@
         <i class="fas fa-satellite-dish"></i> Lead Feed
       </div>
       <div class="nav-section">Manage</div>
+      <div class="nav-item" data-panel="revenue">
+        <i class="fas fa-sack-dollar"></i> Revenue
+      </div>
       <div class="nav-item" data-panel="crm">
         <i class="fas fa-chart-line"></i> CRM / Leads
       </div>
@@ -223,6 +226,111 @@
               </div>
 
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: REVENUE DASHBOARD ── -->
+      <div class="panel" id="panel-revenue">
+        <div class="rev-wrap">
+
+          <div class="rev-header">
+            <div>
+              <div class="rev-title">Revenue &amp; Pipeline</div>
+              <div class="rev-sub">Live Stripe MRR · pipeline value · weekly target</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-rev-log-win">
+              <i class="fas fa-trophy"></i> Log a win
+            </button>
+          </div>
+
+          <div class="rev-stats">
+            <div class="rev-stat rev-stat-hero">
+              <div class="rev-stat-n" id="rev-mrr">—</div>
+              <div class="rev-stat-l">Monthly Recurring (MRR)</div>
+              <div class="rev-stat-note" id="rev-mrr-note">Connect Stripe to unlock</div>
+            </div>
+            <div class="rev-stat">
+              <div class="rev-stat-n" id="rev-30d">—</div>
+              <div class="rev-stat-l">Last 30 days</div>
+            </div>
+            <div class="rev-stat">
+              <div class="rev-stat-n" id="rev-subs">—</div>
+              <div class="rev-stat-l">Active subs</div>
+            </div>
+            <div class="rev-stat">
+              <div class="rev-stat-n" id="rev-pipeline">—</div>
+              <div class="rev-stat-l">Pipeline value</div>
+              <div class="rev-stat-note" id="rev-pipe-note"></div>
+            </div>
+          </div>
+
+          <div class="rev-cols">
+
+            <!-- GOAL + PIPELINE BREAKDOWN -->
+            <div class="rev-col">
+              <div class="rev-section-hdr"><i class="fas fa-bullseye"></i> This Week's Target</div>
+              <div class="rev-goal-box">
+                <div class="rev-goal-row">
+                  <label class="rev-goal-label">Weekly goal (£)</label>
+                  <input type="number" id="rev-goal-input" min="0" step="50" value="500">
+                </div>
+                <div class="rev-progress-wrap">
+                  <div class="rev-progress-bar"><div class="rev-progress-fill" id="rev-progress-fill"></div></div>
+                  <div class="rev-progress-txt"><span id="rev-progress-now">£0</span> / <span id="rev-progress-goal">£500</span></div>
+                </div>
+                <div class="rev-goal-hint" id="rev-goal-hint">Set a target, log wins below, watch it fill</div>
+              </div>
+
+              <div class="rev-section-hdr" style="margin-top:18px"><i class="fas fa-diagram-project"></i> Pipeline Breakdown</div>
+              <div class="rev-settings-row">
+                <label>Est. value per closed client (£)</label>
+                <input type="number" id="rev-per-client" min="0" step="50" value="500">
+              </div>
+              <div class="rev-pipe-list" id="rev-pipe-list">
+                <div class="rev-pipe-empty">No leads yet — scan and add some</div>
+              </div>
+            </div>
+
+            <!-- REVENUE FEED -->
+            <div class="rev-col">
+              <div class="rev-section-hdr"><i class="fas fa-receipt"></i> Recent Activity</div>
+              <div class="rev-feed" id="rev-feed">
+                <div class="rev-feed-empty">
+                  <i class="fas fa-sack-dollar"></i>
+                  <p>No revenue activity yet</p>
+                  <p style="font-size:.72rem;opacity:.6;margin-top:4px">Connect Stripe to show live payments · or log wins manually</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MODAL: LOG A WIN ── -->
+      <div class="rev-modal" id="rev-modal-win" style="display:none">
+        <div class="rev-modal-card">
+          <div class="rev-modal-hdr">
+            <h3>Log a win</h3>
+            <button class="rev-modal-close" onclick="closeLogWin()"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="rev-modal-body">
+            <label>Amount (£)</label>
+            <input type="number" id="win-amount" min="0" step="10" placeholder="e.g. 500">
+            <label>Client / source</label>
+            <input type="text" id="win-source" placeholder="e.g. Plumber London — Reddit DM">
+            <label>Type</label>
+            <select id="win-type">
+              <option value="one-off">One-off payment</option>
+              <option value="recurring">Monthly recurring</option>
+              <option value="deposit">Deposit</option>
+            </select>
+          </div>
+          <div class="rev-modal-ftr">
+            <button class="btn btn-primary" onclick="saveLogWin()">
+              <i class="fas fa-check"></i> Log win
+            </button>
           </div>
         </div>
       </div>

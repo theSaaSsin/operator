@@ -612,6 +612,62 @@ Return JSON only: {"messages": [{"label": "Direct", "body": "..."}, {"label": "E
     json(res, { ok: true });
   },
 
+  // ── Revenue Dashboard aggregates ────────────────────────
+  'GET /api/revenue': async (_, res) => {
+    const out = {
+      ok: true,
+      hasStripe: !!stripe,
+      mrr: 0,
+      activeSubs: 0,
+      last30dGross: 0,
+      currency: 'gbp',
+      recent: [],     // [{ amount, currency, created, description, customer_email }]
+      warning: null
+    };
+
+    if (!stripe) return json(res, out);
+
+    try {
+      // Active subscriptions → MRR
+      const subs = await stripe.subscriptions.list({ status: 'active', limit: 100 });
+      let mrr = 0;
+      for (const s of subs.data) {
+        for (const it of (s.items?.data || [])) {
+          const amount   = it.price?.unit_amount || 0;
+          const interval = it.price?.recurring?.interval || 'month';
+          const qty      = it.quantity || 1;
+          const monthly  = interval === 'year' ? amount / 12 : amount;
+          mrr += monthly * qty;
+        }
+      }
+      out.mrr = Math.round(mrr);
+      out.activeSubs = subs.data.length;
+
+      // Charges in last 30 days
+      const since = Math.floor((Date.now() - 30 * 86400000) / 1000);
+      const charges = await stripe.charges.list({ limit: 100, created: { gte: since } });
+      let gross = 0;
+      for (const c of charges.data) {
+        if (c.status === 'succeeded' && !c.refunded) gross += c.amount;
+      }
+      out.last30dGross = gross;
+      out.recent = charges.data.slice(0, 10).map(c => ({
+        amount:         c.amount,
+        currency:       c.currency,
+        created:        c.created,
+        description:    c.description || c.statement_descriptor || 'Payment',
+        customer_email: c.billing_details?.email || '',
+        status:         c.status,
+        refunded:       c.refunded
+      }));
+      out.currency = subs.data[0]?.items?.data?.[0]?.price?.currency || charges.data[0]?.currency || 'gbp';
+    } catch (e) {
+      out.warning = e.message;
+    }
+
+    json(res, out);
+  },
+
   // ── Keyword Explorer: AI-generated scan combos ──────────
   'POST /api/explore-keywords': async (req, res) => {
     const { persona = {}, seed = '' } = await body(req);
