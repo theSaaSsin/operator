@@ -67,6 +67,9 @@
         <button id="tour-help-btn" title="Take the guided tour" onclick="startTour(true)">
           <i class="fas fa-question"></i>
         </button>
+        <button id="view-showcase-btn" title="Open the marketing showcase (premium agency template)" onclick="window.open('studio.html','_blank')" style="background:linear-gradient(135deg,#e9b44c,#c88f1f);color:#0a0a0a;border:none;padding:8px 14px;border-radius:100px;font-weight:600;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;letter-spacing:.02em;">
+          <i class="fas fa-wand-magic-sparkles"></i> View Showcase
+        </button>
         <div id="api-status-bar" style="display:flex;gap:8px;align-items:center;"></div>
         <span style="margin:0 8px;opacity:.3">|</span>
         TheSaaSsin &nbsp;·&nbsp; <span id="clock"></span>
@@ -788,6 +791,22 @@
               <button class="btn btn-primary" onclick="goPanel('client')">
                 <i class="fas fa-wand-magic-sparkles"></i> Open Brand Studio
               </button>
+
+              <!-- SHOWCASE TEMPLATE PREVIEW (agency-tier reference) -->
+              <div style="margin-top:32px;padding:20px;border:1px solid var(--border);border-radius:14px;background:linear-gradient(135deg,rgba(233,180,76,.08),transparent);max-width:820px;width:100%">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap">
+                  <div>
+                    <div style="font-weight:700;font-size:1rem;color:var(--fg);display:flex;align-items:center;gap:8px"><i class="fas fa-star" style="color:#e9b44c"></i> Live showcase template</div>
+                    <div style="font-size:.8rem;color:var(--muted);margin-top:4px">Agency-tier reference · wearebrand / tenfoldmarc vibe · Phase 2 preview</div>
+                  </div>
+                  <div style="display:flex;gap:8px">
+                    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('showcaseFrame').src='studio.html?t='+Date.now()"><i class="fas fa-rotate"></i> Reload</button>
+                    <button class="btn btn-primary btn-sm" onclick="window.open('studio.html','_blank')"><i class="fas fa-arrow-up-right-from-square"></i> Open full</button>
+                  </div>
+                </div>
+                <iframe id="showcaseFrame" src="studio.html" style="width:100%;height:520px;border:1px solid var(--border);border-radius:10px;background:#0a0a0a"></iframe>
+              </div>
+
               <div class="op-coming-row">
                 <span class="op-phase-badge">Phase 2</span>
                 5 premium templates — Editorial · Agency · Brutalist · Tech/Dark · Minimal
