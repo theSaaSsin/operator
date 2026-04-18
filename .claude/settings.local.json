@@ -58,7 +58,8 @@
       "Bash(python -c ' *)",
       "Bash(node -e \"require\\('./server.js'\\)\")",
       "Bash(node --check server.js)",
-      "Bash(node --check public/operator.js)"
+      "Bash(node --check public/operator.js)",
+      "Read(//tmp/**)"
     ]
   }
 }

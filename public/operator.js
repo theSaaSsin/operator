@@ -1097,7 +1097,7 @@ document.getElementById('btn-export-csv').addEventListener('click', async () => 
 /* ══════════════════════════════════
    OUTREACH QUEUE
 ══════════════════════════════════ */
-let currentOutreachTab = 'pending';
+let currentOutreachTab = 'pending'; // 'pending' | 'sent'
 
 document.querySelectorAll('.out-tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -1118,33 +1118,50 @@ async function loadOutreach() {
 
 function renderOutreach(queue) {
   const list = document.getElementById('out-list');
-  const counts = { pending: 0, approved: 0, sent: 0 };
-  queue.forEach(q => { if (counts[q.status] !== undefined) counts[q.status]++; });
-  document.getElementById('count-pending').textContent  = counts.pending;
-  document.getElementById('count-approved').textContent = counts.approved;
-  document.getElementById('count-sent').textContent     = counts.sent;
+  const countPending = queue.filter(q => q.status === 'pending').length;
+  const countSent    = queue.filter(q => q.status === 'sent' || q.status === 'approved').length;
+  document.getElementById('count-pending').textContent = countPending;
+  document.getElementById('count-sent').textContent    = countSent;
 
-  const filtered = queue.filter(q => q.status === currentOutreachTab);
+  // Normalise: treat 'approved' as 'sent' for display
+  const tab = currentOutreachTab;
+  const filtered = queue.filter(q =>
+    tab === 'sent' ? (q.status === 'sent' || q.status === 'approved') : q.status === tab
+  );
+
   if (!filtered.length) {
-    list.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Nothing here yet</p></div>';
+    const emptyMsg = tab === 'pending'
+      ? 'No queued messages — use Lead Feed → Compose to create one'
+      : 'Nothing sent yet — fire a batch to see results here';
+    list.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><p>${emptyMsg}</p></div>`;
     return;
   }
+
   list.innerHTML = filtered.map(q => `
     <div class="out-card">
       <div class="out-card-head">
         <div class="client-avatar" style="font-size:.72rem">${(q.clientName||'?').charAt(0).toUpperCase()}</div>
-        <div class="out-card-name">${esc(q.clientName || 'Unknown')}</div>
-        <span class="badge ${q.status==='pending'?'badge-new':q.status==='approved'?'badge-active':'badge-pending'}">${q.status}</span>
+        <div class="out-card-name">${esc(q.clientName || 'Unknown')} <span style="font-size:.68rem;color:var(--muted);font-weight:400">${esc(q.label||'')}</span></div>
+        <span class="badge ${q.status==='pending'?'badge-new':'badge-pending'}">${q.status==='pending'?'queued':'sent'}</span>
       </div>
       <div class="out-card-body">${esc(q.message || '')}</div>
+      ${q.status === 'pending' ? `
       <div class="out-actions">
-        ${q.status === 'pending'  ? `<button class="btn btn-success btn-sm" onclick="updateOutreach(${q.id},'approved')"><i class="fas fa-check"></i> Approve</button>` : ''}
-        ${q.status === 'approved' ? `<button class="btn btn-primary btn-sm" onclick="showSendEmail(${q.id})"><i class="fas fa-envelope"></i> Send Email</button>` : ''}
-        ${q.status === 'approved' ? `<button class="btn btn-secondary btn-sm" onclick="showSendSms(${q.id})"><i class="fas fa-mobile-screen"></i> Send SMS</button>` : ''}
-        ${q.status === 'approved' ? `<button class="btn btn-secondary btn-sm" onclick="updateOutreach(${q.id},'sent')"><i class="fas fa-paper-plane"></i> Mark Sent</button>` : ''}
-        ${q.status === 'pending'  ? `<button class="btn btn-danger btn-sm"  onclick="updateOutreach(${q.id},'sent')"><i class="fas fa-times"></i> Dismiss</button>` : ''}
-      </div>
+        <button class="btn btn-primary btn-sm" onclick="showSendEmail(${q.id})"><i class="fas fa-envelope"></i> Send Email</button>
+        <button class="btn btn-secondary btn-sm" onclick="showSendSms(${q.id})"><i class="fas fa-mobile-screen"></i> Send SMS</button>
+        <button class="btn btn-secondary btn-sm" onclick="copyOutreach(${q.id})"><i class="fas fa-copy"></i> Copy</button>
+        <button class="btn btn-secondary btn-sm" onclick="updateOutreach(${q.id},'sent')"><i class="fas fa-check"></i> Mark Sent</button>
+      </div>` : ''}
     </div>`).join('');
+}
+
+function copyOutreach(outreachId) {
+  fetch(API + '/outreach').then(r => r.json()).then(data => {
+    const item = (data.queue || []).find(q => q.id === outreachId);
+    if (item?.message) {
+      navigator.clipboard.writeText(item.message).then(() => toast('Copied to clipboard', 'ok'));
+    }
+  });
 }
 
 async function updateOutreach(id, status) {
@@ -1902,11 +1919,17 @@ document.querySelectorAll('.kw-btn').forEach(btn => {
 });
 
 /* ── PLATFORM TABS ── */
+let _apiStatus = {};  // cached from /api/status
+
 document.querySelectorAll('.feed-ptab').forEach(tab => {
   tab.addEventListener('click', () => {
+    const platform = tab.dataset.platform;
+    // Gate locked platforms — show setup modal immediately
+    if (platform === 'twitter'  && !_apiStatus.twitter)  { openApiSetup('twitter');  return; }
+    if (platform === 'linkedin' && !_apiStatus.serpapi)  { openApiSetup('serpapi');  return; }
     document.querySelectorAll('.feed-ptab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
-    activeFeedPlatform = tab.dataset.platform;
+    activeFeedPlatform = platform;
   });
 });
 
@@ -2132,6 +2155,7 @@ async function checkApiStatus() {
     const res  = await fetch(API + '/status');
     const data = await res.json();
     if (!data.ok) return;
+    _apiStatus = data.services; // cache for platform tab gating
     const s = data.services;
     const bar = document.getElementById('api-status-bar');
     if (!bar) return;
@@ -2148,9 +2172,25 @@ async function checkApiStatus() {
       const clickFn = i.setup && !on ? `onclick="openApiSetup('${i.setup}')" style="cursor:pointer"` : '';
       const tip     = on ? `${i.label}: connected` : `${i.label}: click to set up`;
       return `<span class="api-dot ${on ? 'api-on' : 'api-off'}" title="${tip}" ${clickFn}>
-        <i class="fas ${i.icon}"></i> ${i.label}
+        <i class="fas ${on ? i.icon : 'fa-lock'}"></i> ${i.label}
       </span>`;
     }).join('');
+
+    // Update platform tab lock indicators
+    const tabs = { twitter: s.twitter, linkedin: s.serpapi };
+    document.querySelectorAll('.feed-ptab').forEach(tab => {
+      const p = tab.dataset.platform;
+      if (p === 'twitter' || p === 'linkedin') {
+        const unlocked = tabs[p];
+        tab.title = unlocked ? '' : `Requires ${p === 'twitter' ? 'Twitter' : 'SerpAPI'} key — click to set up`;
+        const icon = tab.querySelector('i');
+        if (icon) {
+          icon.className = unlocked
+            ? (p === 'twitter' ? 'fab fa-x-twitter' : 'fab fa-linkedin')
+            : 'fas fa-lock';
+        }
+      }
+    });
   } catch { /* silent */ }
 }
 
@@ -2205,6 +2245,9 @@ async function fetchFeedLinkedIn(keyword) {
 
 /* ── Find Email (Hunter.io) ── */
 async function findEmail(postId, authorName, domain) {
+  // Gate: if Hunter key missing, show setup modal instead of silently failing
+  if (!_apiStatus.hunter) { openApiSetup('hunter'); return; }
+
   const btn = document.getElementById('email-btn-' + postId);
   if (!btn) return;
   btn.disabled = true;

@@ -141,15 +141,13 @@ tbody tr:hover td{background:rgba(255,255,255,0.02);}
 .color-row input[type="text"]{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:.82rem;font-family:'Courier New',monospace;outline:none;}
 .style-row input[type="text"],.style-row select{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:.82rem;font-family:inherit;outline:none;width:100%;}
 .theme-btns{display:flex;gap:6px;}
-.theme-btn{flex:1;padding:7px 0;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.72rem;font-weight:600;cursor:pointer;transition:all .18s;font-family:inherit;}
-.theme-btn:hover{color:var(--text);border-color:rgba(255,255,255,.15);}
-.theme-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+/* shared toggle button — used by .theme-btn AND .tone-btn */
+.theme-btn,.tone-btn{flex:1;padding:7px 0;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.72rem;font-weight:600;cursor:pointer;transition:all .18s;font-family:inherit;}
+.theme-btn:hover,.tone-btn:hover{color:var(--text);border-color:rgba(255,255,255,.15);}
+.theme-btn.active,.tone-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
 
-/* TONE BUTTONS */
+/* TONE BUTTONS — shares style with .theme-btn */
 .tone-btns{display:flex;gap:6px;}
-.tone-btn{flex:1;padding:7px 0;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.72rem;font-weight:600;cursor:pointer;transition:all .18s;font-family:inherit;}
-.tone-btn:hover{color:var(--text);border-color:rgba(255,255,255,.15);}
-.tone-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
 
 /* SYSTEM CHECKBOXES */
 .sys-checks{display:flex;flex-direction:column;gap:7px;padding:2px 0;}
