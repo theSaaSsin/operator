@@ -2897,9 +2897,18 @@ function goPanel(name) {
 
 function goScan(keyword) {
   goPanel('feed');
-  const kw = document.getElementById('keyword-input');
-  if (kw) kw.value = keyword;
-  setTimeout(() => fetchFeed(keyword), 200);
+  // Sync the active keyword + reflect in custom-kw input + highlight matching pill
+  activeFeedKw = keyword;
+  const input = document.getElementById('feed-custom-kw');
+  if (input) input.value = keyword;
+  document.querySelectorAll('.kw-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.kw === keyword);
+  });
+  setTimeout(() => {
+    if (activeFeedPlatform === 'twitter') fetchFeedX(keyword);
+    else if (activeFeedPlatform === 'linkedin') fetchFeedLinkedIn(keyword);
+    else fetchFeed(keyword);
+  }, 200);
 }
 
 function goRunBatch() {
@@ -2913,13 +2922,19 @@ async function loadWorkflowStats() {
       fetch(API + '/outreach').then(r => r.json()),
       fetch(API + '/leads').then(r => r.json())
     ]);
-    const queue    = outreach.queue || [];
-    const allLeads = leads.leads   || [];
-    const today    = new Date().toISOString().slice(0, 10);
-    const todaySent  = queue.filter(q => (q.created_at || '').startsWith(today)).length;
+    const queue      = outreach.queue || [];
+    const allLeads   = leads.leads   || [];
+    const midnightTs = new Date().setHours(0, 0, 0, 0);
+    const todayIso   = new Date().toISOString().slice(0, 10);
+    // API returns camelCase createdAt (ISO string) — fall back to created_at just in case
+    const todaySent  = queue.filter(q => {
+      const ts = q.createdAt || q.created_at || '';
+      return typeof ts === 'string' && ts.startsWith(todayIso);
+    }).length;
     const todayLeads = Object.keys(feedPostCache).length;
+    // Feedback ts is stored as Date.now() (number) — compare against midnight epoch
     const replied    = JSON.parse(localStorage.getItem('ts_feedback') || '[]')
-      .filter(f => f.outcome === 'replied' && (f.ts || '').startsWith(today)).length;
+      .filter(f => f.outcome === 'replied' && Number(f.ts) >= midnightTs).length;
     const pipeline   = allLeads.filter(l => l.status === 'qualified' || l.status === 'contacted').length;
     document.getElementById('wf-n-scanned').textContent  = todayLeads || '—';
     document.getElementById('wf-n-sent').textContent     = todaySent  || '—';
@@ -2969,7 +2984,11 @@ function markDeployed() {
   toast('Deployed! Share your Railway URL with leads.', 'ok');
 }
 
-function initWorkflowPanel() {
+async function initWorkflowPanel() {
+  // Refresh API status so setup checklist is accurate, then paint
+  if (!_apiStatus || !Object.keys(_apiStatus).length) {
+    try { await checkApiStatus(); } catch {}
+  }
   loadWorkflowStats();
   updateSetupChecklist();
 }
