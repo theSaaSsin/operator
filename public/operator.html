@@ -1332,7 +1332,8 @@ gr.Interface(fn=generate,
       </div>
     </div>
     <div style="display:flex;gap:6px">
-      <button onclick="bossMic()" id="boss-mic-btn" title="Voice" style="background:none;border:1px solid #1f1f1f;color:#888;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.8rem">🎤</button>
+      <button onclick="bossMic()" id="boss-mic-btn" title="Voice input (speak to BOSS)" style="background:none;border:1px solid #1f1f1f;color:#888;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.8rem">🎤</button>
+      <button onclick="bossToggleVoice()" id="boss-voice-btn" title="Voice output (BOSS speaks)" style="background:none;border:1px solid #1f1f1f;color:#888;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.8rem">🔊</button>
       <button onclick="bossToggle()" style="background:none;border:none;color:#666;font-size:1.2rem;cursor:pointer">✕</button>
     </div>
   </div>

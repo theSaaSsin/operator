@@ -21,6 +21,7 @@
   const slashEl = document.getElementById('boss-slash');
 
   const SLASH_CMDS = [
+    { cmd: '/auto',        hint: '/auto - autonomous workflow: discover → brand → pitch → send → close' },
     { cmd: '/scan',        hint: '/scan [niche] - find prospects bleeding pain on Reddit + Forums' },
     { cmd: '/pitch',       hint: '/pitch [market] - full battle pack → email, DM, opener, close line' },
     { cmd: '/orchestrate', hint: '/orchestrate [goal] - burn through all agents, assemble the plan' },
@@ -129,6 +130,9 @@
     HISTORY.push({ role: 'user', content: text });
 
     // Handle slash commands locally
+    if (text.startsWith('/auto')) {
+      return bossAutoWorkflow();
+    }
     if (text.startsWith('/channels')) { bossLoadChannels(); return addMsg('bot', '↓ Opening Channels panel…'), void switchPanel?.('boss-channels'); }
     if (text.startsWith('/status')) {
       const s = await fetch(API + '/boss/state').then(r => r.json()).catch(() => null);
@@ -154,6 +158,29 @@
   };
 
   // Voice input
+  // Voice output toggle
+  window.bossToggleVoice = function () {
+    VOICE_ON = !VOICE_ON;
+    const btn = document.getElementById('boss-voice-btn');
+    localStorage.setItem('boss_voice_enabled', VOICE_ON);
+    if (btn) {
+      btn.style.color = VOICE_ON ? '#ff2a2a' : '#888';
+      btn.style.borderColor = VOICE_ON ? 'rgba(255,42,42,.4)' : '#1f1f1f';
+    }
+    const msg = VOICE_ON ? '🔊 Voice ON — I\'ll speak to you now.' : '🔇 Voice OFF — chat only.';
+    addMsg('bot', msg);
+  };
+
+  // Initialize voice state from localStorage
+  VOICE_ON = localStorage.getItem('boss_voice_enabled') !== 'false';
+  setTimeout(() => {
+    const btn = document.getElementById('boss-voice-btn');
+    if (btn) {
+      btn.style.color = VOICE_ON ? '#ff2a2a' : '#888';
+      btn.style.borderColor = VOICE_ON ? 'rgba(255,42,42,.4)' : '#1f1f1f';
+    }
+  }, 100);
+
   window.bossMic = function () {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return addMsg('bot', '⚠️ Your browser doesn\'t support voice input. Try Chrome.');
@@ -161,7 +188,7 @@
     const r = new SR();
     r.continuous = false;
     r.interimResults = false;
-    r.lang = 'en-GB';
+    r.lang = 'en-US';
     r.onstart = () => { btn.classList.add('listening'); btn.textContent = '🔴'; };
     r.onend   = () => { btn.classList.remove('listening'); btn.textContent = '🎤'; };
     r.onresult = ev => {
@@ -171,16 +198,133 @@
     r.start();
   };
 
+  // Autonomous workflow — nothing to revenue
+  window.bossAutoWorkflow = async function () {
+    addMsg('bot', '🚀 Launching autonomous workflow. Let me check the state of play…');
+    const state = await fetch(API + '/boss/state').then(r => r.json()).catch(() => ({ state: {} }));
+    const s = state.state || {};
+    const leads = s.leads_count || 0;
+    const brandReady = s.brand_set || false;
+    const pitchesSent = s.pitches_sent || 0;
+    const dealsOpen = s.deals_open || 0;
+    const dealsClosed = s.deals_closed || 0;
+
+    // Step 1: No leads yet → Discover
+    if (leads === 0) {
+      addMsg('bot', `
+📍 STEP 1: DISCOVER PAIN
+You have 0 leads. We need to find prospects who are bleeding money problems.
+
+🎯 Next move:
+/scan [your target] — e.g., /scan "fitness coaches without online clients"
+
+What market are we attacking?`);
+      if (VOICE_ON) bossSpeak('Step one. We need leads. Tell me your target market and I will find prospects bleeding pain.');
+      return;
+    }
+
+    // Step 2: Have leads but no brand → Build brand
+    if (leads > 0 && !brandReady) {
+      addMsg('bot', `
+📍 STEP 2: BUILD BRAND
+You have ${leads} lead${leads > 1 ? 's' : ''}. Now we need YOUR brand voice.
+
+Go to: sidebar → Brand Assets → Generate a brand profile for your offer
+Or tell me your brand personality and I'll build it.
+
+What's the vibe? (aggressive, smooth, technical, friendly, etc.)`);
+      if (VOICE_ON) bossSpeak('You have leads. Now we build your brand voice so every message feels like YOU.');
+      return;
+    }
+
+    // Step 3: Have leads + brand but no pitches → Generate pitches
+    if (leads > 0 && brandReady && pitchesSent === 0) {
+      addMsg('bot', `
+📍 STEP 3: GENERATE PITCHES
+You have ${leads} lead${leads > 1 ? 's' : ''} and your brand is locked.
+
+Now we generate customized pitches for each market segment.
+
+Type: /pitch [specific target]
+Example: /pitch "coaches who are too busy to sell"
+
+Or just tell me a lead and I'll build the battle pack.`);
+      if (VOICE_ON) bossSpeak('Brand locked. Now we generate pitches. Give me a specific lead or segment and I will build your battle pack.');
+      return;
+    }
+
+    // Step 4: Have pitches but no deals → Send and track
+    if (pitchesSent > 0 && dealsOpen === 0 && dealsClosed === 0) {
+      addMsg('bot', `
+📍 STEP 4: SEND & TRACK
+You have ${pitchesSent} pitch${pitchesSent > 1 ? 'es' : ''} ready. Time to HIT THE MARKET.
+
+Next:
+1. Go to Outreach module (sidebar)
+2. Load your pitches
+3. Start sending (email, DM, call)
+4. I'll track responses in real-time
+
+Which channel first? (Email, LinkedIn DM, Telegram, etc.)`);
+      if (VOICE_ON) bossSpeak('Pitches locked. Time to send. Which channel do you want to hit first?');
+      return;
+    }
+
+    // Step 5: Have opens deals → Close them
+    if (dealsOpen > 0) {
+      addMsg('bot', `
+📍 STEP 5: CLOSE & SCALE
+You have ${dealsOpen} conversation${dealsOpen > 1 ? 's' : ''} with prospects.
+
+Time to close. Each one is a potential payday.
+
+Type: /coach [prospect name] — I'll give you the exact close strategy
+Or tell me: What's their main objection?`);
+      if (VOICE_ON) bossSpeak('You have hot prospects. Time to close. What are they asking? What\'s their hesitation?');
+      return;
+    }
+
+    // Step 6: Already have revenue → Scale
+    if (dealsClosed > 0) {
+      addMsg('bot', `
+✅ REVENUE LOCKED: £${(dealsClosed * 1500).toLocaleString()} (${dealsClosed} deal${dealsClosed > 1 ? 's' : ''})
+
+Now we SCALE.
+
+Options:
+1. /scan [new market] — Find more bleeding pain in a new segment
+2. /orchestrate growth — Automate outreach to 100+ leads
+3. /coach — Refine our close rate (more deals faster)
+
+What's next? More leads or better close rate?`);
+      if (VOICE_ON) bossSpeak(`You have made money. ${dealsClosed} deals closed. Now we scale. Do you want more leads or a better close rate?`);
+      return;
+    }
+  };
+
   window.bossSpeak = function (text) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text.slice(0, 300));
-    u.lang  = 'en-GB';
-    u.rate  = 1.05;
-    u.pitch = 0.95;
+    // Clean text: remove emoji, limit to first 400 chars
+    const cleanText = text.replace(/[\p{Emoji}]/gu, '').slice(0, 400);
+    const u = new SpeechSynthesisUtterance(cleanText);
+    u.lang  = 'en-US';
+    u.rate  = 1.0;
+    u.pitch = 1.1;  // Slightly higher for female voice
+    u.volume = 0.9;
+
     const voices = window.speechSynthesis.getVoices();
-    const pref   = voices.find(v => v.name.includes('Google UK English Male') || v.name.includes('Daniel'));
-    if (pref) u.voice = pref;
+    // Priority: American female voices (Zira, Samantha, Victoria, Moira)
+    const femaleVoices = [
+      'Zira',           // Microsoft Zira (US female)
+      'Samantha',       // Apple Samantha
+      'Victoria',       // Apple Victoria (British female)
+      'Moira',          // Apple Moira (Irish female)
+      'Google US English',
+    ];
+    const selectedVoice = voices.find(v => femaleVoices.some(f => v.name.includes(f)));
+    if (selectedVoice) u.voice = selectedVoice;
+
     window.speechSynthesis.speak(u);
   };
 
