@@ -36,6 +36,9 @@ function readCfgKey(key) {
       ANTHROPIC_API_KEY:  'anthropicApiKey',
       GROQ_API_KEY:       'groqApiKey',
       OPENROUTER_API_KEY: 'openrouterApiKey',
+      KIMI_API_KEY:       'kimiApiKey',
+      MINIMAX_API_KEY:    'minimaxApiKey',
+      GLM_API_KEY:        'glmApiKey',
       OLLAMA_URL:         'ollamaUrl',
     };
     return data[MAP[key]] || null;
@@ -50,6 +53,9 @@ function isConfigured(provider) {
   if (provider === 'anthropic')  return !!(readCfgKey('ANTHROPIC_API_KEY') && Anthropic);
   if (provider === 'groq')       return !!readCfgKey('GROQ_API_KEY');
   if (provider === 'openrouter') return !!readCfgKey('OPENROUTER_API_KEY');
+  if (provider === 'kimi')       return !!readCfgKey('KIMI_API_KEY');
+  if (provider === 'minimax')    return !!readCfgKey('MINIMAX_API_KEY');
+  if (provider === 'glm')        return !!readCfgKey('GLM_API_KEY');
   if (provider === 'ollama')     return true; // checked live via ping
   return false;
 }
@@ -116,6 +122,72 @@ async function callOpenRouter({ modelId, system, messages, maxTokens }) {
   return data.choices?.[0]?.message?.content || '';
 }
 
+// Kimi (Moonshot AI) — fast, long-context, great for analysis
+async function callKimi({ modelId, system, messages, maxTokens }) {
+  const key = readCfgKey('KIMI_API_KEY');
+  if (!key) throw new Error('no kimi key');
+  const body = {
+    model:      modelId || 'moonshot-v1-8k',
+    max_tokens: maxTokens || 600,
+    messages: [
+      ...(system ? [{ role: 'system', content: system }] : []),
+      ...messages.slice(-16),
+    ],
+  };
+  const res = await fetch('https://api.moonshot.cn/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || 'kimi error');
+  return data.choices?.[0]?.message?.content || '';
+}
+
+// MiniMax — solid Chinese frontier model
+async function callMinimax({ modelId, system, messages, maxTokens }) {
+  const key = readCfgKey('MINIMAX_API_KEY');
+  if (!key) throw new Error('no minimax key');
+  const body = {
+    model:      modelId || 'MiniMax-Text-01',
+    max_tokens: maxTokens || 600,
+    messages: [
+      ...(system ? [{ role: 'system', content: system }] : []),
+      ...messages.slice(-16),
+    ],
+  };
+  const res = await fetch('https://api.minimax.chat/v1/text/chatcompletion_v2', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || 'minimax error');
+  return data.choices?.[0]?.message?.content || '';
+}
+
+// GLM (Zhipu AI) — GLM-4, excellent for code + reasoning
+async function callGLM({ modelId, system, messages, maxTokens }) {
+  const key = readCfgKey('GLM_API_KEY');
+  if (!key) throw new Error('no glm key');
+  const body = {
+    model:      modelId || 'glm-4-flash',   // glm-4-flash is FREE
+    max_tokens: maxTokens || 600,
+    messages: [
+      ...(system ? [{ role: 'system', content: system }] : []),
+      ...messages.slice(-16),
+    ],
+  };
+  const res = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || 'glm error');
+  return data.choices?.[0]?.message?.content || '';
+}
+
 async function callOllama({ modelId, system, messages, maxTokens }) {
   const base = ollamaBase();
   const body = {
@@ -161,13 +233,12 @@ function classifyMessage(msg = '') {
   return 'default';
 }
 
-// Build provider chain based on tier
-// FREE-FIRST: Groq (free tier) → Ollama (local free) → Anthropic (paid, backup only)
+// Build provider chain — free/cheap first, paid last
+// Priority: Groq → GLM-flash(free) → OpenRouter-free → Kimi → MiniMax → Ollama → Claude
 function buildChain(tier) {
-  if (tier === 'local')  return ['ollama', 'groq', 'openrouter', 'anthropic'];
-  if (tier === 'groq')   return ['groq', 'openrouter', 'ollama', 'anthropic'];
-  // cloud tier: still try free first, Claude only as heavy-lifting backup
-  return                        ['groq', 'openrouter', 'ollama', 'anthropic'];
+  if (tier === 'local')  return ['ollama', 'groq', 'glm', 'openrouter', 'anthropic'];
+  if (tier === 'groq')   return ['groq', 'glm', 'openrouter', 'kimi', 'minimax', 'ollama', 'anthropic'];
+  return                        ['groq', 'glm', 'openrouter', 'kimi', 'minimax', 'ollama', 'anthropic'];
 }
 
 function modelFor(provider, taskKind) {
@@ -212,9 +283,12 @@ async function route({
     const modelId = modelFor(provider, kind);
     try {
       let text;
-      if (provider === 'anthropic')       text = await callAnthropic({ modelId, system, messages, maxTokens });
+      if      (provider === 'anthropic')  text = await callAnthropic({ modelId, system, messages, maxTokens });
       else if (provider === 'groq')       text = await callGroq({ modelId, system, messages, maxTokens });
       else if (provider === 'openrouter') text = await callOpenRouter({ modelId, system, messages, maxTokens });
+      else if (provider === 'kimi')       text = await callKimi({ modelId, system, messages, maxTokens });
+      else if (provider === 'minimax')    text = await callMinimax({ modelId, system, messages, maxTokens });
+      else if (provider === 'glm')        text = await callGLM({ modelId, system, messages, maxTokens });
       else                                text = await callOllama({ modelId, system, messages, maxTokens });
       return { ok: true, provider, modelId, tier, taskKind: kind, text };
     } catch (e) {
@@ -231,6 +305,9 @@ async function routerStatus() {
   status.anthropic  = isConfigured('anthropic');
   status.groq       = isConfigured('groq');
   status.openrouter = isConfigured('openrouter');
+  status.kimi       = isConfigured('kimi');
+  status.minimax    = isConfigured('minimax');
+  status.glm        = isConfigured('glm');
 
   try {
     const res  = await fetch(`${ollamaBase()}/api/tags`, { signal: AbortSignal.timeout(2000) });

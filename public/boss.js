@@ -331,6 +331,8 @@
       set('cfg-anthropic-key',  cfg.anthropicApiKey);
       set('cfg-groq-key',       cfg.groqApiKey);
       set('cfg-openrouter-key', cfg.openrouterApiKey);
+      set('cfg-glm-key',        cfg.glmApiKey);
+      set('cfg-kimi-key',       cfg.kimiApiKey);
       set('cfg-persona',        cfg.personaName);
       set('cfg-offer',          cfg.offer);
       set('cfg-serper-key',     cfg.serperApiKey);
@@ -383,14 +385,19 @@
     const off = get('cfg-offer');
     const ser = get('cfg-serper-key');
 
-    if (ant) payload.anthropicApiKey  = ant;
-    if (grq) payload.groqApiKey       = grq;
-    if (ort) payload.openrouterApiKey = ort;
-    if (per) payload.personaName      = per;
-    if (off) payload.offer            = off;
-    if (ser) payload.serperApiKey     = ser;
+    const glm  = get('cfg-glm-key');
+    const kimi = get('cfg-kimi-key');
 
-    if (!ant && !grq && !ort) {
+    if (ant)  payload.anthropicApiKey  = ant;
+    if (grq)  payload.groqApiKey       = grq;
+    if (ort)  payload.openrouterApiKey = ort;
+    if (glm)  payload.glmApiKey        = glm;
+    if (kimi) payload.kimiApiKey       = kimi;
+    if (per)  payload.personaName      = per;
+    if (off)  payload.offer            = off;
+    if (ser)  payload.serperApiKey     = ser;
+
+    if (!ant && !grq && !ort && !glm && !kimi) {
       if (msg) { msg.innerHTML = '<span style="color:#f55">Add at least one API key to activate B.O.S.S.</span>'; }
       return;
     }
@@ -400,7 +407,7 @@
       await fetch(API + '/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
 
       if (btn) { btn.style.background = '#ff2a2a'; btn.textContent = '✓ Saved'; }
-      const active = [ant && 'Claude', grq && 'Groq', ort && 'OpenRouter'].filter(Boolean).join(' + ');
+      const active = [grq && 'Groq', glm && 'GLM', ort && 'OpenRouter', kimi && 'Kimi', ant && 'Claude'].filter(Boolean).join(' + ');
       if (msg) { msg.innerHTML = `<span style="color:#2cb67d">✓ Saved — ${active} active. Chat away.</span>`; }
       const keyStatus = document.getElementById('cfg-key-status');
       if (keyStatus && ant) { keyStatus.textContent = `✓ set (${ant.length} chars)`; keyStatus.style.color = '#2cb67d'; }
@@ -678,6 +685,45 @@
     } catch (_) {
       if (msg) { msg.textContent = 'Failed — is Ollama installed and running?'; msg.style.color = '#f55'; }
     }
+  };
+
+  // ── AI TOOLS PANEL ───────────────────────────────────────────────────────
+  window.bossLoadAITools = async function() {
+    try {
+      const st = await fetch(API + '/boss/router').then(r => r.json());
+      const bar = document.getElementById('ait-status-bar');
+      if (bar) {
+        const providers = [
+          { key: 'groq',       label: 'GROQ',        color: '#00aaff' },
+          { key: 'glm',        label: 'GLM',          color: '#44aaff' },
+          { key: 'openrouter', label: 'OPENROUTER',   color: '#ff9500' },
+          { key: 'kimi',       label: 'KIMI',         color: '#00ddaa' },
+          { key: 'minimax',    label: 'MINIMAX',      color: '#ff6688' },
+          { key: 'anthropic',  label: 'CLAUDE',       color: '#aa44ff' },
+        ];
+        bar.innerHTML = providers.map(p => {
+          const on = st[p.key];
+          return `<span style="font-size:.65rem;font-weight:700;padding:3px 10px;border-radius:100px;background:${on ? p.color+'22' : '#1a1a1a'};color:${on ? p.color : '#333'};border:1px solid ${on ? p.color+'44' : '#1a1a1a'}">${p.label} ${on ? '✓' : '—'}</span>`;
+        }).join('');
+      }
+      // Highlight active cards
+      ['groq','glm','openrouter','kimi','minimax','anthropic'].forEach(k => {
+        const el = document.getElementById('aitc-' + k);
+        if (el) el.classList.toggle('active', !!st[k]);
+      });
+      // Ollama status
+      const olEl = document.getElementById('ait-ollama-status');
+      if (olEl) {
+        if (st.ollama?.running) {
+          const models = st.ollama.models.map(m => m.name).join(' · ') || 'running, no models pulled';
+          olEl.textContent = '● Online — ' + models;
+          olEl.style.color = '#2cb67d';
+        } else {
+          olEl.textContent = '○ Not running — install Ollama below';
+          olEl.style.color = '#555';
+        }
+      }
+    } catch(_) {}
   };
 
   window.bossGroqSave = async function() {

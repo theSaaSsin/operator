@@ -115,6 +115,7 @@
       <div class="nav-item" data-panel="mod-system-matcher"><i class="fas fa-puzzle-piece"></i> System Matcher</div>
       <div class="nav-section" data-cat="boss" style="color:#ff2a2a;opacity:.9">B.O.S.S Core</div>
       <div class="nav-item" data-panel="boss-config" onclick="bossLoadConfig()" style="color:#ff2a2a"><i class="fas fa-key"></i> API Keys &amp; Settings</div>
+      <div class="nav-item" data-panel="panel-ai-tools" onclick="bossLoadAITools()" style="color:#ff2a2a"><i class="fas fa-robot"></i> AI Tools &amp; Models</div>
       <div class="nav-item" data-panel="boss-creative" onclick="bossLoadCreative()" style="color:#ff2a2a"><i class="fas fa-film"></i> Creative Studio</div>
       <div class="nav-item" onclick="window.open('/offaxis.html','_blank')" style="color:#ff2a2a"><i class="fas fa-cube"></i> Off-Axis 3D Viewer</div>
       <div class="nav-item" data-panel="panel-graph" onclick="switchPanel('panel-graph')" style="color:#ff2a2a"><i class="fas fa-project-diagram"></i> Knowledge Graph</div>
@@ -654,6 +655,186 @@
         </div>
       </div>
 
+      <!-- ══ AI TOOLS & MODELS ══ -->
+      <div class="panel" id="panel-ai-tools">
+        <div style="padding:32px;max-width:800px;margin:0 auto">
+          <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 4px">AI Tools &amp; Models</h2>
+          <p style="font-size:.73rem;color:#555;margin:0 0 6px">Every provider B.O.S.S can use. Add keys in <b>API Keys &amp; Settings</b>. Router tries them top → bottom, skips any not configured.</p>
+
+          <!-- Live status bar -->
+          <div id="ait-status-bar" style="display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 28px">
+            <span style="font-size:.68rem;color:#444">Loading status…</span>
+          </div>
+
+          <!-- ── LANGUAGE MODELS ── -->
+          <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:14px">Language Models — Chat &amp; Reasoning</div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;margin-bottom:32px">
+
+            <!-- Groq -->
+            <div class="ait-card" id="aitc-groq">
+              <div class="ait-head"><span class="ait-name" style="color:#00aaff">GROQ</span><span class="ait-badge free">FREE · 800 tok/s</span></div>
+              <div class="ait-model">llama-3.3-70b-versatile</div>
+              <div class="ait-desc">Fastest inference on earth. Llama 3.3 70B free, no rate limit worries for normal use.</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> → Create key → paste in API Keys panel
+              </div>
+            </div>
+
+            <!-- GLM-4 Flash -->
+            <div class="ait-card" id="aitc-glm">
+              <div class="ait-head"><span class="ait-name" style="color:#44aaff">GLM-4 Flash</span><span class="ait-badge free">FREE forever</span></div>
+              <div class="ait-model">glm-4-flash (Zhipu AI)</div>
+              <div class="ait-desc">GLM-4-Flash is permanently free, no credit card. Strong at code and structured output.</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank">open.bigmodel.cn</a> → Register → API Keys → paste as GLM key
+              </div>
+            </div>
+
+            <!-- OpenRouter -->
+            <div class="ait-card" id="aitc-openrouter">
+              <div class="ait-head"><span class="ait-name" style="color:#ff9500">OPENROUTER</span><span class="ait-badge free">FREE models</span></div>
+              <div class="ait-model">Llama / Qwen / Mistral :free</div>
+              <div class="ait-desc">Single key unlocks 50+ models including Llama 3.3 70B, Qwen 2.5 Coder, Mixtral — all with :free tag.</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a> → Create key → paste in API Keys panel
+              </div>
+            </div>
+
+            <!-- Kimi -->
+            <div class="ait-card" id="aitc-kimi">
+              <div class="ait-head"><span class="ait-name" style="color:#00ddaa">KIMI</span><span class="ait-badge">Moonshot AI</span></div>
+              <div class="ait-model">moonshot-v1-8k / 32k / 128k</div>
+              <div class="ait-desc">Long-context specialist. 128k window, excellent for analysing docs, contracts, long threads.</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://platform.moonshot.cn/console/api-keys" target="_blank">platform.moonshot.cn</a> → API Keys → paste as Kimi key
+              </div>
+            </div>
+
+            <!-- MiniMax -->
+            <div class="ait-card" id="aitc-minimax">
+              <div class="ait-head"><span class="ait-name" style="color:#ff6688">MINIMAX</span><span class="ait-badge">MiniMax-Text-01</span></div>
+              <div class="ait-model">MiniMax-Text-01</div>
+              <div class="ait-desc">Strong Chinese frontier model, great for creative writing, pitches and multilingual content.</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://platform.minimax.chat/user-center/basic-information/interface-key" target="_blank">platform.minimax.chat</a> → Interface Key → paste as MiniMax key
+              </div>
+            </div>
+
+            <!-- Anthropic -->
+            <div class="ait-card" id="aitc-anthropic">
+              <div class="ait-head"><span class="ait-name" style="color:#aa44ff">CLAUDE</span><span class="ait-badge paid">Paid · Best quality</span></div>
+              <div class="ait-model">claude-haiku / sonnet (backup)</div>
+              <div class="ait-desc">Used only for code gen, orchestration &amp; heavy pitches. Router falls back here last to preserve credits.</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://console.anthropic.com/billing" target="_blank">console.anthropic.com/billing</a> → Top up → paste in API Keys panel
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── IMAGE / VIDEO MODELS ── -->
+          <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:14px">Image &amp; Video Generation</div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;margin-bottom:32px">
+
+            <!-- Stable Diffusion -->
+            <div class="ait-card">
+              <div class="ait-head"><span class="ait-name" style="color:#ff8844">STABLE DIFFUSION</span><span class="ait-badge free">Local · Free</span></div>
+              <div class="ait-model">SDXL / SD 3.5 / Flux</div>
+              <div class="ait-desc">Run locally via Automatic1111 or ComfyUI. Unlimited generation, no API costs, full control.</div>
+              <div class="ait-steps">
+                <b>Setup (easiest):</b><br>
+                1. Install <a href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/releases" target="_blank">Automatic1111</a> → run webui-user.bat<br>
+                2. Enable API: add <code>--api</code> to COMMANDLINE_ARGS in webui-user.bat<br>
+                3. Add <code>sdxlUrl: "http://127.0.0.1:7860"</code> to your config — B.O.S.S will use it for image tasks
+              </div>
+            </div>
+
+            <!-- Hunyuan -->
+            <div class="ait-card">
+              <div class="ait-head"><span class="ait-name" style="color:#ff4466">HUNYUAN</span><span class="ait-badge">Tencent</span></div>
+              <div class="ait-model">HunyuanDiT / Hunyuan-Video</div>
+              <div class="ait-desc">Tencent's video gen model — best for cinematic video from text. Available via OpenRouter or direct API.</div>
+              <div class="ait-steps">
+                <b>Via OpenRouter (easiest):</b> already covered by your OpenRouter key — model ID: <code>tencent/hunyuan-a13b-instruct</code><br>
+                <b>Direct:</b> <a href="https://cloud.tencent.com/product/hunyuan" target="_blank">cloud.tencent.com/product/hunyuan</a>
+              </div>
+            </div>
+
+            <!-- Fal.ai -->
+            <div class="ait-card">
+              <div class="ait-head"><span class="ait-name" style="color:#aaddff">FAL.AI</span><span class="ait-badge">Fast GPU · Cheap</span></div>
+              <div class="ait-model">Flux / SDXL / LCM / SVD</div>
+              <div class="ait-desc">Fastest cloud GPU inference. SDXL in 2s, video in 30s. Pay-per-use, very cheap (~$0.003/image).</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://fal.ai/dashboard/keys" target="_blank">fal.ai/dashboard/keys</a> → Create key → paste as Fal key
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── DEV TOOLS ── -->
+          <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:14px">Dev Tools &amp; Coding Agents</div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;margin-bottom:32px">
+
+            <!-- Cline -->
+            <div class="ait-card">
+              <div class="ait-head"><span class="ait-name" style="color:#00aaff">CLINE</span><span class="ait-badge free">VS Code · Free</span></div>
+              <div class="ait-model">Autonomous coding agent</div>
+              <div class="ait-desc">Best AI coding agent for VS Code. Reads/writes files, runs terminal commands, browses the web, uses any LLM you already have.</div>
+              <div class="ait-steps">
+                <b>Setup:</b><br>
+                1. VS Code → Extensions → search <b>"Cline"</b> → Install<br>
+                2. Settings → paste your Groq or OpenRouter key (same keys, zero extra cost)<br>
+                3. Open Cline panel → describe what to build → it ships it
+              </div>
+            </div>
+
+            <!-- Playwright -->
+            <div class="ait-card">
+              <div class="ait-head"><span class="ait-name" style="color:#2cb67d">PLAYWRIGHT MCP</span><span class="ait-badge free">Already configured</span></div>
+              <div class="ait-model">Browser automation</div>
+              <div class="ait-desc">B.O.S.S can control Chrome — scrape leads, fill forms, take screenshots, automate workflows.</div>
+              <div class="ait-steps">
+                <b>Setup:</b><br>
+                1. <code>npx playwright install chromium</code> in this folder<br>
+                2. Restart Claude Code — .mcp.json is already wired<br>
+                3. Ask B.O.S.S: "browse [url] and extract leads"
+              </div>
+            </div>
+
+            <!-- Dyad -->
+            <div class="ait-card">
+              <div class="ait-head"><span class="ait-name" style="color:#ff6b35">DYAD</span><span class="ait-badge">App builder</span></div>
+              <div class="ait-model">AI full-stack app builder</div>
+              <div class="ait-desc">Builds and runs full apps from prompts — like Bolt.new but desktop, uses your own LLM keys.</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://dyad.sh" target="_blank">dyad.sh</a> → Download → connect your Groq key → build apps via chat
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── OLLAMA LOCAL ── -->
+          <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:14px">Local Models (Ollama — Fully Offline)</div>
+          <div class="ait-card" style="margin-bottom:12px">
+            <div class="ait-head"><span class="ait-name" style="color:#2cb67d">OLLAMA</span><span class="ait-badge free">Local · Unlimited · Private</span></div>
+            <div class="ait-model" id="ait-ollama-status">checking…</div>
+            <div class="ait-desc">Run any open model on your GPU/CPU. B.O.S.S uses it automatically when Ollama is running — no key needed.</div>
+            <div class="ait-steps">
+              <b>Setup:</b><br>
+              1. <a href="https://ollama.com/download" target="_blank">ollama.com/download</a> → Windows installer (~200MB)<br>
+              2. Open terminal: <code>ollama pull qwen2.5:7b</code> (best all-rounder, 4.7GB)<br>
+              3. B.O.S.S auto-detects it — you'll see LOCAL badge on replies<br>
+              <b>Good free models:</b> <code>qwen2.5:7b</code> · <code>llama3.2:3b</code> · <code>qwen2.5-coder:7b</code>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <!-- ══ B.O.S.S: API KEYS & SETTINGS ══ -->
       <div class="panel" id="panel-boss-config">
         <div style="padding:32px;max-width:680px;margin:0 auto">
@@ -708,6 +889,42 @@
                 style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
                 oninput="bossCfgDirty()">
               <button onclick="bossCfgToggleVisible('cfg-openrouter-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
+            </div>
+          </div>
+
+          <!-- ── GLM — free forever ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#44aaff">GLM-4 FLASH</span>
+                <span style="font-size:.65rem;color:#2cb67d;font-weight:700;margin-left:8px;background:#2cb67d18;padding:2px 7px;border-radius:100px">FREE forever</span>
+              </div>
+              <a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank" style="font-size:.65rem;color:#44aaff;text-decoration:none;opacity:.7">Get key →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Zhipu AI — glm-4-flash is permanently free, no card needed. Good at code + structured output</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-glm-key" type="password" placeholder="GLM key..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleVisible('cfg-glm-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
+            </div>
+          </div>
+
+          <!-- ── KIMI ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#00ddaa">KIMI</span>
+                <span style="font-size:.65rem;color:#aaa;font-weight:700;margin-left:8px;background:#ffffff08;padding:2px 7px;border-radius:100px">128k context</span>
+              </div>
+              <a href="https://platform.moonshot.cn/console/api-keys" target="_blank" style="font-size:.65rem;color:#00ddaa;text-decoration:none;opacity:.7">Get key →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Moonshot AI — long-context champion. Great for analysing big docs, threads, codebases</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-kimi-key" type="password" placeholder="sk-..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleVisible('cfg-kimi-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
             </div>
           </div>
 
@@ -985,6 +1202,20 @@
         .router-tile.cloud-on .rt-dot{background:#aa44ff;box-shadow:0 0 8px rgba(170,68,255,.5)}
         .rt-label{font-size:.65rem;color:#666;text-transform:uppercase;letter-spacing:.08em}
         .rt-val{font-size:.82rem;font-weight:700;color:#aaa}
+        /* AI Tools panel */
+        .ait-card{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;transition:border-color .2s}
+        .ait-card.active{border-color:#2cb67d}
+        .ait-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+        .ait-name{font-size:.82rem;font-weight:800}
+        .ait-badge{font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:100px;background:#1a1a1a;color:#666}
+        .ait-badge.free{background:#2cb67d18;color:#2cb67d}
+        .ait-badge.paid{background:#aa44ff18;color:#aa44ff}
+        .ait-model{font-size:.68rem;color:#555;margin-bottom:6px;font-family:monospace}
+        .ait-desc{font-size:.72rem;color:#888;line-height:1.55;margin-bottom:10px}
+        .ait-steps{font-size:.7rem;color:#666;line-height:1.7;background:#080808;border-radius:8px;padding:10px 12px}
+        .ait-steps a{color:#ff2a2a;text-decoration:none}
+        .ait-steps a:hover{text-decoration:underline}
+        .ait-steps code{color:#aaa;background:#111;padding:1px 5px;border-radius:4px;font-size:.68rem}
       </style>
 
 
