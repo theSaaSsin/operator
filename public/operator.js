@@ -4577,3 +4577,156 @@ checkApiStatus();
     fr.style.display = 'flex';
   }
 })();
+
+/* ═══════════════════════════════════════════════════════════════════
+ * B.O.S.S — Voice (browser STT/TTS + premium TTS) + Coach Pulse
+ *           + Conversation Persistence (always-on Jarvis loop)
+ * ═════════════════════════════════════════════════════════════════ */
+(function () {
+  const API = (window.OP_CONFIG && window.OP_CONFIG.API) || '/api';
+
+  // ── Voice settings (persist across reload) ──
+  const VS = JSON.parse(localStorage.getItem('boss.voice') || '{}');
+  const VOICE = {
+    speakReplies: !!VS.speakReplies,
+    sessionId:    localStorage.getItem('boss.session') || ('sess-' + Date.now().toString(36)),
+    rec:          null,
+    listening:    false,
+    premiumTTS:   null,    // /api/boss/voice/stt-hint will tell us
+  };
+  if (!localStorage.getItem('boss.session')) localStorage.setItem('boss.session', VOICE.sessionId);
+
+  function save() {
+    localStorage.setItem('boss.voice', JSON.stringify({ speakReplies: VOICE.speakReplies }));
+  }
+
+  // ── Browser TTS (always available) ──
+  function browserSpeak(text) {
+    if (!('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(stripHtmlForSpeech(text));
+    u.lang  = 'en-GB';
+    u.rate  = 1.05;
+    u.pitch = 1.0;
+    // pick a deeper male voice if available
+    const voices = speechSynthesis.getVoices();
+    const pref = voices.find(v => /UK|British|GB/.test(v.lang) && /Male|Daniel|Oliver|George/i.test(v.name))
+              || voices.find(v => /UK|British|GB/.test(v.lang))
+              || voices[0];
+    if (pref) u.voice = pref;
+    speechSynthesis.speak(u);
+  }
+
+  // ── Premium TTS via /api/boss/voice/tts (ElevenLabs / OpenAI) ──
+  async function premiumSpeak(text) {
+    try {
+      const r = await fetch(API + '/boss/voice/tts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: stripHtmlForSpeech(text) }),
+      }).then(r => r.json());
+      if (!r.ok || !r.audioBase64) return browserSpeak(text);
+      const audio = new Audio('data:' + (r.mime || 'audio/mpeg') + ';base64,' + r.audioBase64);
+      audio.play();
+    } catch (_) { browserSpeak(text); }
+  }
+
+  function stripHtmlForSpeech(html) {
+    return String(html).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 800);
+  }
+
+  window.bossSpeak = function (text) {
+    if (!VOICE.speakReplies) return;
+    if (VOICE.premiumTTS) premiumSpeak(text);
+    else browserSpeak(text);
+  };
+
+  window.bossVoiceToggle = function () {
+    VOICE.speakReplies = !VOICE.speakReplies;
+    save();
+    const btn = document.getElementById('opchat-voice-toggle');
+    if (btn) {
+      btn.classList.toggle('on', VOICE.speakReplies);
+      btn.innerHTML = VOICE.speakReplies ? '<i class="fas fa-volume-high"></i>' : '<i class="fas fa-volume-xmark"></i>';
+    }
+    if (VOICE.speakReplies) bossSpeak('Voice on. I\'m listening when you are.');
+  };
+
+  // ── Browser STT (SpeechRecognition) ──
+  window.bossStartListening = function () {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return alert('Speech recognition not supported in this browser. Use Chrome/Edge.');
+    const mic = document.getElementById('opchat-mic');
+    if (VOICE.listening) {
+      try { VOICE.rec.stop(); } catch (_) {}
+      return;
+    }
+    const r = new SR();
+    r.lang = 'en-GB'; r.continuous = false; r.interimResults = true;
+    r.onstart = () => { VOICE.listening = true; if (mic) mic.classList.add('listening'); };
+    r.onend   = () => { VOICE.listening = false; if (mic) mic.classList.remove('listening'); };
+    r.onerror = (e) => { VOICE.listening = false; if (mic) mic.classList.remove('listening'); console.warn('STT', e.error); };
+    r.onresult = (ev) => {
+      let txt = '';
+      for (const res of ev.results) txt += res[0].transcript;
+      const input = document.getElementById('opchat-input');
+      if (input) input.value = txt.trim();
+      if (ev.results[ev.results.length - 1].isFinal) {
+        // auto-open drawer + auto-send
+        if (typeof opchatToggle === 'function' && !document.getElementById('opchat-drawer').classList.contains('open')) opchatToggle();
+        if (typeof opchatSend === 'function') opchatSend({ preventDefault(){} });
+      }
+    };
+    VOICE.rec = r;
+    try { r.start(); } catch (e) { console.warn(e); }
+  };
+
+  // Hook into opchatAdd so bot replies get spoken automatically
+  if (typeof window.opchatAdd === 'function') {
+    const orig = window.opchatAdd;
+    window.opchatAdd = function (role, text) {
+      orig(role, text);
+      if (role === 'bot') bossSpeak(text);
+    };
+  }
+
+  // ── Conversation persistence (auto-save every 4 messages) ──
+  let lastSaveLen = 0;
+  setInterval(async () => {
+    if (!window.OPCHAT || !Array.isArray(OPCHAT.history)) return;
+    if (OPCHAT.history.length === lastSaveLen) return;
+    if (OPCHAT.history.length < 2) return;
+    lastSaveLen = OPCHAT.history.length;
+    try {
+      await fetch(API + '/boss/conversations/save', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: VOICE.sessionId, messages: OPCHAT.history }),
+      });
+    } catch (_) {}
+  }, 12000);
+
+  // ── Coach Pulse — proactive next-move badge ──
+  async function refreshCoach(force) {
+    const txtEl = document.getElementById('boss-coach-text');
+    if (!txtEl) return;
+    let r = null;
+    if (force) {
+      r = await fetch(API + '/boss/coach/tick', { method: 'POST' }).then(r => r.json()).catch(() => null);
+    } else {
+      r = await fetch(API + '/boss/coach/latest').then(r => r.json()).catch(() => null);
+      r = r && r.latest;
+    }
+    if (!r || !r.headline) { txtEl.textContent = 'Coach idle — click to wake'; return; }
+    txtEl.textContent = '🧠 ' + r.headline;
+    const pulse = document.querySelector('#boss-coach-pulse .boss-pulse-dot');
+    if (pulse) pulse.style.background = r.vibe === 'red' ? '#ff5d73' : r.vibe === 'amber' ? '#e9b44c' : '#c8ff00';
+  }
+  window.bossCoachPulse = refreshCoach;
+  // Kick on load + every 5 min thereafter
+  setTimeout(() => refreshCoach(false), 1500);
+  setInterval(() => refreshCoach(false), 5 * 60 * 1000);
+
+  // ── On boot: ask server which TTS path to use ──
+  fetch(API + '/boss/voice/stt-hint').then(r => r.json()).then(d => {
+    if (d && d.recommended === 'whisper') VOICE.premiumTTS = true;
+  }).catch(() => {});
+})();

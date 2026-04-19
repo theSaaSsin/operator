@@ -27,6 +27,7 @@ const bossHooks   = require('./automation/webhooks');
 const bossCron    = require('./automation/cron');
 const bossMcp     = require('./automation/mcp');
 const bossAuth    = require('./automation/auth');
+const bossVoice   = require('./ai/voice');
 
 const PORT   = process.env.PORT || 4000;
 const PUBLIC = path.join(__dirname, 'public');
@@ -82,7 +83,7 @@ const ROUTES = {
   // Health check for Railway
   'GET /api/health': (_, res) => json(res, { ok: true, ts: Date.now() }),
 
-  // ── Operator Chat — talk to Operator in-app (Claude Haiku 4.5) ──
+  // ── Legacy Operator Chat — preserved for back-compat. New clients hit /api/boss/chat ──
   'POST /api/chat': async (req, res) => {
     const data = await body(req);
     if (!anthropic) return json(res, { ok: false, error: 'ANTHROPIC_API_KEY not set' }, 400);
@@ -322,6 +323,45 @@ CONTEXT:
     json(res, { ok: true, user: r.user });
   },
   'GET /api/auth/me': (req, res) => json(res, bossAuth.middleware(req)),
+
+  // ── Voice: TTS (server-side, premium) + STT hint ─────────
+  'POST /api/boss/voice/tts': async (req, res) => {
+    const d = await body(req);
+    json(res, await bossVoice.tts({ text: d.text, voice: d.voice }));
+  },
+  'GET /api/boss/voice/stt-hint': (_req, res) => json(res, { ok: true, ...bossVoice.sttHint() }),
+
+  // ── Conversation persistence (always-on Jarvis loop) ─────
+  'GET /api/boss/conversations': (_req, res) => {
+    const fs = require('fs');
+    const dir = path.join(__dirname, 'memory', 'outputs', 'conversations');
+    try { fs.mkdirSync(dir, { recursive: true }); } catch (_) {}
+    let list = [];
+    try {
+      list = fs.readdirSync(dir).filter(f => f.endsWith('.json')).map(f => {
+        const stat = fs.statSync(path.join(dir, f));
+        return { id: f.replace(/\.json$/, ''), bytes: stat.size, mtime: stat.mtimeMs };
+      }).sort((a, b) => b.mtime - a.mtime).slice(0, 50);
+    } catch (_) {}
+    json(res, { ok: true, conversations: list });
+  },
+  'POST /api/boss/conversations/save': async (req, res) => {
+    const fs = require('fs');
+    const d  = await body(req);
+    const dir = path.join(__dirname, 'memory', 'outputs', 'conversations');
+    try { fs.mkdirSync(dir, { recursive: true }); } catch (_) {}
+    const id = (d.id || ('conv-' + Date.now().toString(36))).replace(/[^a-z0-9_-]/gi, '_');
+    fs.writeFileSync(path.join(dir, id + '.json'), JSON.stringify({ id, savedAt: new Date().toISOString(), messages: d.messages || [] }, null, 2));
+    json(res, { ok: true, id });
+  },
+  'GET /api/boss/conversations/load': (req, res) => {
+    const fs = require('fs');
+    const qs = new URLSearchParams(req.url.split('?')[1] || '');
+    const id = (qs.get('id') || '').replace(/[^a-z0-9_-]/gi, '_');
+    const file = path.join(__dirname, 'memory', 'outputs', 'conversations', id + '.json');
+    try { json(res, { ok: true, conversation: JSON.parse(require('fs').readFileSync(file, 'utf8')) }); }
+    catch (e) { json(res, { ok: false, error: 'not found' }, 404); }
+  },
 
   // ── Creative engine: list templates ──────────────────────
   'GET /api/creative/templates': (_req, res) => {

@@ -1,44 +1,48 @@
 {
   "schemaVersion": 1,
   "updatedAt": "2026-04-19T00:00:00.000Z",
-  "current_goal": "Transform Operator into B.O.S.S — multi-agent, multi-model personal AI operator running the business end-to-end.",
-  "last_stable_commit": "d2d3865",
+  "current_goal": "Stabilise B.O.S.S into a single controlled system, then make it talk.",
+  "last_stable_commit": "fb1ce8f",
   "active_tasks": [
-    { "id": "boss-foundation", "title": "Scaffold memory + agents + router + persona", "status": "in_progress" }
+    { "id": "voice-jarvis-mvp", "title": "Browser STT/TTS + premium TTS (ElevenLabs/OpenAI) wired into chat drawer", "status": "completed" },
+    { "id": "step-2-consolidation", "title": "npm run boss + START.md + legacy /api/chat aliased + conversation persistence + coach pulse", "status": "completed" }
   ],
   "completed_tasks": [
-    { "id": "operator-chat-drawer", "title": "Chat drawer + /api/chat (Haiku 4.5)", "commit": "d2d3865" },
-    { "id": "content-studio-pipeline", "title": "Content Studio 4-stage pipeline panel", "commit": "d2d3865" },
-    { "id": "lovable-landing-import", "title": "Lovable pixel-dream-studio-67 imported with relative paths", "commit": "578fe0e" },
-    { "id": "tool-kit-panel", "title": "Tool Kit + Scrapling Pinokio sidecar + privacy gate", "commit": "e2c391e" }
+    { "id": "boss-foundation",        "title": "Memory + agents + router + persona + GitHub integration", "commit": "557c9e2" },
+    { "id": "boss-vision-teach-coach","title": "Vision + Teach + Coach + Bug Scan + real ModelsLab/Scrapling wiring + Desktop shortcut", "commit": "c968619" },
+    { "id": "deploy-configs",         "title": "Vercel + GitHub Pages workflow + DEPLOY.md", "commit": "86bf636" },
+    { "id": "automation-creative",    "title": "n8n webhooks + cron + MCP discovery + multi-user auth + creative scaffolds", "commit": "fb1ce8f" }
   ],
   "known_issues": [
-    "GitHub Pages deploy to thesaassin/thesaassin not yet live at the expected URL.",
-    "Content Studio ccGenAsset is a stub — not yet wired to /api/tools/modelslab/run with real payloads.",
-    "Tool Kit quick-scan still shows alert() instead of real scan.",
-    "No OOBABOOGA_URL wired for local models yet."
+    "If port 4000 is busy, another node process is bound — kill it (netstat | findstr :4000) before npm run boss.",
+    "Premium TTS requires ELEVENLABS_API_KEY or OPENAI_API_KEY — falls back to browser TTS automatically.",
+    "Whisper STT endpoint not yet implemented (browser SR works as Layer 1).",
+    "Content Studio ccGenAsset is wired to ModelsLab via tkQuickScan path but not yet driving the full asset pipeline."
   ],
   "architecture_notes": [
-    "Node vanilla HTTP server (ROUTES map in server.js). No framework.",
-    "Front-end is zero-dep vanilla JS (public/operator.js).",
-    "BOSS foundation adds /ai (agents + router + persona) and /memory (state + logs).",
-    "config/boss.config.js is the single source of truth for env keys, paths, model policy.",
-    "project-state.json is the shared handoff file across Claude / Bolt / local models."
+    "Single Node entry: server.js. One port (PORT env, default 4000). One process.",
+    "All capabilities are routes under /api/{boss|tools|hooks|auth|creative}/*.",
+    "config/boss.config.js = single source of truth for env keys, paths, model policy.",
+    "memory/project-state.json = shared handoff for Claude/Bolt/local models.",
+    "Cron auto-starts in server listen() → coach tick 30m, GitHub surface 24h.",
+    "Conversations auto-persist every 12s to memory/outputs/conversations/<sessionId>.json (always-on Jarvis loop)."
   ],
   "next_steps": [
-    "Wire Operator chat drawer to /api/boss/chat (BOSS persona).",
-    "Add Planner Agent flow: goal in → task list out → write into active_tasks.",
-    "Add Self-Improvement surface route (/api/boss/surface) to recommend tools/repos.",
-    "Ship GitHub Pages deploy for studio.html.",
-    "Replace ccGenAsset stub with real ModelsLab calls."
+    "Add Whisper STT endpoint (POST /api/boss/voice/whisper accepting webm blob).",
+    "Wire Content Studio ccGenAsset to /api/tools/modelslab/run with real per-asset payloads (hero/video/voice/captions).",
+    "Add Remotion sidecar service for headless MP4 render of /creative/remotion compositions.",
+    "Tauri desktop wrap — point at http://localhost:4000/operator.html.",
+    "MCP discovery panel inside Operator UI rendering /api/boss/mcp."
   ],
-  "agents_available": ["planner", "builder", "analyst", "growth", "designer", "content"],
+  "agents_available": ["planner", "builder", "analyst", "growth"],
   "memory_palace": {
     "rooms": {
-      "goals":     "memory/goals.json",
-      "decisions": "memory/decisions.log",
-      "outputs":   "memory/outputs/",
-      "state":     "memory/project-state.json"
+      "goals":         "memory/goals.json",
+      "decisions":     "memory/decisions.log",
+      "outputs":       "memory/outputs/",
+      "state":         "memory/project-state.json",
+      "conversations": "memory/outputs/conversations/",
+      "users":         "memory/users.json"
     },
     "convention": "Every agent reads project-state.json before acting and appends a line to decisions.log after acting."
   }

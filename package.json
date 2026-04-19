@@ -1,14 +1,17 @@
 {
-  "name": "thesaasin-operator",
-  "version": "1.0.0",
-  "description": "TheSaaSsin Operator — AI lead engine",
+  "name": "boss",
+  "version": "0.2.0",
+  "description": "B.O.S.S — Business Optimization System Service. Single Node entry: server.js on PORT (default 4000).",
   "main": "server.js",
   "engines": {
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "boss":         "node server.js",
+    "start":        "node server.js",
+    "dev":          "node server.js",
+    "shortcut:install":   "powershell -ExecutionPolicy Bypass -File launch/install-shortcut.ps1",
+    "shortcut:uninstall": "powershell -ExecutionPolicy Bypass -File launch/uninstall-shortcut.ps1"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
