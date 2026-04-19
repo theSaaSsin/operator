@@ -292,10 +292,16 @@ async function route({
       else                                text = await callOllama({ modelId, system, messages, maxTokens });
       return { ok: true, provider, modelId, tier, taskKind: kind, text };
     } catch (e) {
+      // Surface credit exhaustion immediately — no point trying other providers for this error
+      if (e?.status === 400 && e?.message?.includes('credit balance')) {
+        return { ok: false, error: 'credits_exhausted', provider, tier, taskKind: kind,
+                 hint: 'Anthropic credits are zero. Add a free Groq key at console.groq.com → API Keys → free forever.' };
+      }
       // try next in chain
     }
   }
-  return { ok: false, error: 'All providers failed or unconfigured', tier, taskKind: kind };
+  return { ok: false, error: 'no_provider', tier, taskKind: kind,
+           hint: 'No AI provider configured. Add a free Groq key at console.groq.com → paste in API Keys.' };
 }
 
 // --- status check (used by /api/local/status) ---

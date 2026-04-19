@@ -2090,7 +2090,12 @@ Commands: /scan /pitch /channels /coach /status /render /models`;
     if (r.ok) {
       res.end(JSON.stringify({ ok: true, reply: r.text, provider: r.provider, tier: r.tier, taskKind: r.taskKind }));
     } else {
-      res.end(JSON.stringify({ ok: false, error: r.error || 'All AI providers offline. Add your Anthropic key in API Keys & Settings.' }));
+      const userMsg = r.error === 'credits_exhausted'
+        ? '💳 Anthropic credits exhausted. Get a FREE Groq key at console.groq.com → paste in API Keys → instant access.'
+        : r.error === 'no_provider'
+        ? '🔑 No AI provider active. Get a FREE Groq key at console.groq.com — takes 60 seconds, free forever.'
+        : r.hint || r.error || 'All AI providers offline. Add a key in API Keys & Settings.';
+      res.end(JSON.stringify({ ok: false, error: userMsg, hint: r.hint }));
     }
   },
 

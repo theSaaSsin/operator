@@ -22,7 +22,7 @@
 
   const SLASH_CMDS = [
     { cmd: '/scan',        hint: '/scan [keyword] - sweep Reddit for leads' },
-    { cmd: '/pitch',       hint: '/pitch [lead] - generate full pitch' },
+    { cmd: '/pitch',       hint: '/pitch [target] - generate full outreach pack (email + DM + call opener + pain points)' },
     { cmd: '/orchestrate', hint: '/orchestrate [goal] - deploy all agents' },
     { cmd: '/agents',      hint: '/agents - see the full agent roster' },
     { cmd: '/studio',      hint: '/studio - open Creative Studio' },
@@ -557,6 +557,60 @@
       addMsg('user', text);
       document.querySelector('[data-panel="boss-config"]')?.click();
       addMsgRich('bot', '🔑 Opening <strong>API Keys & Settings</strong>…');
+      return;
+    }
+
+    // ── /pitch — full campaign pack generator ──────────────────────────────
+    if (text.startsWith('/pitch') || text.startsWith('/campaign')) {
+      const target = text.replace(/^\/(pitch|campaign)\s*/,'').trim();
+      addMsg('user', text);
+      if (!target) {
+        addMsgRich('bot', `<strong>/pitch</strong> — Generate a full outreach pack.<br><br>Usage:<br><code>/pitch SaaS founders who struggle with client acquisition</code><br><code>/pitch fitness coaches who want to automate their DMs</code>`);
+        return;
+      }
+      const typing = showTyping();
+      try {
+        const systemPrompt = `You are B.O.S.S — a sharp sales operator. Generate complete, ready-to-send outreach assets. Be direct, punchy, and persuasive. No fluff. Make everything immediately usable.`;
+        const userPrompt = `Generate a complete cold outreach campaign pack for: "${target}"
+
+Deliver ALL of these, each clearly labelled:
+
+📧 COLD EMAIL (subject line + 4-line body + CTA)
+💬 REDDIT/FORUM DM (2-3 casual lines, no pitch vibe)
+🔗 LINKEDIN MESSAGE (professional, 3 sentences, soft CTA)
+📱 INSTAGRAM/TWITTER DM (ultra short, 1-2 lines, curiosity hook)
+📞 CALL OPENER (first 20 seconds of a cold call, confident)
+🎯 KEY PAIN POINTS (3 bullet points — what they're struggling with)
+💰 OFFER STATEMENT (one clear sentence — what we do + result)
+❓ QUALIFYING QUESTION (one question to open a real conversation)
+
+Keep everything tight. Real words, not templates. Output only the pack.`;
+
+        const r = await fetch(API + '/boss/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [{ role: 'user', content: userPrompt }],
+            system: systemPrompt,
+            taskKind: 'pitch',
+            maxTokens: 1200,
+          })
+        }).then(x => x.json());
+        removeTyping();
+        const out = r.text || r.reply || r.message || 'Could not generate — try again.';
+        const badge = tierBadge(r.provider, null);
+        const html = `<div style="margin-bottom:8px"><strong>🎯 Pitch Pack</strong>${badge} <span style="opacity:.5;font-size:.72rem">for: ${target.slice(0,50)}</span></div>`
+          + `<div style="font-size:.8rem;white-space:pre-wrap;line-height:1.6;color:#d0d0e0">${out.replace(/</g,'&lt;')}</div>`
+          + `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">`
+          + `<button style="background:rgba(255,42,42,.12);border:1px solid rgba(255,42,42,.2);color:var(--accent);border-radius:6px;padding:5px 12px;font-size:.75rem;cursor:pointer;font-family:inherit" onclick="navigator.clipboard.writeText(this.closest('#boss-msgs').querySelector('.boss-msg:last-of-type .boss-msg-text pre')?.textContent||'').then(()=>toast('Pack copied','ok'))"><i class="fas fa-copy"></i> Copy All</button>`
+          + `<button style="background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:.75rem;cursor:pointer;font-family:inherit" onclick="document.querySelector('[data-panel=\\'mod-cold-outreach\\']')?.click()"><i class="fas fa-comment-dots"></i> Open Outreach</button>`
+          + `</div>`;
+        addMsgRich('bot', html);
+        HISTORY.push({ role: 'assistant', content: out });
+      } catch(err) {
+        removeTyping();
+        addMsg('bot', 'Pitch generation failed — check AI connection in API Keys.');
+      }
       return;
     }
 

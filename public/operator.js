@@ -204,6 +204,168 @@ const STATUS_META = {
 };
 const STATUS_CYCLE = { planned: 'building', building: 'active', active: 'later', later: 'planned' };
 
+/* ── BUILD COLLAPSIBLE NAV FROM MODULE_MAP ── */
+function buildNav() {
+  const container = document.getElementById('nav-modules');
+  if (!container) return;
+
+  // Category metadata for nav display
+  const CAT_META = {
+    core:        { icon:'fa-microchip',           color:'#ff2a2a', label:'Core' },
+    acquisition: { icon:'fa-bullseye',             color:'#22c55e', label:'Acquire' },
+    sales:       { icon:'fa-hand-holding-dollar',  color:'#f59e0b', label:'Sales' },
+    content:     { icon:'fa-pen-nib',              color:'#a855f7', label:'Content' },
+    automation:  { icon:'fa-gears',                color:'#3b82f6', label:'Automate' },
+    delivery:    { icon:'fa-truck-fast',            color:'#06b6d4', label:'Deliver' },
+    expansion:   { icon:'fa-rocket',               color:'#ec4899', label:'Expand' },
+  };
+
+  // Module icon map (filekey → FA icon)
+  const MOD_ICONS = {
+    'cold-outreach':'fa-comment-dots','proposal':'fa-file-invoice','call-script':'fa-phone',
+    'intent':'fa-brain','followup':'fa-clock-rotate-left','competitor-hijack':'fa-user-secret',
+    'local-finder':'fa-map-pin','keyword-detect':'fa-crosshairs','outreach-send':'fa-share-nodes',
+    'reply-detect':'fa-reply','booking':'fa-calendar-check',
+    'landing-page':'fa-globe','funnel':'fa-filter','offer':'fa-gift','demo-viz':'fa-eye',
+    'testimonials':'fa-star','pricing':'fa-tags','objections':'fa-shield-halved','close-track':'fa-handshake',
+    'content-ideas':'fa-lightbulb','short-form':'fa-video','long-form':'fa-newspaper',
+    'social-posts':'fa-thumbs-up','scheduler':'fa-calendar-days','visual-assets':'fa-image',
+    'brand':'fa-palette','profile-optimizer':'fa-user-pen','engagement':'fa-comments','content-perf':'fa-chart-simple',
+    'workflows':'fa-diagram-project','crm-auto':'fa-robot','email-auto':'fa-envelope-open-text',
+    'notifications':'fa-bell','tasks':'fa-list-check','onboarding':'fa-user-check',
+    'data-sync':'fa-arrows-rotate','file-assets':'fa-folder-open','templates':'fa-clone','clone':'fa-copy',
+    'client-dash':'fa-gauge-high','system-viz':'fa-sitemap','training':'fa-graduation-cap',
+    'progress':'fa-bars-progress','performance':'fa-chart-pie','support':'fa-headset',
+    'change-requests':'fa-code-pull-request','access-control':'fa-lock','export':'fa-file-export','whitelabel':'fa-tag',
+    'partners':'fa-handshake','resellers':'fa-store','marketplace':'fa-cart-shopping',
+    'api-layer':'fa-plug','plugins':'fa-puzzle-piece','revenue':'fa-sack-dollar',
+    'billing':'fa-credit-card','affiliates':'fa-people-arrows','teams':'fa-users','global-analytics':'fa-earth-americas',
+    'system-matcher':'fa-puzzle-piece',
+  };
+
+  // Deduplicated module list per category (prefer entry with panel)
+  const MODULES_BY_CAT = {
+    core: [
+      { key:'feed',     label:'Lead Feed',          status:'active',   icon:'fa-satellite-dish' },
+      { key:'crm',      label:'CRM Pipeline',       status:'active',   icon:'fa-chart-line' },
+      { key:'outreach', label:'Outreach Queue',     status:'active',   icon:'fa-paper-plane' },
+      { key:'client',   label:'New Client',         status:'active',   icon:'fa-user-plus' },
+      { key:'analytics',label:'Analytics',          status:'active',   icon:'fa-chart-bar', fn:'loadAnalytics()' },
+      { key:'mod-system-matcher', label:'System Matcher', status:'building', icon:'fa-puzzle-piece' },
+    ],
+    acquisition: [
+      { key:'feed',                label:'Lead Scraper',      status:'active',   icon:'fa-hashtag' },
+      { key:'mod-keyword-detect',  label:'Keyword Detect',    status:'building', icon:'fa-crosshairs' },
+      { key:'mod-intent',          label:'Intent Analyzer',   status:'building', icon:'fa-brain' },
+      { key:'mod-competitor-hijack',label:'Competitor Hijack',status:'planned',  icon:'fa-user-secret' },
+      { key:'mod-local-finder',    label:'Local Finder',      status:'planned',  icon:'fa-map-pin' },
+      { key:'mod-cold-outreach',   label:'Cold Outreach',     status:'active',   icon:'fa-comment-dots' },
+      { key:'mod-outreach-send',   label:'Outreach Sender',   status:'planned',  icon:'fa-share-nodes' },
+      { key:'mod-followup',        label:'Follow-Up',         status:'planned',  icon:'fa-clock-rotate-left' },
+      { key:'mod-reply-detect',    label:'Reply Detection',   status:'planned',  icon:'fa-reply' },
+      { key:'mod-booking',         label:'Booking',           status:'planned',  icon:'fa-calendar-check' },
+    ],
+    sales: [
+      { key:'mod-landing-page',label:'Landing Page',         status:'planned',  icon:'fa-globe' },
+      { key:'mod-funnel',      label:'Funnel Builder',       status:'planned',  icon:'fa-filter' },
+      { key:'mod-offer',       label:'Offer Generator',      status:'planned',  icon:'fa-gift' },
+      { key:'mod-proposal',    label:'Proposal Builder',     status:'active',   icon:'fa-file-invoice' },
+      { key:'mod-demo-viz',    label:'Demo Visualizer',      status:'planned',  icon:'fa-eye' },
+      { key:'mod-testimonials',label:'Testimonials',         status:'planned',  icon:'fa-star' },
+      { key:'mod-call-script', label:'Call Script',          status:'active',   icon:'fa-phone' },
+      { key:'mod-pricing',     label:'Pricing Builder',      status:'planned',  icon:'fa-tags' },
+      { key:'mod-objections',  label:'Objection Scripts',    status:'planned',  icon:'fa-shield-halved' },
+      { key:'mod-close-track', label:'Close Tracking',       status:'planned',  icon:'fa-handshake' },
+    ],
+    content: [
+      { key:'mod-content-ideas',    label:'Content Ideas',    status:'active',  icon:'fa-lightbulb' },
+      { key:'mod-short-form',       label:'Short-Form',       status:'planned', icon:'fa-video' },
+      { key:'mod-long-form',        label:'Long-Form',        status:'planned', icon:'fa-newspaper' },
+      { key:'mod-social-posts',     label:'Social Posts',     status:'planned', icon:'fa-thumbs-up' },
+      { key:'mod-scheduler',        label:'Scheduler',        status:'planned', icon:'fa-calendar-days' },
+      { key:'mod-visual-assets',    label:'Visual Assets',    status:'planned', icon:'fa-image' },
+      { key:'mod-brand',            label:'Brand Identity',   status:'planned', icon:'fa-palette' },
+      { key:'mod-profile-optimizer',label:'Profile Optimizer',status:'planned', icon:'fa-user-pen' },
+      { key:'mod-engagement',       label:'Engagement',       status:'planned', icon:'fa-comments' },
+      { key:'mod-content-perf',     label:'Content Tracker',  status:'planned', icon:'fa-chart-simple' },
+    ],
+    automation: [
+      { key:'mod-workflows',  label:'Workflows',       status:'planned', icon:'fa-diagram-project' },
+      { key:'mod-crm-auto',   label:'CRM Auto',        status:'planned', icon:'fa-robot' },
+      { key:'mod-email-auto', label:'Email Auto',      status:'planned', icon:'fa-envelope-open-text' },
+      { key:'mod-notifications',label:'Notifications', status:'planned', icon:'fa-bell' },
+      { key:'mod-tasks',      label:'Task Manager',    status:'planned', icon:'fa-list-check' },
+      { key:'mod-onboarding', label:'Onboarding',      status:'planned', icon:'fa-user-check' },
+      { key:'mod-data-sync',  label:'Data Sync',       status:'planned', icon:'fa-arrows-rotate' },
+      { key:'mod-file-assets',label:'File Assets',     status:'planned', icon:'fa-folder-open' },
+      { key:'mod-templates',  label:'Template Library',status:'active',  icon:'fa-clone' },
+      { key:'mod-clone',      label:'System Clone',    status:'planned', icon:'fa-copy' },
+    ],
+    delivery: [
+      { key:'mod-client-dash',    label:'Client Dashboard',  status:'planned', icon:'fa-gauge-high' },
+      { key:'mod-system-viz',     label:'System Visualizer', status:'planned', icon:'fa-sitemap' },
+      { key:'mod-training',       label:'Training Gen',      status:'planned', icon:'fa-graduation-cap' },
+      { key:'mod-progress',       label:'Progress Tracker',  status:'planned', icon:'fa-bars-progress' },
+      { key:'mod-performance',    label:'Performance Dash',  status:'planned', icon:'fa-chart-pie' },
+      { key:'mod-support',        label:'Support Chat',      status:'planned', icon:'fa-headset' },
+      { key:'mod-change-requests',label:'Change Requests',   status:'planned', icon:'fa-code-pull-request' },
+      { key:'mod-access-control', label:'Access Control',    status:'planned', icon:'fa-lock' },
+      { key:'mod-export',         label:'Export / Handoff',  status:'planned', icon:'fa-file-export' },
+      { key:'mod-whitelabel',     label:'White Label',       status:'planned', icon:'fa-tag' },
+    ],
+    expansion: [
+      { key:'mod-partners',        label:'Partners',        status:'later', icon:'fa-handshake' },
+      { key:'mod-resellers',       label:'Resellers',       status:'later', icon:'fa-store' },
+      { key:'mod-marketplace',     label:'Marketplace',     status:'later', icon:'fa-cart-shopping' },
+      { key:'mod-api-layer',       label:'API Layer',       status:'later', icon:'fa-plug' },
+      { key:'mod-plugins',         label:'Plugins',         status:'later', icon:'fa-puzzle-piece' },
+      { key:'mod-revenue',         label:'Revenue Track',   status:'later', icon:'fa-sack-dollar' },
+      { key:'mod-billing',         label:'Billing',         status:'later', icon:'fa-credit-card' },
+      { key:'mod-affiliates',      label:'Affiliates',      status:'later', icon:'fa-people-arrows' },
+      { key:'mod-teams',           label:'Teams',           status:'later', icon:'fa-users' },
+      { key:'mod-global-analytics',label:'Global Analytics',status:'later', icon:'fa-earth-americas' },
+    ],
+  };
+
+  const catOrder = ['core','acquisition','sales','content','automation','delivery','expansion'];
+
+  container.innerHTML = catOrder.map(catId => {
+    const meta  = CAT_META[catId];
+    const mods  = MODULES_BY_CAT[catId] || [];
+    const live  = mods.filter(m => m.status === 'active').length;
+    const total = mods.length;
+    // Expand core and acquisition by default
+    const openDefault = (catId === 'core' || catId === 'acquisition') ? 'open' : '';
+
+    const items = mods.map(m => {
+      const statusCls = m.status === 'active' ? 'mod-live' : m.status === 'building' ? 'mod-building' : m.status === 'later' ? 'mod-later' : '';
+      const clickFn   = m.fn ? `onclick="${m.fn}"` : '';
+      return `<div class="nav-item ${statusCls}" data-panel="${m.key}" ${clickFn}><i class="fas ${m.icon}"></i> ${m.label}</div>`;
+    }).join('');
+
+    return `
+    <div class="nav-group ${openDefault}" id="navg-${catId}">
+      <div class="nav-group-head" onclick="toggleNavGroup('${catId}')" style="color:${meta.color}">
+        <i class="fas ${meta.icon} nav-gi"></i>
+        <span>${meta.label}</span>
+        <span class="nav-count">${live}/${total}</span>
+        <i class="fas fa-chevron-down nav-group-arrow"></i>
+      </div>
+      <div class="nav-group-items">${items}</div>
+    </div>`;
+  }).join('');
+
+  // Re-bind nav click listeners for the newly created items
+  document.querySelectorAll('#nav-modules .nav-item').forEach(item => {
+    item.addEventListener('click', () => switchPanel(item.dataset.panel));
+  });
+}
+
+function toggleNavGroup(catId) {
+  const el = document.getElementById('navg-' + catId);
+  if (el) el.classList.toggle('open');
+}
+
 function findModuleByNumber(moduleNumber) {
   for (const cat of MODULE_MAP) {
     const mod = cat.modules.find(m => m.n === moduleNumber);
@@ -323,6 +485,7 @@ async function cycleModuleStatus(moduleNumber) {
   }
 }
 
+buildNav();
 renderDashboard();
 updateSidebarModuleCounts();
 loadModuleState();
