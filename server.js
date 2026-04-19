@@ -23,6 +23,10 @@ const bossVision  = require('./ai/vision');
 const bossTeach   = require('./ai/teach');
 const bossCoach   = require('./ai/coach');
 const bossBugscan = require('./ai/bugscan');
+const bossHooks   = require('./automation/webhooks');
+const bossCron    = require('./automation/cron');
+const bossMcp     = require('./automation/mcp');
+const bossAuth    = require('./automation/auth');
 
 const PORT   = process.env.PORT || 4000;
 const PUBLIC = path.join(__dirname, 'public');
@@ -288,6 +292,48 @@ CONTEXT:
   'POST /api/boss/bugscan': async (req, res) => {
     const d = await body(req);
     json(res, await bossBugscan.scan({ withVerdict: !!d.withVerdict }));
+  },
+
+  // ── Webhooks (n8n-ready) ─────────────────────────────────
+  'GET /api/hooks/snapshot': (_req, res) => json(res, { ok: true, ...bossHooks.snapshot() }),
+  // (POST /api/hooks/in/<name> handled in the request listener below — prefix match)
+  'POST /api/hooks/emit': async (req, res) => {
+    const d = await body(req);
+    if (!d.event) return json(res, { ok: false, error: 'event required' }, 400);
+    json(res, { ok: true, results: await bossHooks.emit(d.event, d.payload || {}) });
+  },
+
+  // ── MCP discovery ────────────────────────────────────────
+  'GET /api/boss/mcp': (req, res) => {
+    const qs = new URLSearchParams(req.url.split('?')[1] || '');
+    json(res, { ok: true, servers: bossMcp.discover({ topic: qs.get('topic') || '', limit: Number(qs.get('limit') || 6) }) });
+  },
+  'POST /api/boss/mcp/record': async (req, res) => {
+    const d = await body(req);
+    json(res, { ok: true, list: bossMcp.record(d) });
+  },
+
+  // ── Auth (multi-user prep) ───────────────────────────────
+  'POST /api/auth/login': async (req, res) => {
+    const d = await body(req);
+    const r = bossAuth.login(d.email, d.password);
+    if (!r.ok) return json(res, r, 401);
+    res.setHeader('Set-Cookie', `boss_token=${encodeURIComponent(r.token)}; HttpOnly; Path=/; Max-Age=${60*60*24*14}; SameSite=Lax`);
+    json(res, { ok: true, user: r.user });
+  },
+  'GET /api/auth/me': (req, res) => json(res, bossAuth.middleware(req)),
+
+  // ── Creative engine: list templates ──────────────────────
+  'GET /api/creative/templates': (_req, res) => {
+    const fs = require('fs');
+    const root = path.join(__dirname, 'creative');
+    const out = {};
+    for (const sub of ['three','shaders','framer','remotion']) {
+      const dir = path.join(root, sub);
+      try { out[sub] = fs.readdirSync(dir).filter(f => !f.startsWith('.')).map(f => ({ name: f, path: `creative/${sub}/${f}` })); }
+      catch (_) { out[sub] = []; }
+    }
+    json(res, { ok: true, templates: out });
   },
 
   // ── Brand Engine ─────────────────────────────────────────
@@ -1156,6 +1202,17 @@ http.createServer(async (req, res) => {
   const key = `${req.method} ${req.url.split('?')[0]}`;
   if (ROUTES[key]) return ROUTES[key](req, res);
 
+  // Prefix routes (dynamic path params)
+  if (req.method === 'POST' && req.url.startsWith('/api/hooks/in/')) {
+    const name = req.url.split('?')[0].split('/').pop();
+    const qs   = new URLSearchParams(req.url.split('?')[1] || '');
+    if (!bossHooks.authOk(qs.get('secret'))) return json(res, { ok: false, error: 'bad secret' }, 401);
+    const payload = await body(req);
+    const file = bossHooks.recordInbound(name, payload, req.headers);
+    bossHooks.emit(`in.${name}`, payload).catch(() => {});
+    return json(res, { ok: true, recordedAt: file });
+  }
+
   // Static files — root now serves studio.html (public marketing), /operator.html is gated
   let filePath = req.url === '/' ? '/studio.html' : req.url;
   filePath = path.join(PUBLIC, filePath.split('?')[0]);
@@ -1166,7 +1223,11 @@ http.createServer(async (req, res) => {
     res.end(data);
   });
 }).listen(PORT, () => {
-  console.log(`TheSaaSsin Operator → http://localhost:${PORT}`);
+  console.log(`B.O.S.S → http://localhost:${PORT}`);
   if (PRIVATE_MODE && OPERATOR_PASSWORD) console.log(`  🔒 Private mode ON · password gate active`);
   else if (PRIVATE_MODE && !OPERATOR_PASSWORD) console.log(`  ⚠️  Private mode ON but no OPERATOR_PASSWORD set — set one in .env to enforce`);
+
+  // Bootstrap auth (idempotent) and start in-process cron jobs.
+  try { bossAuth.bootstrap(); } catch (e) { console.warn('auth bootstrap:', e.message); }
+  try { bossCron.start();     } catch (e) { console.warn('cron start:', e.message); }
 });

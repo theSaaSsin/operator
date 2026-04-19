@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>BOSS · Hero Particles</title>
+<style>html,body{margin:0;height:100%;background:#0a0a0a;overflow:hidden}canvas{display:block}</style>
+</head><body>
+<canvas id="c"></canvas>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const cv = document.getElementById('c');
+const w = innerWidth, h = innerHeight;
+const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+renderer.setPixelRatio(devicePixelRatio); renderer.setSize(w, h);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, w/h, 0.1, 100); camera.position.z = 14;
+// Particle field
+const N = 4000, geo = new THREE.BufferGeometry();
+const pos = new Float32Array(N * 3);
+for (let i = 0; i < N; i++) { pos[i*3]=(Math.random()-0.5)*40; pos[i*3+1]=(Math.random()-0.5)*22; pos[i*3+2]=(Math.random()-0.5)*40; }
+geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+const mat = new THREE.PointsMaterial({ size: 0.03, color: 0xc8ff00, transparent: true, opacity: 0.85 });
+const points = new THREE.Points(geo, mat); scene.add(points);
+// Subtle camera drift
+let t = 0;
+function loop() { t += 0.005; points.rotation.y = t * 0.4; points.rotation.x = Math.sin(t)*0.1; renderer.render(scene, camera); requestAnimationFrame(loop); }
+loop();
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); });
+</script>
+</body></html>
