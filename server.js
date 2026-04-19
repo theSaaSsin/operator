@@ -19,6 +19,10 @@ const bossAgents  = require('./ai/agents');
 const bossGithub  = require('./ai/github');
 const bossRouter  = require('./ai/router');
 const bossPersona = require('./ai/persona');
+const bossVision  = require('./ai/vision');
+const bossTeach   = require('./ai/teach');
+const bossCoach   = require('./ai/coach');
+const bossBugscan = require('./ai/bugscan');
 
 const PORT   = process.env.PORT || 4000;
 const PUBLIC = path.join(__dirname, 'public');
@@ -262,6 +266,29 @@ CONTEXT:
 
   // Agents listing (for UI)
   'GET /api/boss/agents': (_req, res) => json(res, { ok: true, agents: bossCfg.agents, available: bossAgents.list() }),
+
+  // ── Vision: BOSS sees the screen ─────────────────────────
+  'POST /api/boss/vision': async (req, res) => {
+    const d = await body(req);
+    json(res, await bossVision.review({ imageBase64: d.image, task: d.task, extra: d.extra }));
+  },
+
+  // ── Teach: vibe-coding mentor curriculum ─────────────────
+  'POST /api/boss/teach': async (req, res) => {
+    const d = await body(req);
+    json(res, await bossTeach.teach({ topic: d.topic, level: d.level }));
+  },
+  'GET /api/boss/teach/list': (_req, res) => json(res, { ok: true, lessons: bossTeach.listLessons() }),
+
+  // ── Coach: proactive next-move panel ─────────────────────
+  'POST /api/boss/coach/tick': async (_req, res) => json(res, await bossCoach.tick()),
+  'GET /api/boss/coach/latest': (_req, res) => json(res, { ok: true, latest: bossCoach.latest() }),
+
+  // ── Bug Scan: heuristic + AI verdict ─────────────────────
+  'POST /api/boss/bugscan': async (req, res) => {
+    const d = await body(req);
+    json(res, await bossBugscan.scan({ withVerdict: !!d.withVerdict }));
+  },
 
   // ── Brand Engine ─────────────────────────────────────────
   'POST /api/generate-brand': async (req, res) => {

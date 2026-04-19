@@ -87,12 +87,44 @@ async function pingTool(id) {
     el.textContent=label; el.style.color=color; el.style.background=bg;
   } catch (e) { el.textContent='ERR'; }
 }
-function tkQuickScan(id) {
+async function tkQuickScan(id) {
+  const API = (window.OP_CONFIG?.API || '/api');
   if (id === 'scrapling') {
     const kw = prompt('Keyword for stealth Reddit scan:', 'need clients');
     if (!kw) return;
-    alert(`Scanning with Scrapling for "${kw}"…\n\nLead Feed will light up if sidecar is running (port 5001).`);
+    const r = await fetch(API + '/tools/scrapling/scan', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: '/scan/reddit', body: { query: kw, limit: 10 } }),
+    }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+    if (!r.ok) return alert('Scrapling: ' + (r.error || 'failed') + '\nIs sidecar running on :5001?');
+    alert(`Got ${(r.results||[]).length} results. Opening Lead Feed.`);
+    if (typeof goPanel === 'function') goPanel('feed');
+  } else if (id === 'modelslab') {
+    const p = prompt('Quick image prompt:', 'cinematic dark editorial portrait, neon rim');
+    if (!p) return;
+    const r = await fetch(API + '/tools/modelslab/run', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: 'realtime/text2img', payload: { prompt: p, width: 1024, height: 1024, samples: 1 } }),
+    }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+    const url = r?.output?.[0] || r?.proxy_links?.[0];
+    if (url) window.open(url, '_blank');
+    else alert('ModelsLab: ' + (r.error || JSON.stringify(r).slice(0, 200)));
+  } else {
+    alert('Quick-scan not yet wired for ' + id);
   }
+}
+async function bossBugScan() {
+  const API = (window.OP_CONFIG?.API || '/api');
+  const btn = document.getElementById('boss-bugscan-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Scanning…'; }
+  const r = await fetch(API + '/boss/bugscan', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ withVerdict: true }),
+  }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+  if (btn) { btn.disabled = false; btn.textContent = 'Quick Bug Scan'; }
+  if (!r.ok) return alert('Bug scan: ' + r.error);
+  const top3 = (r.verdict?.top_3_to_fix || []).map((t,i) => `${i+1}. ${t.file}: ${t.action}`).join('\n');
+  alert(`Bug Scan: ${r.totalFiles} smelly files.\nOverall: ${r.verdict?.overall || 'n/a'}\n\nTop 3:\n${top3 || '(none)'}`);
 }
 function tkConfigure(id, envKey) {
   goPanel('settings');
