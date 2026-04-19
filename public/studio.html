@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B.O.S.S Creative Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0f;--primary:#1de5ff;--secondary:#7f5af0;--accent:#ff6b35;
+  --success:#2cb67d;--surface:#12121a;--border:rgba(29,229,255,0.15);
+  --text:#e8f0fe;--font:'Space Mono',monospace;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font)}
+/* HEADER */
+#header{
+  position:fixed;top:0;left:0;right:0;height:60px;background:var(--surface);
+  border-bottom:1px solid var(--border);display:flex;align-items:center;
+  padding:0 20px;gap:16px;z-index:100;
+}
+#logo{color:var(--primary);font-weight:700;font-size:14px;letter-spacing:2px;white-space:nowrap}
+#logo span{color:var(--accent)}
+.tabs{display:flex;gap:4px;flex:1;position:relative}
+.tab{
+  padding:6px 16px;font-family:var(--font);font-size:11px;font-weight:700;
+  letter-spacing:1px;color:rgba(232,240,254,0.5);background:transparent;
+  border:none;cursor:pointer;transition:color 0.2s;position:relative;
+}
+.tab.active{color:var(--primary)}
+#tab-indicator{
+  position:absolute;bottom:-1px;height:2px;background:var(--primary);
+  transition:left 0.3s cubic-bezier(.4,0,.2,1),width 0.3s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 0 8px var(--primary);
+}
+#header-right{display:flex;align-items:center;gap:12px;margin-left:auto}
+#boss-toggle{
+  padding:6px 14px;background:rgba(29,229,255,0.1);border:1px solid var(--border);
+  color:var(--primary);font-family:var(--font);font-size:11px;font-weight:700;
+  cursor:pointer;letter-spacing:1px;transition:all 0.2s;
+}
+#boss-toggle:hover{background:rgba(29,229,255,0.2)}
+#back-link{
+  color:rgba(232,240,254,0.4);font-size:11px;text-decoration:none;
+  letter-spacing:1px;transition:color 0.2s;
+}
+#back-link:hover{color:var(--primary)}
+/* MAIN LAYOUT */
+#layout{
+  display:flex;position:fixed;top:60px;left:0;right:0;bottom:20px;
+}
+#main{flex:1;position:relative;overflow:hidden}
+/* SIDEBAR */
+#sidebar{
+  width:320px;background:var(--surface);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;transition:width 0.3s,opacity 0.3s;
+  overflow:hidden;
+}
+#sidebar.collapsed{width:0;opacity:0;pointer-events:none}
+#sidebar-header{
+  padding:16px;border-bottom:1px solid var(--border);display:flex;
+  align-items:center;gap:10px;
+}
+#boss-avatar{
+  width:32px;height:32px;background:rgba(29,229,255,0.15);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+  border:1px solid var(--border);flex-shrink:0;
+}
+#sidebar-title{color:var(--primary);font-size:12px;font-weight:700;letter-spacing:1px}
+#sidebar-subtitle{color:rgba(232,240,254,0.4);font-size:10px;margin-top:2px}
+#msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+#msgs::-webkit-scrollbar{width:4px}
+#msgs::-webkit-scrollbar-track{background:transparent}
+#msgs::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.msg-user{
+  align-self:flex-end;background:rgba(29,229,255,0.15);border:1px solid rgba(29,229,255,0.3);
+  color:var(--primary);padding:8px 12px;font-size:11px;max-width:85%;line-height:1.5;
+}
+.msg-boss{
+  align-self:flex-start;background:rgba(18,18,26,0.8);border-left:3px solid var(--primary);
+  color:var(--text);padding:8px 12px;font-size:11px;max-width:95%;line-height:1.5;
+}
+.msg-thinking{color:rgba(232,240,254,0.4);font-size:11px;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:1}}
+#sidebar-input-wrap{
+  padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;
+}
+#sidebar-input{
+  flex:1;background:rgba(29,229,255,0.05);border:1px solid var(--border);
+  color:var(--text);font-family:var(--font);font-size:11px;padding:8px 10px;
+  outline:none;
+}
+#sidebar-input:focus{border-color:var(--primary)}
+#sidebar-send{
+  background:var(--primary);border:none;color:#000;font-family:var(--font);
+  font-size:12px;font-weight:700;padding:8px 12px;cursor:pointer;
+  transition:opacity 0.2s;
+}
+#sidebar-send:hover{opacity:0.8}
+/* MODE PANELS */
+.mode-panel{
+  position:absolute;inset:0;opacity:0;pointer-events:none;
+  transition:opacity 0.3s;
+}
+.mode-panel.active{opacity:1;pointer-events:all}
+/* MODE 1: 3D GRID */
+#mode-grid canvas{display:block;width:100%!important;height:100%!important}
+#filter-bar{
+  position:absolute;top:16px;left:50%;transform:translateX(-50%);
+  display:flex;gap:8px;z-index:10;
+}
+.filter-btn{
+  padding:6px 14px;background:rgba(18,18,26,0.9);border:1px solid var(--border);
+  color:rgba(232,240,254,0.5);font-family:var(--font);font-size:10px;font-weight:700;
+  letter-spacing:1px;cursor:pointer;transition:all 0.2s;
+}
+.filter-btn.active{background:rgba(29,229,255,0.15);border-color:var(--primary);color:var(--primary)}
+/* MODE 2: PARTICLE LAB */
+#mode-particles{background:var(--bg)}
+#mode-particles canvas{display:block}
+#preset-bar{
+  position:absolute;top:16px;left:50%;transform:translateX(-50%);
+  display:flex;gap:8px;z-index:10;
+}
+.preset-btn{
+  padding:6px 14px;background:rgba(18,18,26,0.9);border:1px solid var(--border);
+  color:rgba(232,240,254,0.5);font-family:var(--font);font-size:10px;font-weight:700;
+  letter-spacing:1px;cursor:pointer;transition:all 0.2s;
+}
+.preset-btn.active{color:var(--primary);border-color:var(--primary);background:rgba(29,229,255,0.1)}
+/* MODE 3: PARALLAX */
+#mode-parallax{overflow-y:scroll}
+#parallax-container{position:relative;height:300vh;overflow:hidden}
+.parallax-layer{position:fixed;inset:0;pointer-events:none}
+#parallax-controls{
+  position:fixed;right:20px;top:80px;width:180px;
+  background:rgba(18,18,26,0.95);border:1px solid var(--border);
+  padding:16px;z-index:20;
+}
+#parallax-controls h3{color:var(--primary);font-size:10px;letter-spacing:1px;margin-bottom:12px}
+.depth-control{margin-bottom:10px}
+.depth-control label{font-size:9px;color:rgba(232,240,254,0.5);letter-spacing:1px;display:block;margin-bottom:4px}
+.depth-control input[type=range]{width:100%;accent-color:var(--primary)}
+#export-css-btn{
+  width:100%;margin-top:12px;padding:8px;background:rgba(29,229,255,0.1);
+  border:1px solid var(--primary);color:var(--primary);font-family:var(--font);
+  font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;
+}
+#css-output{
+  display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:500px;background:var(--surface);border:1px solid var(--primary);
+  padding:20px;z-index:200;max-height:70vh;overflow:auto;
+}
+#css-output pre{font-size:10px;color:var(--success);white-space:pre-wrap;line-height:1.6}
+#css-copy-btn{
+  margin-top:12px;padding:6px 14px;background:var(--primary);border:none;
+  color:#000;font-family:var(--font);font-size:10px;font-weight:700;cursor:pointer;
+}
+#css-close-btn{
+  margin-top:12px;margin-left:8px;padding:6px 14px;background:transparent;
+  border:1px solid var(--border);color:var(--text);font-family:var(--font);
+  font-size:10px;cursor:pointer;
+}
+/* MODE 4: TEMPLATES */
+#mode-templates{overflow-y:auto;padding:24px}
+#mode-templates h2{color:var(--primary);font-size:16px;letter-spacing:2px;margin-bottom:20px}
+#template-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+.template-card{
+  background:var(--surface);border:1px solid var(--border);padding:0;
+  cursor:pointer;transition:border-color 0.2s,transform 0.2s;overflow:hidden;
+}
+.template-card:hover{border-color:var(--primary);transform:translateY(-2px)}
+.template-preview{width:100%;height:120px;position:relative;overflow:hidden}
+.template-info{padding:14px}
+.template-name{color:var(--primary);font-size:12px;font-weight:700;letter-spacing:1px}
+.template-tagline{color:rgba(232,240,254,0.5);font-size:10px;margin-top:4px;line-height:1.4}
+.template-badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
+.badge{
+  padding:2px 6px;background:rgba(29,229,255,0.1);border:1px solid var(--border);
+  color:rgba(232,240,254,0.5);font-size:9px;letter-spacing:0.5px;
+}
+.launch-btn{
+  width:100%;margin-top:12px;padding:8px;background:rgba(29,229,255,0.1);
+  border:1px solid var(--primary);color:var(--primary);font-family:var(--font);
+  font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;
+  transition:background 0.2s;
+}
+.launch-btn:hover{background:rgba(29,229,255,0.25)}
+/* STATUS BAR */
+#statusbar{
+  position:fixed;bottom:0;left:0;right:0;height:20px;background:rgba(18,18,26,0.95);
+  border-top:1px solid var(--border);display:flex;align-items:center;
+  padding:0 16px;gap:16px;font-size:9px;letter-spacing:1px;color:rgba(232,240,254,0.4);
+  z-index:100;
+}
+#status-mode{color:var(--primary)}
+#status-fps{color:var(--success)}
+#status-provider{color:var(--secondary)}
+@media(max-width:768px){
+  #sidebar{display:none}
+  #sidebar.mobile-open{display:flex;position:fixed;inset:60px 0 20px auto;z-index:90}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header id="header">
+  <div id="logo">B.O.S.S <span>STUDIO</span></div>
+  <div class="tabs" id="tabs">
+    <button class="tab active" onclick="switchMode(0)" data-mode="0">3D GRID</button>
+    <button class="tab" onclick="switchMode(1)" data-mode="1">PARTICLE LAB</button>
+    <button class="tab" onclick="switchMode(2)" data-mode="2">PARALLAX</button>
+    <button class="tab" onclick="switchMode(3)" data-mode="3">TEMPLATES</button>
+    <div id="tab-indicator"></div>
+  </div>
+  <div id="header-right">
+    <button id="boss-toggle" onclick="toggleSidebar()">⚡ B.O.S.S</button>
+    <a id="back-link" href="/operator.html">← Operator</a>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div id="layout">
+  <div id="main">
+
+    <!-- MODE 1: 3D GRID -->
+    <div class="mode-panel active" id="mode-grid">
+      <div id="filter-bar">
+        <button class="filter-btn active" onclick="filterGrid('all')">ALL</button>
+        <button class="filter-btn" onclick="filterGrid('web')">WEB</button>
+        <button class="filter-btn" onclick="filterGrid('saas')">SAAS</button>
+        <button class="filter-btn" onclick="filterGrid('brand')">BRAND</button>
+        <button class="filter-btn" onclick="filterGrid('3d')">3D</button>
+      </div>
+    </div>
+
+    <!-- MODE 2: PARTICLE LAB -->
+    <div class="mode-panel" id="mode-particles">
+      <div id="preset-bar">
+        <button class="preset-btn active" onclick="setPreset('nebula')">NEBULA</button>
+        <button class="preset-btn" onclick="setPreset('neural')">NEURAL</button>
+        <button class="preset-btn" onclick="setPreset('rocket')">ROCKET 🚀</button>
+        <button class="preset-btn" onclick="setPreset('matrix')">MATRIX</button>
+        <button class="preset-btn" onclick="setPreset('galaxy')">GALAXY</button>
+      </div>
+    </div>
+
+    <!-- MODE 3: PARALLAX -->
+    <div class="mode-panel" id="mode-parallax">
+      <div id="parallax-container">
+        <canvas id="layer0-canvas" class="parallax-layer" style="z-index:1"></canvas>
+        <div id="layer1" class="parallax-layer" style="z-index:2"></div>
+        <div id="layer2" class="parallax-layer" style="z-index:3"></div>
+        <div id="layer3" class="parallax-layer" style="z-index:4"></div>
+        <div id="layer4" class="parallax-layer" style="z-index:5;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px">
+          <h1 style="font-size:clamp(32px,5vw,72px);color:var(--primary);letter-spacing:8px;text-shadow:0 0 40px var(--primary)">YOUR PORTFOLIO</h1>
+          <p style="color:rgba(232,240,254,0.6);font-size:14px;letter-spacing:3px">BUILT TO CONVERT. DESIGNED TO IMPRESS.</p>
+          <button style="padding:14px 32px;background:var(--primary);border:none;color:#000;font-family:var(--font);font-size:13px;font-weight:700;letter-spacing:2px;cursor:pointer">GET STARTED →</button>
+        </div>
+      </div>
+      <div id="parallax-controls">
+        <h3>DEPTH CONTROLS</h3>
+        <div class="depth-control"><label>LAYER 0 (BG STARS)</label><input type="range" min="1" max="20" value="5" id="depth0" oninput="updateDepth(0,this.value/100)"></div>
+        <div class="depth-control"><label>LAYER 1 (SHAPES)</label><input type="range" min="1" max="40" value="15" id="depth1" oninput="updateDepth(1,this.value/100)"></div>
+        <div class="depth-control"><label>LAYER 2 (GRID)</label><input type="range" min="1" max="60" value="35" id="depth2" oninput="updateDepth(2,this.value/100)"></div>
+        <div class="depth-control"><label>LAYER 3 (CARDS)</label><input type="range" min="1" max="80" value="60" id="depth3" oninput="updateDepth(3,this.value/100)"></div>
+        <div class="depth-control"><label>LAYER 4 (FOREGROUND)</label><input type="range" min="50" max="120" value="100" id="depth4" oninput="updateDepth(4,this.value/100)"></div>
+        <button id="export-css-btn" onclick="exportCSS()">EXPORT CSS</button>
+      </div>
+      <div id="css-output">
+        <pre id="css-pre"></pre>
+        <button id="css-copy-btn" onclick="copyCSS()">COPY</button>
+        <button id="css-close-btn" onclick="document.getElementById('css-output').style.display='none'">CLOSE</button>
+      </div>
+    </div>
+
+    <!-- MODE 4: TEMPLATES -->
+    <div class="mode-panel" id="mode-templates">
+      <h2>TEMPLATE LIBRARY</h2>
+      <div id="template-grid"></div>
+    </div>
+
+  </div>
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <div id="boss-avatar">⚡</div>
+      <div>
+        <div id="sidebar-title">B.O.S.S</div>
+        <div id="sidebar-subtitle">Business Optimization System Service</div>
+      </div>
+    </div>
+    <div id="msgs"></div>
+    <div id="sidebar-input-wrap">
+      <input id="sidebar-input" placeholder="Ask B.O.S.S anything..." onkeydown="if(event.key==='Enter')sendBoss()">
+      <button id="sidebar-send" onclick="sendBoss()">→</button>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="statusbar">
+  <span>MODE: <span id="status-mode">3D GRID</span></span>
+  <span>FPS: <span id="status-fps">--</span></span>
+  <span id="status-provider"></span>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// GLOBALS
+// ═══════════════════════════════════════════════════════════
+let currentMode = 0;
+const modeNames = ['3D GRID','PARTICLE LAB','PARALLAX','TEMPLATES'];
+let sidebarOpen = true;
+let frameId = null;
+let fpsLast = performance.now(), fpsCount = 0, fps = 0;
+
+// ═══════════════════════════════════════════════════════════
+// TAB INDICATOR
+// ═══════════════════════════════════════════════════════════
+function positionIndicator(idx) {
+  const tabs = document.querySelectorAll('.tab');
+  const t = tabs[idx];
+  const bar = document.querySelector('.tabs');
+  const barRect = bar.getBoundingClientRect();
+  const tabRect = t.getBoundingClientRect();
+  const ind = document.getElementById('tab-indicator');
+  ind.style.left = (tabRect.left - barRect.left) + 'px';
+  ind.style.width = tabRect.width + 'px';
+}
+window.addEventListener('load', () => setTimeout(() => positionIndicator(0), 100));
+window.addEventListener('resize', () => positionIndicator(currentMode));
+
+// ═══════════════════════════════════════════════════════════
+// MODE SWITCHING
+// ═══════════════════════════════════════════════════════════
+function switchMode(idx) {
+  const panels = document.querySelectorAll('.mode-panel');
+  panels[currentMode].classList.remove('active');
+  panels[idx].classList.add('active');
+
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  positionIndicator(idx);
+
+  // cleanup
+  if (currentMode === 0) pauseGrid();
+  if (currentMode === 1) stopParticles();
+
+  currentMode = idx;
+  document.getElementById('status-mode').textContent = modeNames[idx];
+
+  if (idx === 0) resumeGrid();
+  if (idx === 1) startParticles();
+  if (idx === 2) initParallax();
+  if (idx === 3) initTemplates();
+
+  // notify BOSS
+  const tip = ['3D Grid', 'Particle Lab', 'Parallax', 'Templates'][idx];
+  bossSwitchContext(tip);
+}
+
+// ═══════════════════════════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════════════════════════
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  document.getElementById('sidebar').classList.toggle('collapsed', !sidebarOpen);
+}
+
+// ═══════════════════════════════════════════════════════════
+// BOSS CHAT
+// ═══════════════════════════════════════════════════════════
+let bossHistory = [];
+let bossProvider = '';
+
+function addMsg(role, text) {
+  const msgs = document.getElementById('msgs');
+  const div = document.createElement('div');
+  div.className = role === 'user' ? 'msg-user' : 'msg-boss';
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function addThinking() {
+  const msgs = document.getElementById('msgs');
+  const div = document.createElement('div');
+  div.className = 'msg-thinking';
+  div.id = 'boss-thinking';
+  div.textContent = 'B.O.S.S is thinking...';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeThinking() {
+  const el = document.getElementById('boss-thinking');
+  if (el) el.remove();
+}
+
+async function callBoss(userMsg, taskKind = 'coach') {
+  bossHistory.push({ role: 'user', content: userMsg });
+  addThinking();
+  try {
+    const res = await fetch('/api/boss/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: bossHistory, taskKind })
+    });
+    const data = await res.json();
+    removeThinking();
+    const reply = data.reply || data.message || data.content || 'Ready.';
+    bossHistory.push({ role: 'assistant', content: reply });
+    if (data.provider) {
+      bossProvider = data.provider + (data.model ? ' · ' + data.model : '');
+      document.getElementById('status-provider').textContent = bossProvider;
+    }
+    return reply;
+  } catch(e) {
+    removeThinking();
+    return 'B.O.S.S offline — connect to localhost:4000';
+  }
+}
+
+async function sendBoss() {
+  const input = document.getElementById('sidebar-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addMsg('user', text);
+  const reply = await callBoss(text);
+  addMsg('boss', reply);
+}
+
+async function bossSwitchContext(modeName) {
+  if (!sidebarOpen) return;
+  const content = `Studio context: I just switched to ${modeName} mode. Give me one sharp tip.`;
+  const reply = await callBoss(content, 'coach');
+  addMsg('boss', reply);
+}
+
+// init greeting
+(async function() {
+  const reply = await callBoss('Studio just opened. Give a brief welcome and one power tip for the 3D Grid mode.', 'coach');
+  addMsg('boss', reply);
+})();
+
+// ═══════════════════════════════════════════════════════════
+// FPS COUNTER
+// ═══════════════════════════════════════════════════════════
+function trackFPS() {
+  fpsCount++;
+  const now = performance.now();
+  if (now - fpsLast >= 1000) {
+    fps = Math.round(fpsCount * 1000 / (now - fpsLast));
+    document.getElementById('status-fps').textContent = fps;
+    fpsCount = 0;
+    fpsLast = now;
+  }
+  requestAnimationFrame(trackFPS);
+}
+trackFPS();
+
+// ═══════════════════════════════════════════════════════════
+// MODE 1: THREE.JS 3D GRID
+// ═══════════════════════════════════════════════════════════
+const CARDS = [
+  { title: 'SaaS Dashboard', cat: 'saas', color: '#1de5ff', metric: '94%', tag: 'CONVERSION' },
+  { title: 'Agency Site', cat: 'web', color: '#7f5af0', metric: '4.2s', tag: 'LOAD TIME' },
+  { title: 'Brand Identity', cat: 'brand', color: '#ff6b35', metric: '3×', tag: 'GROWTH' },
+  { title: '3D Landing', cat: '3d', color: '#2cb67d', metric: '99', tag: 'PERF SCORE' },
+  { title: 'AI Product Page', cat: 'saas', color: '#1de5ff', metric: '68%', tag: 'BOUNCE↓' },
+  { title: 'E-Commerce Store', cat: 'web', color: '#7f5af0', metric: '£12k', tag: 'REV/MO' },
+  { title: 'Logo Suite', cat: 'brand', color: '#ff6b35', metric: '∞', tag: 'SCALABLE' },
+  { title: 'WebGL Hero', cat: '3d', color: '#2cb67d', metric: '60fps', tag: 'SMOOTH' },
+  { title: 'CRM Portal', cat: 'saas', color: '#1de5ff', metric: '2hrs', tag: 'SAVED/DAY' },
+  { title: 'Portfolio Site', cat: 'web', color: '#7f5af0', metric: 'A+', tag: 'GRADE' },
+  { title: 'Brand System', cat: 'brand', color: '#ff6b35', metric: '50+', tag: 'ASSETS' },
+  { title: 'Particle BG', cat: '3d', color: '#2cb67d', metric: '1M+', tag: 'PARTICLES' },
+];
+
+let threeScene, threeCamera, threeRenderer, threeCards = [], threeParticles;
+let threeRAF = null, threeActive = false;
+let mouseMoveX = 0, mouseMoveY = 0;
+let currentFilter = 'all';
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let hoveredCard = null;
+
+function makeCardTexture(card) {
+  const cv = document.createElement('canvas');
+  cv.width = 256; cv.height = 340;
+  const ctx = cv.getContext('2d');
+
+  // bg
+  ctx.fillStyle = '#0d0d14';
+  ctx.fillRect(0, 0, 256, 340);
+
+  // border
+  ctx.strokeStyle = card.color;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, 254, 338);
+
+  // top gradient strip
+  const grd = ctx.createLinearGradient(0, 0, 256, 0);
+  grd.addColorStop(0, card.color + '33');
+  grd.addColorStop(1, 'transparent');
+  ctx.fillStyle = grd;
+  ctx.fillRect(2, 2, 252, 80);
+
+  // grid lines in preview area
+  ctx.strokeStyle = card.color + '22';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 8; i++) {
+    ctx.beginPath(); ctx.moveTo(i*32+2, 2); ctx.lineTo(i*32+2, 82); ctx.stroke();
+  }
+  for (let i = 0; i < 5; i++) {
+    ctx.beginPath(); ctx.moveTo(2, i*20+2); ctx.lineTo(254, i*20+2); ctx.stroke();
+  }
+
+  // category badge
+  ctx.fillStyle = card.color + '33';
+  ctx.fillRect(8, 90, 60, 18);
+  ctx.fillStyle = card.color;
+  ctx.font = 'bold 9px monospace';
+  ctx.fillText(card.cat.toUpperCase(), 12, 103);
+
+  // title
+  ctx.fillStyle = '#e8f0fe';
+  ctx.font = 'bold 16px monospace';
+  ctx.fillText(card.title.length > 14 ? card.title.substring(0,13)+'…' : card.title, 8, 135);
+
+  // divider
+  ctx.strokeStyle = card.color + '44';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(8, 148); ctx.lineTo(248, 148); ctx.stroke();
+
+  // metric big
+  ctx.fillStyle = card.color;
+  ctx.font = 'bold 36px monospace';
+  ctx.fillText(card.metric, 8, 200);
+
+  // tag
+  ctx.fillStyle = 'rgba(232,240,254,0.4)';
+  ctx.font = '10px monospace';
+  ctx.fillText(card.tag, 8, 222);
+
+  // bottom dots
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.arc(16 + i*20, 310, 3, 0, Math.PI*2);
+    ctx.fillStyle = i === 0 ? card.color : card.color + '44';
+    ctx.fill();
+  }
+
+  return cv;
+}
+
+function initGrid() {
+  const container = document.getElementById('mode-grid');
+  const w = container.clientWidth, h = container.clientHeight;
+
+  threeScene = new THREE.Scene();
+  threeCamera = new THREE.PerspectiveCamera(60, w/h, 0.1, 100);
+  threeCamera.position.set(0, 0, 8);
+
+  threeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  threeRenderer.setSize(w, h);
+  threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  threeRenderer.setClearColor(0x0a0a0f, 1);
+  container.appendChild(threeRenderer.domElement);
+
+  // ambient + directional light
+  threeScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const dir = new THREE.DirectionalLight(0x1de5ff, 1.2);
+  dir.position.set(5, 5, 5);
+  threeScene.add(dir);
+
+  // particles bg
+  const pts = new Float32Array(200 * 3);
+  for (let i = 0; i < 200; i++) {
+    pts[i*3] = (Math.random()-0.5)*30;
+    pts[i*3+1] = (Math.random()-0.5)*30;
+    pts[i*3+2] = (Math.random()-0.5)*20 - 5;
+  }
+  const pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pts, 3));
+  const pMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.06, transparent: true, opacity: 0.7 });
+  threeParticles = new THREE.Points(pGeo, pMat);
+  threeScene.add(threeParticles);
+
+  // create card meshes
+  CARDS.forEach((card, i) => {
+    const geo = new THREE.PlaneGeometry(1.5, 2);
+    const cv = makeCardTexture(card);
+    const tex = new THREE.CanvasTexture(cv);
+    const mat = new THREE.MeshStandardMaterial({
+      map: tex,
+      side: THREE.FrontSide,
+      emissive: new THREE.Color(card.color),
+      emissiveIntensity: 0.05,
+      transparent: true,
+      opacity: 1
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.userData = { card, index: i, targetPos: new THREE.Vector3(), baseEmissive: 0.05 };
+    threeScene.add(mesh);
+    threeCards.push(mesh);
+  });
+
+  layoutCards('all');
+
+  // events
+  container.addEventListener('mousemove', onGridMouseMove);
+  window.addEventListener('resize', onGridResize);
+
+  threeActive = true;
+  animateGrid();
+}
+
+function layoutCards(filter) {
+  const visible = CARDS.map((c, i) => ({ c, i, show: filter === 'all' || c.cat === filter }));
+  let col = 0, row = 0, visCount = 0;
+  const cols = 4;
+  const spacingX = 1.9, spacingY = 2.5;
+
+  visible.forEach(({ c, i, show }) => {
+    const mesh = threeCards[i];
+    if (show) {
+      const x = (col - (Math.min(visCount < cols ? visCount : cols, CARDS.filter(cc=>filter==='all'||cc.cat===filter).length)-1)/2) * spacingX;
+      const y = -row * spacingY + 2;
+      mesh.userData.targetPos.set(x, y, 0);
+      col++;
+      if (col >= cols) { col = 0; row++; }
+      visCount++;
+      gsap.to(mesh.material, { opacity: 1, duration: 0.5 });
+      gsap.to(mesh.position, { x, y, z: 0, duration: 0.7, ease: 'power2.out', delay: visCount * 0.05 });
+    } else {
+      gsap.to(mesh.material, { opacity: 0, duration: 0.4 });
+      gsap.to(mesh.position, { z: -8, duration: 0.5, ease: 'power2.in' });
+    }
+  });
+}
+
+function filterGrid(cat) {
+  currentFilter = cat;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase() === cat || (cat==='all'&&b.textContent==='ALL')));
+  layoutCards(cat);
+}
+
+function onGridMouseMove(e) {
+  const rect = threeRenderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  mouseMoveX = mouse.x;
+  mouseMoveY = mouse.y;
+}
+
+function onGridResize() {
+  if (!threeRenderer) return;
+  const container = document.getElementById('mode-grid');
+  const w = container.clientWidth, h = container.clientHeight;
+  threeCamera.aspect = w/h;
+  threeCamera.updateProjectionMatrix();
+  threeRenderer.setSize(w, h);
+}
+
+function animateGrid() {
+  if (!threeActive) return;
+  threeRAF = requestAnimationFrame(animateGrid);
+
+  // parallax
+  threeScene.rotation.y = mouseMoveX * 0.05;
+  threeScene.rotation.x = -mouseMoveY * 0.03;
+
+  // particles drift
+  if (threeParticles) threeParticles.rotation.y += 0.0003;
+
+  // raycaster hover
+  raycaster.setFromCamera(mouse, threeCamera);
+  const hits = raycaster.intersectObjects(threeCards);
+
+  threeCards.forEach(c => {
+    c.material.emissiveIntensity = c.userData.baseEmissive;
+  });
+
+  if (hits.length) {
+    const hit = hits[0].object;
+    hit.material.emissiveIntensity = 0.3;
+    const nx = (mouse.x - hit.position.x / 10);
+    const ny = (mouse.y - hit.position.y / 10);
+    hit.rotation.y = nx * 0.3;
+    hit.rotation.x = -ny * 0.2;
+  }
+
+  threeRenderer.render(threeScene, threeCamera);
+}
+
+function pauseGrid() {
+  threeActive = false;
+  if (threeRAF) { cancelAnimationFrame(threeRAF); threeRAF = null; }
+}
+
+function resumeGrid() {
+  if (!threeRenderer) { initGrid(); return; }
+  threeActive = true;
+  animateGrid();
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODE 2: PARTICLE LAB
+// ═══════════════════════════════════════════════════════════
+let pCanvas, pCtx, pRAF = null, pPreset = 'nebula';
+let particles = [];
+let matrixCols = [];
+
+function initParticles() {
+  const container = document.getElementById('mode-particles');
+  pCanvas = document.createElement('canvas');
+  pCanvas.style.position = 'absolute';
+  pCanvas.style.inset = '0';
+  pCanvas.width = container.clientWidth;
+  pCanvas.height = container.clientHeight;
+  container.appendChild(pCanvas);
+  pCtx = pCanvas.getContext('2d');
+  buildPreset('nebula');
+  animateParticles();
+}
+
+function startParticles() {
+  if (!pCanvas) { initParticles(); return; }
+  buildPreset(pPreset);
+  animateParticles();
+}
+
+function stopParticles() {
+  if (pRAF) { cancelAnimationFrame(pRAF); pRAF = null; }
+}
+
+function setPreset(name) {
+  pPreset = name;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(name)));
+  if (pCanvas) {
+    particles = [];
+    matrixCols = [];
+    buildPreset(name);
+  }
+}
+
+function buildPreset(name) {
+  if (!pCanvas) return;
+  const W = pCanvas.width, H = pCanvas.height;
+  particles = [];
+  matrixCols = [];
+
+  if (name === 'nebula') {
+    for (let i = 0; i < 120; i++) {
+      const hue = Math.random() < 0.4 ? 190 : (Math.random() < 0.5 ? 270 : 20);
+      particles.push({
+        x: Math.random()*W, y: Math.random()*H,
+        vx: (Math.random()-.5)*0.4, vy: (Math.random()-.5)*0.4,
+        r: 8 + Math.random()*20, hue, sat: 80+Math.random()*20,
+        alpha: 0.3+Math.random()*0.4, hueShift: (Math.random()-.5)*0.5
+      });
+    }
+  } else if (name === 'neural') {
+    for (let i = 0; i < 60; i++) {
+      particles.push({
+        x: Math.random()*W, y: Math.random()*H,
+        vx: (Math.random()-.5)*0.6, vy: (Math.random()-.5)*0.6,
+        r: 3+Math.random()*4, baseR: 3+Math.random()*4,
+        pulsePhase: Math.random()*Math.PI*2, pulseSpeed: 0.03+Math.random()*0.04,
+        color: '#1de5ff', signals: []
+      });
+    }
+    // pre-generate signals
+    setInterval(() => {
+      if (pPreset !== 'neural' || !pCanvas) return;
+      if (Math.random() < 0.3) {
+        const i = Math.floor(Math.random()*particles.length);
+        const j = Math.floor(Math.random()*particles.length);
+        if (i !== j) {
+          particles[i].signals.push({ target: j, t: 0, speed: 0.02+Math.random()*0.03 });
+        }
+      }
+    }, 200);
+  } else if (name === 'rocket') {
+    for (let i = 0; i < 80; i++) spawnRocketParticle(W, H);
+  } else if (name === 'matrix') {
+    const cols = Math.floor(W / 14);
+    for (let i = 0; i < cols; i++) {
+      matrixCols.push({
+        x: i*14, y: -Math.random()*H,
+        speed: 1+Math.random()*3, chars: [],
+        length: 8+Math.floor(Math.random()*20)
+      });
+    }
+  } else if (name === 'galaxy') {
+    for (let i = 0; i < 200; i++) {
+      const angle = Math.random()*Math.PI*2;
+      const radius = 40 + Math.pow(Math.random(), 0.6) * (Math.min(W,H)*0.38);
+      const arm = Math.floor(Math.random()*3) * (Math.PI*2/3);
+      const spiral = radius * 0.008;
+      particles.push({
+        angle: angle + arm + spiral,
+        radius,
+        speed: (0.0002 + Math.random()*0.0003) * (1/Math.sqrt(radius/40)),
+        size: 0.5+Math.random()*2.5,
+        twinkle: Math.random()*Math.PI*2,
+        twinkleSpeed: 0.03+Math.random()*0.08,
+        color: Math.random()<0.6 ? '#1de5ff' : (Math.random()<0.5 ? '#7f5af0' : '#ffffff'),
+        shooting: Math.random() < 0.01,
+        shootX: 0, shootY: 0, shootAlpha: 0
+      });
+    }
+  }
+}
+
+function spawnRocketParticle(W, H) {
+  const spread = (Math.random()-.5)*1.2;
+  particles.push({
+    x: W/2 + (Math.random()-.5)*20,
+    y: H - 20,
+    vx: spread + (Math.random()-.5)*0.5,
+    vy: -(2+Math.random()*4),
+    life: 1, decay: 0.008+Math.random()*0.015,
+    r: 2+Math.random()*4,
+    type: 'exhaust', W, H
+  });
+  if (Math.random()<0.15) {
+    particles.push({
+      x: W/2+(Math.random()-.5)*40, y: H-20+(Math.random()-1)*60,
+      vx: (Math.random()-.5)*4, vy: (Math.random()-.5)*4,
+      life: 1, decay: 0.02+Math.random()*0.03,
+      r: 1.5+Math.random()*2, type: 'spark', W, H,
+      bounced: false
+    });
+  }
+}
+
+const MATRIX_CHARS = 'BOSS01アイウエオ10ウォXZ';
+
+function animateParticles() {
+  if (!pCanvas) return;
+  pRAF = requestAnimationFrame(animateParticles);
+  const W = pCanvas.width, H = pCanvas.height;
+  const ctx = pCtx;
+
+  if (pPreset === 'matrix') {
+    ctx.fillStyle = 'rgba(10,10,15,0.12)';
+    ctx.fillRect(0,0,W,H);
+    ctx.font = '13px monospace';
+    matrixCols.forEach(col => {
+      for (let i = 0; i < col.length; i++) {
+        const alpha = 1 - i/col.length;
+        const brightness = i === 0 ? 255 : Math.floor(40 + alpha * 100);
+        ctx.fillStyle = i === 0 ? `rgba(180,255,180,${alpha})` : `rgba(0,${brightness},0,${alpha})`;
+        const ch = MATRIX_CHARS[Math.floor(Math.random()*MATRIX_CHARS.length)];
+        ctx.fillText(ch, col.x, col.y - i*14);
+      }
+      col.y += col.speed;
+      if (col.y > H + col.length*14) {
+        col.y = -Math.random()*H*0.5;
+        col.speed = 1+Math.random()*3;
+      }
+    });
+    return;
+  }
+
+  ctx.fillStyle = 'rgba(10,10,15,0.15)';
+  ctx.fillRect(0,0,W,H);
+
+  if (pPreset === 'nebula') {
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      p.hue += p.hueShift;
+      if (p.x < -p.r) p.x = W+p.r;
+      if (p.x > W+p.r) p.x = -p.r;
+      if (p.y < -p.r) p.y = H+p.r;
+      if (p.y > H+p.r) p.y = -p.r;
+      const grd = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
+      grd.addColorStop(0, `hsla(${p.hue},${p.sat}%,70%,${p.alpha})`);
+      grd.addColorStop(1, 'transparent');
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle = grd; ctx.fill();
+    });
+  } else if (pPreset === 'neural') {
+    // draw edges
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i+1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx+dy*dy);
+        if (dist < 120) {
+          const alpha = (1 - dist/120) * 0.4;
+          ctx.strokeStyle = `rgba(29,229,255,${alpha})`;
+          ctx.lineWidth = 0.5;
+          ctx.beginPath(); ctx.moveTo(particles[i].x,particles[i].y);
+          ctx.lineTo(particles[j].x,particles[j].y); ctx.stroke();
+        }
+      }
+    }
+    // draw signal pulses
+    particles.forEach((p,i) => {
+      p.pulsePhase += p.pulseSpeed;
+      p.r = p.baseR + Math.sin(p.pulsePhase) * 1.5;
+      p.x += p.vx; p.y += p.vy;
+      if (p.x<0||p.x>W) p.vx*=-1;
+      if (p.y<0||p.y>H) p.vy*=-1;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle = '#1de5ff'; ctx.fill();
+
+      p.signals = p.signals.filter(s => {
+        s.t += s.speed;
+        if (s.t > 1) return false;
+        const tp = particles[s.target];
+        const sx = p.x + (tp.x - p.x) * s.t;
+        const sy = p.y + (tp.y - p.y) * s.t;
+        ctx.beginPath(); ctx.arc(sx,sy,3,0,Math.PI*2);
+        ctx.fillStyle = `rgba(255,255,100,${1-s.t})`; ctx.fill();
+        return true;
+      });
+    });
+  } else if (pPreset === 'rocket') {
+    const W2 = particles[0]?.W || W;
+    const H2 = particles[0]?.H || H;
+    // spawn new particles
+    if (Math.random() < 0.7) spawnRocketParticle(W2, H2);
+
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => {
+      if (p.type === 'exhaust') {
+        p.vy += 0.04; // slight gravity
+        p.vx *= 0.99;
+        p.x += p.vx; p.y += p.vy;
+        p.life -= p.decay;
+        const t = p.life;
+        const r = 255, g = Math.floor(t * 200), b = 0;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r*t,0,Math.PI*2);
+        ctx.fillStyle = `rgba(${r},${g},0,${t*0.8})`; ctx.fill();
+      } else {
+        p.vy += 0.06;
+        p.x += p.vx; p.y += p.vy;
+        p.life -= p.decay;
+        if (!p.bounced && p.y > p.H-10) { p.vy *= -0.6; p.vx *= 0.8; p.bounced = true; }
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);
+        ctx.fillStyle = `rgba(255,200,50,${p.life})`; ctx.fill();
+      }
+    });
+  } else if (pPreset === 'galaxy') {
+    const cx = W/2, cy = H/2;
+    particles.forEach(p => {
+      p.angle += p.speed;
+      p.twinkle += p.twinkleSpeed;
+      const x = cx + Math.cos(p.angle) * p.radius;
+      const y = cy + Math.sin(p.angle) * p.radius * 0.45;
+      const alpha = 0.5 + Math.sin(p.twinkle) * 0.4;
+      ctx.beginPath(); ctx.arc(x,y,p.size,0,Math.PI*2);
+      ctx.fillStyle = p.color.replace(')', `,${alpha})`).replace('rgb','rgba').replace('#','').length > 8
+        ? p.color : hexToRgba(p.color, alpha);
+      ctx.fill();
+    });
+  }
+}
+
+function hexToRgba(hex, a) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODE 3: PARALLAX
+// ═══════════════════════════════════════════════════════════
+let parallaxDepths = [0.05, 0.15, 0.35, 0.6, 1.0];
+let parallaxInited = false;
+let starCanvas, starCtx, starRAF = null;
+let stars = [];
+
+function initParallax() {
+  if (parallaxInited) return;
+  parallaxInited = true;
+
+  const container = document.getElementById('mode-parallax');
+  container.addEventListener('scroll', onParallaxScroll);
+
+  // Layer 0: star canvas
+  const L0 = document.getElementById('layer0-canvas');
+  L0.width = window.innerWidth; L0.height = window.innerHeight - 80;
+  starCanvas = L0; starCtx = L0.getContext('2d');
+  for (let i = 0; i < 200; i++) {
+    stars.push({ x: Math.random()*L0.width, y: Math.random()*L0.height, r: Math.random()*1.5, phase: Math.random()*Math.PI*2 });
+  }
+  animateStars();
+
+  // Layer 1: geometric shapes
+  const L1 = document.getElementById('layer1');
+  L1.innerHTML = '';
+  const shapes = [
+    { type:'circle', w:300, h:300, top:'10%', left:'5%', color:'rgba(127,90,240,0.08)' },
+    { type:'circle', w:200, h:200, top:'60%', left:'75%', color:'rgba(29,229,255,0.06)' },
+    { type:'hex', w:180, h:180, top:'30%', left:'60%', color:'rgba(255,107,53,0.07)' },
+    { type:'circle', w:400, h:400, top:'70%', left:'20%', color:'rgba(44,182,125,0.05)' },
+  ];
+  shapes.forEach(s => {
+    const el = document.createElement('div');
+    el.style.cssText = `position:absolute;width:${s.w}px;height:${s.h}px;top:${s.top};left:${s.left};background:${s.color};border-radius:${s.type==='circle'?'50%':'8px'};filter:blur(40px);`;
+    L1.appendChild(el);
+  });
+
+  // Layer 2: neon grid lines SVG
+  const L2 = document.getElementById('layer2');
+  L2.innerHTML = `<svg width="100%" height="100%" style="opacity:0.3"><defs><pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M 60 0 L 0 0 0 60" fill="none" stroke="#1de5ff" stroke-width="0.5"/></pattern></defs><rect width="100%" height="100%" fill="url(#grid)"/></svg>`;
+
+  // Layer 3: floating cards
+  const L3 = document.getElementById('layer3');
+  L3.innerHTML = '';
+  ['WEB', 'SAAS', 'BRAND', '3D'].forEach((t,i) => {
+    const el = document.createElement('div');
+    el.style.cssText = `position:absolute;padding:16px 20px;background:rgba(18,18,26,0.85);border:1px solid rgba(29,229,255,0.3);color:#e8f0fe;font-size:12px;font-weight:700;letter-spacing:2px;top:${20+i*18}%;left:${10+i*20}%;`;
+    el.textContent = t + ' PROJECT ↗';
+    L3.appendChild(el);
+  });
+}
+
+function onParallaxScroll() {
+  const scrollY = document.getElementById('mode-parallax').scrollTop;
+  ['layer0-canvas','layer1','layer2','layer3','layer4'].forEach((id,i) => {
+    const el = document.getElementById(id);
+    if (el) el.style.transform = `translateY(${scrollY * parallaxDepths[i] * -1}px)`;
+  });
+}
+
+function updateDepth(layer, val) {
+  parallaxDepths[layer] = val;
+}
+
+function animateStars() {
+  if (!starCanvas) return;
+  starRAF = requestAnimationFrame(animateStars);
+  const ctx = starCtx;
+  ctx.fillStyle = 'rgba(10,10,15,0.15)';
+  ctx.fillRect(0,0,starCanvas.width,starCanvas.height);
+  const t = Date.now()*0.001;
+  stars.forEach(s => {
+    const alpha = 0.4 + Math.sin(s.phase + t) * 0.4;
+    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`; ctx.fill();
+  });
+}
+
+function exportCSS() {
+  const css = `.parallax-scene {
+  position: relative;
+  height: 300vh;
+  overflow-y: scroll;
+}
+
+/* Layer depths */
+.layer-0 { transform: translateY(calc(var(--scrollY) * ${parallaxDepths[0]} * -1px)); }
+.layer-1 { transform: translateY(calc(var(--scrollY) * ${parallaxDepths[1]} * -1px)); }
+.layer-2 { transform: translateY(calc(var(--scrollY) * ${parallaxDepths[2]} * -1px)); }
+.layer-3 { transform: translateY(calc(var(--scrollY) * ${parallaxDepths[3]} * -1px)); }
+.layer-4 { transform: translateY(calc(var(--scrollY) * ${parallaxDepths[4]} * -1px)); }
+
+/* JS: document.addEventListener('scroll', () => {
+  document.documentElement.style.setProperty('--scrollY', window.scrollY);
+}); */`;
+  document.getElementById('css-pre').textContent = css;
+  document.getElementById('css-output').style.display = 'block';
+}
+
+function copyCSS() {
+  navigator.clipboard.writeText(document.getElementById('css-pre').textContent);
+  document.getElementById('css-copy-btn').textContent = 'COPIED!';
+  setTimeout(() => { document.getElementById('css-copy-btn').textContent = 'COPY'; }, 1500);
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODE 4: TEMPLATES
+// ═══════════════════════════════════════════════════════════
+const TEMPLATES = [
+  {
+    id: 'agency',
+    name: 'AGENCY',
+    tagline: 'Dark hero, service grid, neon CTAs',
+    badges: ['WebGL', 'Parallax', 'Dark'],
+    previewColors: ['#7f5af0','#1de5ff','#ff6b35'],
+    file: 'template-agency.html'
+  },
+  {
+    id: 'saas',
+    name: 'SAAS',
+    tagline: 'Feature columns, pricing table, gradient hero',
+    badges: ['Gradient', 'Pricing', 'Dark'],
+    previewColors: ['#1de5ff','#2cb67d','#7f5af0'],
+    file: 'template-saas.html'
+  },
+  {
+    id: 'developer',
+    name: 'DEVELOPER',
+    tagline: 'Terminal-style, code blocks, project grid',
+    badges: ['Terminal', 'Dark', 'Mono'],
+    previewColors: ['#2cb67d','#1de5ff','#0a0a0f'],
+    file: 'template-developer.html'
+  },
+  {
+    id: 'creative',
+    name: 'CREATIVE',
+    tagline: 'Full-bleed images, parallax, bold type',
+    badges: ['Parallax', 'Bold', 'Full-bleed'],
+    previewColors: ['#ff6b35','#7f5af0','#1de5ff'],
+    file: 'template-creative.html'
+  },
+  {
+    id: 'minimal',
+    name: 'MINIMAL',
+    tagline: 'Clean white, typography-first, subtle animations',
+    badges: ['Light', 'Clean', 'Animate'],
+    previewColors: ['#f0f0f0','#888','#333'],
+    file: 'template-minimal.html'
+  }
+];
+
+let templatesInited = false;
+
+function initTemplates() {
+  if (templatesInited) return;
+  templatesInited = true;
+  const grid = document.getElementById('template-grid');
+  TEMPLATES.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'template-card';
+    card.innerHTML = `
+      <div class="template-preview" style="background:linear-gradient(135deg,${t.previewColors.map((c,i)=>c+' '+(i/2*100)+'%').join(',')})">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:12px;gap:6px">
+          <div style="height:8px;background:rgba(255,255,255,0.2);width:60%"></div>
+          <div style="height:4px;background:rgba(255,255,255,0.1);width:80%"></div>
+          <div style="height:4px;background:rgba(255,255,255,0.1);width:45%"></div>
+          <div style="display:flex;gap:4px;margin-top:auto">
+            <div style="height:24px;flex:1;background:rgba(255,255,255,0.25)"></div>
+            <div style="height:24px;flex:1;background:rgba(255,255,255,0.15)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="template-info">
+        <div class="template-name">${t.name}</div>
+        <div class="template-tagline">${t.tagline}</div>
+        <div class="template-badges">${t.badges.map(b=>`<span class="badge">${b}</span>`).join('')}</div>
+        <button class="launch-btn" onclick="launchTemplate('${t.id}')">LAUNCH →</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function launchTemplate(id) {
+  const t = TEMPLATES.find(x => x.id === id);
+  const html = generateTemplate(id);
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = t.file; a.click();
+  URL.revokeObjectURL(url);
+
+  // notify BOSS
+  const msgs = document.getElementById('msgs');
+  if (!sidebarOpen) toggleSidebar();
+  addMsg('boss', `${t.name} template is live. Here's what to customise first:\n1. Replace placeholder headlines with your brand copy\n2. Swap the color variables at the top of :root\n3. Add your real project screenshots to the image slots\n4. Update the CTA links to your lead capture form\n5. Drop your logo in the header`);
+}
+
+function generateTemplate(id) {
+  if (id === 'agency') return generateAgency();
+  if (id === 'saas') return generateSaaS();
+  if (id === 'developer') return generateDeveloper();
+  if (id === 'creative') return generateCreative();
+  if (id === 'minimal') return generateMinimal();
+  return '';
+}
+
+function generateAgency() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agency — Bold Creative Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#080810;--primary:#1de5ff;--secondary:#7f5af0;--accent:#ff6b35;--text:#e8f0fe;--font:'Space Mono',monospace}
+body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden}
+nav{position:fixed;top:0;width:100%;padding:20px 40px;display:flex;justify-content:space-between;align-items:center;z-index:100;background:rgba(8,8,16,0.8);backdrop-filter:blur(10px);border-bottom:1px solid rgba(29,229,255,0.1)}
+.logo{color:var(--primary);font-weight:700;letter-spacing:3px;font-size:14px}
+.nav-links{display:flex;gap:24px}
+.nav-links a{color:rgba(232,240,254,0.6);text-decoration:none;font-size:11px;letter-spacing:1px;transition:color 0.2s}
+.nav-links a:hover{color:var(--primary)}
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;text-align:center;padding:0 40px}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(127,90,240,0.2) 0,transparent 50%),radial-gradient(ellipse at 80% 20%,rgba(29,229,255,0.15) 0,transparent 50%)}
+canvas#hero-canvas{position:absolute;inset:0;opacity:0.3}
+.hero-content{position:relative;z-index:2}
+.hero-tag{color:var(--primary);font-size:11px;letter-spacing:3px;margin-bottom:20px}
+h1{font-size:clamp(40px,7vw,90px);line-height:1;letter-spacing:-2px;margin-bottom:24px}
+h1 span{color:var(--primary);text-shadow:0 0 40px var(--primary)}
+.hero-sub{color:rgba(232,240,254,0.6);font-size:14px;max-width:480px;margin:0 auto 40px;line-height:1.7}
+.btn{display:inline-block;padding:14px 32px;background:var(--primary);color:#000;text-decoration:none;font-family:var(--font);font-size:12px;font-weight:700;letter-spacing:2px;transition:opacity 0.2s;margin:0 8px}
+.btn:hover{opacity:0.8}
+.btn-outline{background:transparent;border:1px solid var(--primary);color:var(--primary)}
+.btn-outline:hover{background:rgba(29,229,255,0.1)}
+.services{padding:100px 40px;max-width:1200px;margin:0 auto}
+.services h2{font-size:32px;letter-spacing:2px;margin-bottom:60px;text-align:center}
+.services h2 span{color:var(--primary)}
+.service-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px}
+.service-card{padding:32px;border:1px solid rgba(29,229,255,0.15);background:rgba(18,18,26,0.5);transition:border-color 0.2s,transform 0.2s}
+.service-card:hover{border-color:var(--primary);transform:translateY(-4px)}
+.service-icon{font-size:28px;margin-bottom:16px}
+.service-card h3{font-size:13px;letter-spacing:2px;margin-bottom:10px;color:var(--primary)}
+.service-card p{color:rgba(232,240,254,0.5);font-size:11px;line-height:1.7}
+.cta-section{padding:100px 40px;text-align:center;background:linear-gradient(135deg,rgba(127,90,240,0.1),rgba(29,229,255,0.05))}
+.cta-section h2{font-size:40px;margin-bottom:20px}
+.cta-section p{color:rgba(232,240,254,0.5);margin-bottom:40px}
+footer{padding:40px;text-align:center;color:rgba(232,240,254,0.3);font-size:10px;letter-spacing:1px;border-top:1px solid rgba(29,229,255,0.1)}
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">AGENCY.CO</div>
+  <div class="nav-links"><a href="#">WORK</a><a href="#">SERVICES</a><a href="#">ABOUT</a><a href="#">CONTACT</a></div>
+</nav>
+<section class="hero">
+  <div class="hero-bg"></div>
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-content">
+    <div class="hero-tag">AWARD-WINNING CREATIVE STUDIO</div>
+    <h1>WE BUILD<br><span>DIGITAL</span><br>LEGENDS</h1>
+    <p class="hero-sub">Transforming ambitious brands into category-defining digital experiences that convert, captivate, and crush the competition.</p>
+    <a href="#" class="btn">START A PROJECT</a>
+    <a href="#" class="btn btn-outline">VIEW WORK</a>
+  </div>
+</section>
+<section class="services">
+  <h2>WHAT WE <span>BUILD</span></h2>
+  <div class="service-grid">
+    <div class="service-card"><div class="service-icon">⚡</div><h3>WEB DESIGN</h3><p>Conversion-focused websites that look stunning and perform even better. Every pixel with purpose.</p></div>
+    <div class="service-card"><div class="service-icon">🚀</div><h3>BRAND IDENTITY</h3><p>Complete brand systems: logo, typography, colour, voice, and every touchpoint you need to dominate.</p></div>
+    <div class="service-card"><div class="service-icon">🎯</div><h3>SAAS PRODUCTS</h3><p>Full-stack SaaS development from zero to launch. UI/UX, engineering, growth—all under one roof.</p></div>
+    <div class="service-card"><div class="service-icon">✦</div><h3>3D & WEBGL</h3><p>Next-level interactive experiences with Three.js and WebGL that stop scrollers dead in their tracks.</p></div>
+  </div>
+</section>
+<section class="cta-section">
+  <h2>READY TO <span style="color:var(--accent)">DOMINATE</span>?</h2>
+  <p>Let's build something that makes your competitors nervous.</p>
+  <a href="#" class="btn">GET A FREE STRATEGY CALL</a>
+</section>
+<footer>© 2026 AGENCY.CO — ALL RIGHTS RESERVED</footer>
+<script>
+const cv=document.getElementById('hero-canvas');
+cv.width=window.innerWidth;cv.height=window.innerHeight;
+const ctx=cv.getContext('2d');
+const pts=Array.from({length:80},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,vx:(Math.random()-.5)*0.3,vy:(Math.random()-.5)*0.3}));
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>cv.width)p.vx*=-1;if(p.y<0||p.y>cv.height)p.vy*=-1;
+  ctx.beginPath();ctx.arc(p.x,p.y,1.5,0,Math.PI*2);ctx.fillStyle='rgba(29,229,255,0.6)';ctx.fill()});
+  requestAnimationFrame(draw);
+}draw();
+<\/script>
+</body></html>`;
+}
+
+function generateSaaS() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SaaS — The Platform That Runs Your Business</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#05050d;--primary:#1de5ff;--secondary:#7f5af0;--success:#2cb67d;--text:#e8f0fe;--font:'Space Mono',monospace}
+body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden}
+nav{position:fixed;top:0;width:100%;padding:16px 40px;display:flex;justify-content:space-between;align-items:center;z-index:100;background:rgba(5,5,13,0.9);border-bottom:1px solid rgba(29,229,255,0.1)}
+.logo{color:var(--primary);font-weight:700;letter-spacing:2px}
+.nav-cta{padding:8px 20px;background:var(--primary);color:#000;font-family:var(--font);font-size:11px;font-weight:700;border:none;cursor:pointer;letter-spacing:1px}
+.hero{min-height:100vh;display:grid;place-items:center;text-align:center;padding:80px 40px 40px;background:radial-gradient(ellipse at 50% 0%,rgba(29,229,255,0.12) 0,transparent 60%)}
+.badge{display:inline-block;padding:4px 12px;border:1px solid rgba(29,229,255,0.4);color:var(--primary);font-size:10px;letter-spacing:2px;margin-bottom:24px}
+h1{font-size:clamp(36px,5vw,68px);line-height:1.1;margin-bottom:20px}
+h1 em{color:var(--primary);font-style:normal}
+.hero-sub{color:rgba(232,240,254,0.55);font-size:13px;max-width:520px;margin:0 auto 36px;line-height:1.8}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{padding:12px 28px;font-family:var(--font);font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;border:none;transition:opacity 0.2s}
+.btn-primary{background:var(--primary);color:#000}
+.btn-ghost{background:transparent;border:1px solid rgba(232,240,254,0.3);color:var(--text)}
+.btn:hover{opacity:0.8}
+.stats{display:flex;gap:40px;justify-content:center;margin:60px 0;flex-wrap:wrap}
+.stat{text-align:center}
+.stat-n{font-size:36px;font-weight:700;color:var(--primary)}
+.stat-l{color:rgba(232,240,254,0.4);font-size:10px;letter-spacing:2px;margin-top:4px}
+.features{padding:100px 40px;max-width:1100px;margin:0 auto}
+.features h2{text-align:center;font-size:28px;letter-spacing:2px;margin-bottom:60px}
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.feature{padding:28px;background:rgba(18,18,26,0.6);border:1px solid rgba(29,229,255,0.1)}
+.feature-head{color:var(--primary);font-size:12px;letter-spacing:1px;margin-bottom:10px}
+.feature p{color:rgba(232,240,254,0.5);font-size:11px;line-height:1.7}
+.pricing{padding:100px 40px;max-width:900px;margin:0 auto;text-align:center}
+.pricing h2{font-size:28px;letter-spacing:2px;margin-bottom:60px}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.plan{padding:32px 24px;border:1px solid rgba(29,229,255,0.15);position:relative}
+.plan.popular{border-color:var(--primary)}
+.plan-tag{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--primary);color:#000;font-size:9px;font-weight:700;padding:4px 10px;letter-spacing:1px;white-space:nowrap}
+.plan-name{font-size:11px;letter-spacing:2px;color:rgba(232,240,254,0.5);margin-bottom:12px}
+.plan-price{font-size:36px;color:var(--text);margin-bottom:4px}
+.plan-price span{font-size:12px;color:rgba(232,240,254,0.4)}
+.plan-features{margin:20px 0;text-align:left}
+.plan-features li{list-style:none;font-size:11px;color:rgba(232,240,254,0.6);padding:6px 0;border-bottom:1px solid rgba(29,229,255,0.08)}
+.plan-features li::before{content:'✓ ';color:var(--success)}
+.plan-btn{width:100%;padding:12px;font-family:var(--font);font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;margin-top:16px;border:none;background:rgba(29,229,255,0.15);color:var(--primary);border:1px solid var(--primary);transition:background 0.2s}
+.plan-btn:hover{background:rgba(29,229,255,0.3)}
+.popular .plan-btn{background:var(--primary);color:#000}
+</style>
+</head>
+<body>
+<nav><div class="logo">PLATFORM</div><button class="nav-cta">START FREE →</button></nav>
+<section class="hero">
+  <div>
+    <div class="badge">NOW IN PUBLIC BETA</div>
+    <h1>THE PLATFORM THAT<br>RUNS YOUR <em>ENTIRE</em><br>BUSINESS</h1>
+    <p class="hero-sub">Automate operations, manage clients, track revenue, and scale faster than ever — all from one dashboard.</p>
+    <div class="hero-btns">
+      <button class="btn btn-primary">START FREE TRIAL</button>
+      <button class="btn btn-ghost">WATCH DEMO ▶</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-n">12k+</div><div class="stat-l">ACTIVE USERS</div></div>
+      <div class="stat"><div class="stat-n">£8.4M</div><div class="stat-l">REVENUE PROCESSED</div></div>
+      <div class="stat"><div class="stat-n">99.9%</div><div class="stat-l">UPTIME SLA</div></div>
+    </div>
+  </div>
+</section>
+<section class="features">
+  <h2>EVERYTHING YOU NEED</h2>
+  <div class="feature-grid">
+    <div class="feature"><div class="feature-head">⚡ AUTOMATION ENGINE</div><p>Build powerful workflows without code. Trigger actions across your entire stack automatically.</p></div>
+    <div class="feature"><div class="feature-head">📊 REVENUE ANALYTICS</div><p>Real-time MRR, churn, LTV. Know your numbers before your accountant does.</p></div>
+    <div class="feature"><div class="feature-head">🤖 AI ASSISTANT</div><p>Built-in AI that writes copy, answers support tickets, and coaches your team 24/7.</p></div>
+    <div class="feature"><div class="feature-head">🔗 100+ INTEGRATIONS</div><p>Stripe, Notion, Slack, Zapier and 97 more. Your stack, unified in minutes.</p></div>
+    <div class="feature"><div class="feature-head">👥 CRM & PIPELINE</div><p>Manage every lead, deal, and client relationship in one clean, fast interface.</p></div>
+    <div class="feature"><div class="feature-head">🛡️ ENTERPRISE SECURITY</div><p>SOC2 Type II, GDPR compliant, end-to-end encryption. Your data stays yours.</p></div>
+  </div>
+</section>
+<section class="pricing">
+  <h2>SIMPLE PRICING</h2>
+  <div class="pricing-grid">
+    <div class="plan"><div class="plan-name">STARTER</div><div class="plan-price">£29<span>/mo</span></div><ul class="plan-features"><li>Up to 3 users</li><li>1k automations/mo</li><li>Basic analytics</li><li>Email support</li></ul><button class="plan-btn">GET STARTED</button></div>
+    <div class="plan popular"><div class="plan-tag">MOST POPULAR</div><div class="plan-name">PRO</div><div class="plan-price">£79<span>/mo</span></div><ul class="plan-features"><li>Up to 15 users</li><li>50k automations/mo</li><li>Full analytics</li><li>AI assistant</li><li>Priority support</li></ul><button class="plan-btn">GET STARTED</button></div>
+    <div class="plan"><div class="plan-name">ENTERPRISE</div><div class="plan-price">£299<span>/mo</span></div><ul class="plan-features"><li>Unlimited users</li><li>Unlimited automations</li><li>Custom analytics</li><li>Dedicated success mgr</li></ul><button class="plan-btn">CONTACT SALES</button></div>
+  </div>
+</section>
+</body></html>`;
+}
+
+function generateDeveloper() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dev Portfolio — Building the Future, One Commit at a Time</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0f0a;--primary:#2cb67d;--secondary:#1de5ff;--text:#e8f0fe;--dim:rgba(232,240,254,0.5);--font:'Space Mono',monospace}
+body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden}
+.terminal-bar{background:#1a1a1a;padding:10px 20px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #333}
+.dot{width:12px;height:12px;border-radius:50%}
+.terminal-title{flex:1;text-align:center;font-size:11px;color:#666;letter-spacing:1px}
+.hero{padding:80px 40px;max-width:900px;margin:0 auto}
+.prompt{color:var(--primary);font-size:12px;letter-spacing:1px;margin-bottom:8px}
+.command{font-size:clamp(24px,4vw,48px);line-height:1.2;margin-bottom:20px}
+.command .cursor{animation:blink 1s infinite;color:var(--primary)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.output{color:var(--dim);font-size:12px;line-height:1.8;margin-bottom:40px;border-left:2px solid var(--primary);padding-left:16px}
+.skills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:40px}
+.skill{padding:4px 10px;border:1px solid var(--primary);color:var(--primary);font-size:10px;letter-spacing:1px}
+.cta-link{color:var(--secondary);font-size:12px;letter-spacing:1px;text-decoration:none;border-bottom:1px solid var(--secondary)}
+.projects{padding:60px 40px;max-width:900px;margin:0 auto}
+.section-head{color:var(--primary);font-size:10px;letter-spacing:3px;margin-bottom:30px}
+.section-head::before{content:'// '}
+.project-list{display:grid;gap:16px}
+.project{padding:24px;background:rgba(18,24,18,0.8);border:1px solid rgba(44,182,125,0.2);display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start}
+.project-name{color:var(--text);font-size:13px;font-weight:700;margin-bottom:6px}
+.project-desc{color:var(--dim);font-size:11px;line-height:1.6}
+.project-tech{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tech{font-size:9px;color:var(--secondary);letter-spacing:1px}
+.project-stars{color:var(--primary);font-size:12px;white-space:nowrap}
+.code-block{padding:60px 40px;max-width:900px;margin:0 auto}
+pre{background:#0d140d;border:1px solid rgba(44,182,125,0.2);padding:24px;overflow-x:auto;font-size:12px;line-height:1.8}
+.kw{color:#7f5af0}.fn{color:var(--secondary)}.str{color:var(--primary)}.cm{color:#555}
+</style>
+</head>
+<body>
+<div class="terminal-bar">
+  <div class="dot" style="background:#ff5f57"></div>
+  <div class="dot" style="background:#ffbd2e"></div>
+  <div class="dot" style="background:#28c840"></div>
+  <div class="terminal-title">~/portfolio — zsh</div>
+</div>
+<section class="hero">
+  <div class="prompt">➜ ~ whoami</div>
+  <div class="command">SENIOR FULL-STACK<br>DEVELOPER<span class="cursor">_</span></div>
+  <div class="output">
+    Building scalable web apps and open source tools since 2018.<br>
+    Specialising in React, Node.js, WebGL, and distributed systems.<br>
+    Currently: Available for contracts and consulting.
+  </div>
+  <div class="skills">
+    <span class="skill">TYPESCRIPT</span><span class="skill">REACT</span><span class="skill">NODE.JS</span>
+    <span class="skill">WEBGL</span><span class="skill">POSTGRES</span><span class="skill">DOCKER</span>
+    <span class="skill">AWS</span><span class="skill">RUST</span>
+  </div>
+  <a href="mailto:hello@dev.io" class="cta-link">→ HIRE ME</a>
+</section>
+<section class="projects">
+  <div class="section-head">OPEN SOURCE PROJECTS</div>
+  <div class="project-list">
+    <div class="project">
+      <div>
+        <div class="project-name">bolt-query</div>
+        <div class="project-desc">Blazing-fast SQL query builder for TypeScript with full type inference and zero runtime overhead.</div>
+        <div class="project-tech"><span class="tech">TYPESCRIPT</span><span class="tech">POSTGRES</span><span class="tech">SQLITE</span></div>
+      </div>
+      <div class="project-stars">★ 2.4k</div>
+    </div>
+    <div class="project">
+      <div>
+        <div class="project-name">webgl-particles</div>
+        <div class="project-desc">GPU-accelerated particle system library. 1M+ particles at 60fps. Zero dependencies.</div>
+        <div class="project-tech"><span class="tech">WEBGL</span><span class="tech">GLSL</span><span class="tech">JAVASCRIPT</span></div>
+      </div>
+      <div class="project-stars">★ 1.8k</div>
+    </div>
+    <div class="project">
+      <div>
+        <div class="project-name">react-motion-kit</div>
+        <div class="project-desc">Production-ready animation primitives for React. Physics-based, accessible, tiny bundle.</div>
+        <div class="project-tech"><span class="tech">REACT</span><span class="tech">FRAMER</span><span class="tech">A11Y</span></div>
+      </div>
+      <div class="project-stars">★ 3.1k</div>
+    </div>
+  </div>
+</section>
+<section class="code-block">
+  <div class="section-head">RECENT COMMIT</div>
+  <pre><span class="cm">// feat: add GPU particle culling for 10x perf gain</span>
+<span class="kw">export</span> <span class="kw">function</span> <span class="fn">cullParticles</span>(
+  particles: Particle[],
+  viewport: Viewport
+): Particle[] {
+  <span class="kw">return</span> particles.<span class="fn">filter</span>(p =>
+    <span class="fn">isInFrustum</span>(p.position, viewport.frustum)
+  );
+}</pre>
+</section>
+</body></html>`;
+}
+
+function generateCreative() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Creative — Visual Storytelling Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#08050d;--primary:#ff6b35;--secondary:#7f5af0;--text:#e8f0fe;--font:'Space Mono',monospace}
+body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden}
+nav{position:fixed;top:0;width:100%;padding:24px 48px;display:flex;justify-content:space-between;align-items:center;z-index:100;mix-blend-mode:difference}
+.logo{color:#fff;font-weight:700;letter-spacing:4px;font-size:13px}
+.nav-right a{color:rgba(255,255,255,0.7);text-decoration:none;font-size:11px;letter-spacing:2px;margin-left:24px;transition:color 0.2s}
+.nav-right a:hover{color:#fff}
+.panel{min-height:100vh;display:flex;align-items:center;overflow:hidden;position:relative}
+.panel-1{background:linear-gradient(135deg,#0a0510 0%,#1a0530 100%)}
+.panel-2{background:linear-gradient(135deg,#0d0005 0%,#2d0815 100%)}
+.panel-3{background:linear-gradient(to right,#050a0d 0%,#0d1a0d 100%)}
+.large-text{font-size:clamp(60px,12vw,160px);line-height:0.9;letter-spacing:-4px;padding:40px 48px;font-weight:700}
+.em-text{color:transparent;-webkit-text-stroke:1px var(--primary)}
+.floating-label{position:absolute;writing-mode:vertical-rl;font-size:10px;letter-spacing:3px;color:rgba(232,240,254,0.3)}
+.content-block{max-width:480px;padding:48px}
+.eyebrow{color:var(--primary);font-size:10px;letter-spacing:3px;margin-bottom:16px}
+.content-block p{color:rgba(232,240,254,0.6);font-size:13px;line-height:1.9}
+.cta-wrap{margin-top:32px;display:flex;align-items:center;gap:20px}
+.cta-arrow{font-size:24px;color:var(--primary);animation:hover 2s infinite}
+@keyframes hover{0%,100%{transform:translateX(0)}50%{transform:translateX(8px)}}
+.pill{display:inline-block;padding:8px 20px;border-radius:100px;border:1px solid rgba(255,107,53,0.5);color:var(--primary);font-size:11px;letter-spacing:1px;cursor:pointer;transition:background 0.2s}
+.pill:hover{background:rgba(255,107,53,0.15)}
+.grid-imgs{display:grid;grid-template-columns:1fr 1fr;width:50%;margin-left:auto;height:100vh}
+.img-block{background:linear-gradient(135deg,var(--c1),var(--c2));position:relative;overflow:hidden;transition:transform 0.4s}
+.img-block:hover{transform:scale(1.02)}
+.img-overlay{position:absolute;bottom:20px;left:20px;right:20px;background:rgba(0,0,0,0.6);padding:12px;backdrop-filter:blur(10px)}
+.img-overlay h3{font-size:11px;letter-spacing:2px;margin-bottom:4px}
+.img-overlay p{font-size:9px;color:rgba(232,240,254,0.5);letter-spacing:1px}
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">STUDIO</div>
+  <div class="nav-right"><a href="#">WORK</a><a href="#">PROCESS</a><a href="#">CONTACT</a></div>
+</nav>
+<section class="panel panel-1">
+  <div>
+    <div class="large-text"><span class="em-text">VISUAL</span><br>STORIES<br>THAT SELL</div>
+  </div>
+  <div class="floating-label" style="right:48px;top:30%">SCROLL DOWN ↓</div>
+</section>
+<section class="panel panel-2" style="flex-direction:row">
+  <div class="content-block">
+    <div class="eyebrow">OUR APPROACH</div>
+    <h2 style="font-size:32px;margin-bottom:20px;line-height:1.2">WE DON'T MAKE<br>ART. WE MAKE<br><span style="color:var(--primary)">RESULTS.</span></h2>
+    <p>Every creative decision is grounded in data, psychology, and a deep understanding of what moves people to act. Beautiful and strategic — never one without the other.</p>
+    <div class="cta-wrap">
+      <span class="pill">VIEW PROCESS</span>
+      <span class="cta-arrow">→</span>
+    </div>
+  </div>
+  <div class="grid-imgs">
+    <div class="img-block" style="--c1:#2d0815;--c2:#7f5af0"><div class="img-overlay"><h3>BRAND FILM</h3><p>CLIENT: LUMINARY</p></div></div>
+    <div class="img-block" style="--c1:#0d1a2d;--c2:#1de5ff"><div class="img-overlay"><h3>WEB DESIGN</h3><p>CLIENT: APEX</p></div></div>
+    <div class="img-block" style="--c1:#0d2d15;--c2:#2cb67d"><div class="img-overlay"><h3>MOTION</h3><p>CLIENT: FLORA</p></div></div>
+    <div class="img-block" style="--c1:#2d1a0d;--c2:#ff6b35"><div class="img-overlay"><h3>IDENTITY</h3><p>CLIENT: ORBIT</p></div></div>
+  </div>
+</section>
+<section class="panel panel-3" style="justify-content:center;text-align:center;flex-direction:column;gap:20px;padding:48px">
+  <div style="color:rgba(232,240,254,0.3);font-size:10px;letter-spacing:3px">READY TO START?</div>
+  <div class="large-text" style="padding:0">LET'S <span style="color:var(--primary)">TALK.</span></div>
+  <span class="pill" style="font-size:13px;padding:14px 32px;border-radius:0;border-color:var(--primary)">BOOK A CALL</span>
+</section>
+</body></html>`;
+}
+
+function generateMinimal() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minimal — Less. But Better.</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#fafafa;--text:#111;--muted:#888;--accent:#111;--font:'Space Mono',monospace}
+body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden}
+nav{padding:32px 48px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee}
+.logo{font-weight:700;letter-spacing:3px;font-size:12px}
+.nav-links{display:flex;gap:24px}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:11px;letter-spacing:1px;transition:color 0.2s}
+.nav-links a:hover{color:var(--text)}
+.hero{padding:120px 48px;max-width:900px}
+.hero-tag{color:var(--muted);font-size:10px;letter-spacing:3px;margin-bottom:24px}
+h1{font-size:clamp(48px,6vw,80px);line-height:1;letter-spacing:-3px;margin-bottom:24px}
+.underline{border-bottom:4px solid var(--text);display:inline}
+.hero-sub{color:var(--muted);font-size:14px;max-width:480px;line-height:1.9;margin-bottom:40px}
+.btn-minimal{display:inline-block;padding:14px 32px;background:var(--text);color:var(--bg);text-decoration:none;font-family:var(--font);font-size:11px;font-weight:700;letter-spacing:2px;transition:opacity 0.2s}
+.btn-minimal:hover{opacity:0.7}
+.work{padding:80px 48px;border-top:1px solid #eee}
+.work-head{font-size:10px;letter-spacing:3px;color:var(--muted);margin-bottom:40px}
+.work-list{display:grid;gap:0}
+.work-item{display:grid;grid-template-columns:1fr auto;align-items:center;padding:24px 0;border-bottom:1px solid #eee;transition:background 0.2s;cursor:pointer}
+.work-item:hover{padding-left:8px}
+.work-name{font-size:20px;font-weight:700;letter-spacing:-0.5px}
+.work-meta{color:var(--muted);font-size:10px;letter-spacing:1px;text-align:right}
+.about{padding:80px 48px;max-width:600px;border-top:1px solid #eee}
+.about p{font-size:16px;line-height:1.9;color:var(--muted)}
+.about p strong{color:var(--text)}
+.contact{padding:80px 48px;border-top:1px solid #eee;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}
+.contact-text h2{font-size:32px;letter-spacing:-1px;margin-bottom:8px}
+.contact-text p{color:var(--muted);font-size:12px}
+footer{padding:24px 48px;border-top:1px solid #eee;display:flex;justify-content:space-between;color:var(--muted);font-size:10px;letter-spacing:1px}
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">STUDIO</div>
+  <div class="nav-links"><a href="#">WORK</a><a href="#">ABOUT</a><a href="#">CONTACT</a></div>
+</nav>
+<section class="hero">
+  <div class="hero-tag">INDEPENDENT DESIGNER & DEVELOPER</div>
+  <h1>LESS.<br>BUT <span class="underline">BETTER.</span></h1>
+  <p class="hero-sub">I design and build digital products that strip away the noise and let the work speak for itself. Precision over decoration. Function over form.</p>
+  <a href="#" class="btn-minimal">SEE SELECTED WORK</a>
+</section>
+<section class="work">
+  <div class="work-head">SELECTED WORK — 2024/25</div>
+  <div class="work-list">
+    <div class="work-item"><div><div class="work-name">Meridian Dashboard</div><div style="font-size:11px;color:#aaa;margin-top:4px">SaaS Platform · Product Design · 2025</div></div><div class="work-meta">01 →</div></div>
+    <div class="work-item"><div><div class="work-name">Foxfield Brand</div><div style="font-size:11px;color:#aaa;margin-top:4px">Identity · Typography · 2025</div></div><div class="work-meta">02 →</div></div>
+    <div class="work-item"><div><div class="work-name">Bloom E-Commerce</div><div style="font-size:11px;color:#aaa;margin-top:4px">Web Design · Shopify · 2024</div></div><div class="work-meta">03 →</div></div>
+    <div class="work-item"><div><div class="work-name">Apex Annual Report</div><div style="font-size:11px;color:#aaa;margin-top:4px">Editorial · Print · Digital · 2024</div></div><div class="work-meta">04 →</div></div>
+  </div>
+</section>
+<section class="about">
+  <p>I'm a <strong>designer and developer</strong> with a decade of experience working with ambitious brands and startups. I believe that <strong>great design is invisible</strong> — it removes friction, communicates clearly, and makes people feel something without them knowing why.</p>
+</section>
+<section class="contact">
+  <div class="contact-text">
+    <h2>LET'S WORK<br>TOGETHER.</h2>
+    <p>Currently accepting projects for Q3 2025.</p>
+  </div>
+  <a href="mailto:hello@studio.co" class="btn-minimal">GET IN TOUCH →</a>
+</section>
+<footer><span>© 2026 STUDIO</span><span>DESIGNED WITH INTENT</span></footer>
+</body></html>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (document.activeElement === document.getElementById('sidebar-input')) return;
+  if (e.key === '1') switchMode(0);
+  if (e.key === '2') switchMode(1);
+  if (e.key === '3') switchMode(2);
+  if (e.key === '4') switchMode(3);
+  if (e.key === 'Escape') {
+    document.getElementById('css-output').style.display = 'none';
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  positionIndicator(0);
+  initGrid();
+});
+
+window.addEventListener('resize', () => {
+  if (pCanvas) {
+    const container = document.getElementById('mode-particles');
+    pCanvas.width = container.clientWidth;
+    pCanvas.height = container.clientHeight;
+    if (pPreset) buildPreset(pPreset);
+  }
+  if (starCanvas) {
+    starCanvas.width = window.innerWidth;
+    starCanvas.height = window.innerHeight - 80;
+  }
+});
+</script>
+</body>
+</html>`;
