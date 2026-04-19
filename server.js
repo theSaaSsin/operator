@@ -1169,6 +1169,65 @@ const bossChannels = require('./channels/registry');
 const bossSwarm    = require('./channels/agents');
 const bossRouter   = require('./ai/router');
 
+// ── Inbound message handler (all channels → B.O.S.S AI → reply) ─────────────
+async function bossHandleInbound(ch, chanId, norm) {
+  try {
+    const state    = bossReadState();
+    const persona  = bossSwarm.getPersona(chanId);
+    const cfg      = readJSON('config.json');
+    if (cfg.groqApiKey)      process.env.GROQ_API_KEY      = cfg.groqApiKey;
+    if (cfg.anthropicApiKey) process.env.ANTHROPIC_API_KEY = cfg.anthropicApiKey;
+
+    const text = (norm.text || '').trim();
+
+    // Slash command routing from Telegram
+    let taskKind = 'quickReply';
+    let systemExtra = '';
+    if (text.startsWith('/pitch'))       { taskKind = 'pitch';    systemExtra = 'Generate full cold outreach pack.'; }
+    else if (text.startsWith('/scan'))   { taskKind = 'analyse';  systemExtra = 'Find pain points and prospect leads for this market.'; }
+    else if (text.startsWith('/auto'))   { taskKind = 'strategy'; systemExtra = 'Assess current state and give one clear next move toward revenue.'; }
+    else if (text.startsWith('/coach'))  { taskKind = 'coach';    systemExtra = 'Give me the most important next action to take right now.'; }
+    else if (text.startsWith('/plan'))   { taskKind = 'strategy'; systemExtra = 'Build a step-by-step plan.'; }
+
+    const system = `You are BOSS — ${norm.userName || 'Josh'}'s autonomous revenue operator on ${chanId}.
+You are a female operator (confident, sexy authority, money-focused). Sharp. Direct. No fluff.
+${systemExtra}
+${state.current_goal ? 'Mission: ' + state.current_goal : 'Mission: Revenue. Now.'}
+Reply concisely — this is a messaging app. Use line breaks, not walls of text. Max 6 lines.`;
+
+    const history = bossSwarm.recentMessages(chanId, norm.chatId, 8);
+    const msgs = [...history, { role: 'user', content: text }];
+
+    const r = await bossRouter.route({ taskKind, system, messages: msgs, maxTokens: 400 });
+    const reply = r.ok ? r.text : `⚡ All AI providers offline. Add a Groq key at console.groq.com`;
+
+    bossSwarm.pushMessage(chanId, norm.chatId, 'assistant', reply);
+    if (ch.configured()) await ch.send({ to: norm.chatId, text: reply });
+  } catch (e) {
+    console.error('[bossHandleInbound]', e.message);
+  }
+}
+
+// ── Image generation (HuggingFace free inference) ────────────────────────────
+async function generateImage(prompt, hfToken) {
+  const model = 'black-forest-labs/FLUX.1-schnell';
+  const headers = { 'Content-Type': 'application/json' };
+  if (hfToken) headers['Authorization'] = `Bearer ${hfToken}`;
+  const res = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ inputs: prompt, parameters: { num_inference_steps: 4 } }),
+    signal: AbortSignal.timeout(30000),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`HF error ${res.status}: ${err.slice(0, 200)}`);
+  }
+  // Returns raw image bytes
+  const buf = Buffer.from(await res.arrayBuffer());
+  return `data:image/jpeg;base64,${buf.toString('base64')}`;
+}
+
 // Freeform Claude call — returns raw markdown text (for B.O.S.S Jarvis chat)
 function callClaudeFreeform(apiKey, system, messages, maxTokens) {
   return new Promise((resolve) => {
@@ -2129,6 +2188,40 @@ Mission: Revenue. Now.`;
   },
 
   // Coach — proactive next-move
+  // ── Image generation ──────────────────────────────────────────────────────
+  'POST /api/image/generate': async (req, res) => {
+    const data = await body(req);
+    const prompt = (data.prompt || '').trim();
+    if (!prompt) { res.end(JSON.stringify({ ok: false, error: 'prompt required' })); return; }
+    const cfg = readJSON('config.json');
+    const hfToken = cfg.hfToken || process.env.HF_TOKEN || '';
+    try {
+      const dataUrl = await generateImage(prompt, hfToken);
+      res.end(JSON.stringify({ ok: true, image: dataUrl, prompt }));
+    } catch (e) {
+      res.end(JSON.stringify({ ok: false, error: e.message }));
+    }
+  },
+
+  // ── Social posting (multi-platform) ───────────────────────────────────────
+  'POST /api/social/post': async (req, res) => {
+    const data = await body(req);
+    const { platforms = [], text = '', imageBase64 } = data;
+    if (!text && !imageBase64) { res.end(JSON.stringify({ ok: false, error: 'text required' })); return; }
+    const results = {};
+    for (const pid of platforms) {
+      const ch = bossChannels.get(pid);
+      if (!ch) { results[pid] = { ok: false, error: 'channel not found' }; continue; }
+      if (!ch.configured()) { results[pid] = { ok: false, error: 'not configured — add API key' }; continue; }
+      try {
+        results[pid] = await ch.send({ text });
+      } catch (e) {
+        results[pid] = { ok: false, error: e.message };
+      }
+    }
+    res.end(JSON.stringify({ ok: true, results }));
+  },
+
   'POST /api/boss/coach/tick': async (req, res) => {
     const cfg = readJSON('config.json');
     if (!cfg.anthropicApiKey) { res.end(JSON.stringify({ ok: false, error: 'no_key' })); return; }
@@ -2240,18 +2333,10 @@ const server = http.createServer(async (req, res) => {
       const payload = await body(req);
       const norm = ch ? ch.ingest(payload) : null;
       if (!norm) { res.end(JSON.stringify({ ok: true })); return; }
+      res.end(JSON.stringify({ ok: true })); // respond immediately (Telegram needs <5s)
       bossSwarm.pushMessage(chanId, norm.chatId, 'user', norm.text);
-      const cfg = readJSON('config.json');
-      const persona = bossSwarm.getPersona(chanId);
-      const system  = `You are B.O.S.S on ${chanId}. Tone: ${persona.tone || 'sharp, brief'}. Reply in under 3 sentences.`;
-      if (cfg.anthropicApiKey) {
-        const msgs = [...bossSwarm.recentMessages(chanId, norm.chatId, 6), { role: 'user', content: norm.text }];
-        const r = await callClaudeFreeform(cfg.anthropicApiKey, system, msgs, 300);
-        const reply = r.ok ? r.reply : '⚠️ B.O.S.S is thinking…';
-        bossSwarm.pushMessage(chanId, norm.chatId, 'assistant', reply);
-        if (ch.configured()) ch.send({ to: norm.chatId, text: reply }).catch(() => {});
-      }
-      return res.end(JSON.stringify({ ok: true }));
+      bossHandleInbound(ch, chanId, norm).catch(() => {});
+      return;
     }
   }
 
@@ -2620,4 +2705,26 @@ server.on('upgrade', (req, socket) => {
   setupWebSocket(req, socket);
 });
 
-server.listen(PORT, () => console.log(`Operator → http://localhost:${PORT}`));
+server.listen(PORT, () => {
+  console.log(`Operator → http://localhost:${PORT}`);
+
+  // ── Auto-start Telegram polling if token is set ───────────────────────────
+  // No public URL needed — long-poll grabs messages every 25s
+  const tg = bossChannels.get('telegram');
+  const cfg0 = readJSON('config.json');
+  if (cfg0.telegramBotToken)  process.env.TELEGRAM_BOT_TOKEN         = cfg0.telegramBotToken;
+  if (cfg0.telegramChatIds)   process.env.TELEGRAM_ALLOWED_CHAT_IDS  = cfg0.telegramChatIds;
+  if (cfg0.xBearerToken)      process.env.X_BEARER_TOKEN             = cfg0.xBearerToken;
+  if (cfg0.linkedinToken)     process.env.LINKEDIN_TOKEN             = cfg0.linkedinToken;
+  if (cfg0.igAccessToken)     process.env.IG_ACCESS_TOKEN            = cfg0.igAccessToken;
+
+  if (tg && tg.configured()) {
+    console.log('[Telegram] Starting polling…');
+    tg.startPolling(async (norm) => {
+      bossSwarm.pushMessage('telegram', norm.chatId, 'user', norm.text);
+      await bossHandleInbound(tg, 'telegram', norm);
+    }).catch(e => console.error('[Telegram] polling error:', e.message));
+  } else {
+    console.log('[Telegram] Not configured — add TELEGRAM_BOT_TOKEN in API Keys to enable.');
+  }
+});

@@ -1202,6 +1202,66 @@ gr.Interface(fn=generate,
               oninput="bossCfgDirty()"></textarea>
           </div>
 
+          <!-- ── CHANNELS ──────────────────────────────────────── -->
+          <div style="font-size:.68rem;font-weight:700;color:#444;letter-spacing:.1em;text-transform:uppercase;margin:20px 0 10px">Channels</div>
+
+          <!-- Telegram -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:.78rem;font-weight:800;color:#2aabee"><i class="fab fa-telegram"></i> Telegram</span>
+              <a href="https://t.me/BotFather" target="_blank" style="font-size:.65rem;color:#2aabee;opacity:.7">Create bot →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Chat + call B.O.S.S from your phone. Get token from @BotFather. TELEGRAM_POLLING auto-starts on boot.</div>
+            <input id="cfg-telegram-token" type="password" placeholder="Bot Token (123456:ABC-...)" oninput="bossCfgDirty()"
+              style="width:100%;box-sizing:border-box;background:#080808;border:1px solid #222;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.75rem;font-family:monospace;margin-bottom:6px">
+            <input id="cfg-telegram-chatid" type="text" placeholder="Your Chat ID (use @userinfobot to get it)" oninput="bossCfgDirty()"
+              style="width:100%;box-sizing:border-box;background:#080808;border:1px solid #222;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.75rem;font-family:monospace">
+          </div>
+
+          <!-- X / Twitter -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:.78rem;font-weight:800;color:#f5f5f5"><i class="fab fa-x-twitter"></i> X / Twitter</span>
+              <a href="https://developer.twitter.com/en/portal/dashboard" target="_blank" style="font-size:.65rem;color:#aaa;opacity:.7">Dev portal →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Post to X from B.O.S.S Social Post module. Free basic API includes 1,500 tweets/month.</div>
+            <input id="cfg-x-token" type="password" placeholder="X Bearer Token" oninput="bossCfgDirty()"
+              style="width:100%;box-sizing:border-box;background:#080808;border:1px solid #222;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.75rem;font-family:monospace">
+          </div>
+
+          <!-- LinkedIn -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:.78rem;font-weight:800;color:#0077b5"><i class="fab fa-linkedin"></i> LinkedIn</span>
+              <a href="https://www.linkedin.com/developers/apps" target="_blank" style="font-size:.65rem;color:#0077b5;opacity:.7">Create app →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Post updates and articles to LinkedIn profile/page.</div>
+            <input id="cfg-linkedin-token" type="password" placeholder="LinkedIn OAuth Token" oninput="bossCfgDirty()"
+              style="width:100%;box-sizing:border-box;background:#080808;border:1px solid #222;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.75rem;font-family:monospace">
+          </div>
+
+          <!-- Instagram -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:.78rem;font-weight:800;color:#e1306c"><i class="fab fa-instagram"></i> Instagram</span>
+              <a href="https://developers.facebook.com/docs/instagram-api" target="_blank" style="font-size:.65rem;color:#e1306c;opacity:.7">Meta Graph API →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">IG Business/Creator account needed. Requires FB Page link + Graph API access token.</div>
+            <input id="cfg-ig-token" type="password" placeholder="IG Access Token" oninput="bossCfgDirty()"
+              style="width:100%;box-sizing:border-box;background:#080808;border:1px solid #222;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.75rem;font-family:monospace">
+          </div>
+
+          <!-- HuggingFace (image gen) -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px;margin-bottom:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:.78rem;font-weight:800;color:#ff9d00">🤗 HuggingFace</span>
+              <a href="https://huggingface.co/settings/tokens" target="_blank" style="font-size:.65rem;color:#ff9d00;opacity:.7">Get token →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Free image generation (FLUX Schnell). Without a token, rate limits apply. With token: unlimited free inference.</div>
+            <input id="cfg-hf-token" type="password" placeholder="hf_..." oninput="bossCfgDirty()"
+              style="width:100%;box-sizing:border-box;background:#080808;border:1px solid #222;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.75rem;font-family:monospace">
+          </div>
+
           <!-- ── ACTIONS ── -->
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
             <button id="cfg-save-btn" onclick="bossCfgSave()"

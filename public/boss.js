@@ -475,14 +475,20 @@ What's next? More leads or better close rate?`);
     try {
       const cfg = await fetch(API + '/config').then(r => r.json()).catch(() => ({}));
       const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
-      set('cfg-anthropic-key',  cfg.anthropicApiKey);
-      set('cfg-groq-key',       cfg.groqApiKey);
-      set('cfg-openrouter-key', cfg.openrouterApiKey);
-      set('cfg-glm-key',        cfg.glmApiKey);
-      set('cfg-kimi-key',       cfg.kimiApiKey);
-      set('cfg-persona',        cfg.personaName);
-      set('cfg-offer',          cfg.offer);
-      set('cfg-serper-key',     cfg.serperApiKey);
+      set('cfg-anthropic-key',   cfg.anthropicApiKey);
+      set('cfg-groq-key',        cfg.groqApiKey);
+      set('cfg-openrouter-key',  cfg.openrouterApiKey);
+      set('cfg-glm-key',         cfg.glmApiKey);
+      set('cfg-kimi-key',        cfg.kimiApiKey);
+      set('cfg-persona',         cfg.personaName);
+      set('cfg-offer',           cfg.offer);
+      set('cfg-serper-key',      cfg.serperApiKey);
+      set('cfg-telegram-token',  cfg.telegramBotToken);
+      set('cfg-telegram-chatid', cfg.telegramChatIds);
+      set('cfg-hf-token',        cfg.hfToken);
+      set('cfg-x-token',         cfg.xBearerToken);
+      set('cfg-linkedin-token',  cfg.linkedinToken);
+      set('cfg-ig-token',        cfg.igAccessToken);
       const keyStatus = document.getElementById('cfg-key-status');
       if (keyStatus) {
         if (cfg.anthropicApiKey) { keyStatus.textContent = `✓ set (${cfg.anthropicApiKey.length} chars)`; keyStatus.style.color = '#2cb67d'; }
@@ -525,27 +531,38 @@ What's next? More leads or better close rate?`);
     const btn  = document.getElementById('cfg-save-btn');
 
     const payload = {};
-    const ant = get('cfg-anthropic-key');
-    const grq = get('cfg-groq-key');
-    const ort = get('cfg-openrouter-key');
-    const per = get('cfg-persona');
-    const off = get('cfg-offer');
-    const ser = get('cfg-serper-key');
-
+    const ant  = get('cfg-anthropic-key');
+    const grq  = get('cfg-groq-key');
+    const ort  = get('cfg-openrouter-key');
+    const per  = get('cfg-persona');
+    const off  = get('cfg-offer');
+    const ser  = get('cfg-serper-key');
     const glm  = get('cfg-glm-key');
     const kimi = get('cfg-kimi-key');
+    const tgToken  = get('cfg-telegram-token');
+    const tgChats  = get('cfg-telegram-chatid');
+    const hfToken  = get('cfg-hf-token');
+    const xToken   = get('cfg-x-token');
+    const liToken  = get('cfg-linkedin-token');
+    const igToken  = get('cfg-ig-token');
 
-    if (ant)  payload.anthropicApiKey  = ant;
-    if (grq)  payload.groqApiKey       = grq;
-    if (ort)  payload.openrouterApiKey = ort;
-    if (glm)  payload.glmApiKey        = glm;
-    if (kimi) payload.kimiApiKey       = kimi;
-    if (per)  payload.personaName      = per;
-    if (off)  payload.offer            = off;
-    if (ser)  payload.serperApiKey     = ser;
+    if (ant)     payload.anthropicApiKey  = ant;
+    if (grq)     payload.groqApiKey       = grq;
+    if (ort)     payload.openrouterApiKey = ort;
+    if (glm)     payload.glmApiKey        = glm;
+    if (kimi)    payload.kimiApiKey       = kimi;
+    if (per)     payload.personaName      = per;
+    if (off)     payload.offer            = off;
+    if (ser)     payload.serperApiKey     = ser;
+    if (tgToken) payload.telegramBotToken = tgToken;
+    if (tgChats) payload.telegramChatIds  = tgChats;
+    if (hfToken) payload.hfToken          = hfToken;
+    if (xToken)  payload.xBearerToken     = xToken;
+    if (liToken) payload.linkedinToken    = liToken;
+    if (igToken) payload.igAccessToken    = igToken;
 
     if (!ant && !grq && !ort && !glm && !kimi) {
-      if (msg) { msg.innerHTML = '<span style="color:#f55">Add at least one API key to activate B.O.S.S.</span>'; }
+      if (msg) { msg.innerHTML = '<span style="color:#f55">Add at least one AI key to activate B.O.S.S.</span>'; }
       return;
     }
 

@@ -281,7 +281,7 @@ function buildNav() {
       { key:'mod-content-ideas',    label:'Content Ideas',    status:'active',  icon:'fa-lightbulb' },
       { key:'mod-short-form',       label:'Short-Form',       status:'planned', icon:'fa-video' },
       { key:'mod-long-form',        label:'Long-Form',        status:'planned', icon:'fa-newspaper' },
-      { key:'mod-social-posts',     label:'Social Posts',     status:'planned', icon:'fa-thumbs-up' },
+      { key:'mod-social-post',      label:'Social Posts',     status:'active',  icon:'fa-thumbs-up' },
       { key:'mod-scheduler',        label:'Scheduler',        status:'planned', icon:'fa-calendar-days' },
       { key:'mod-visual-assets',    label:'Visual Assets',    status:'planned', icon:'fa-image' },
       { key:'mod-brand',            label:'Brand Identity',   status:'planned', icon:'fa-palette' },
