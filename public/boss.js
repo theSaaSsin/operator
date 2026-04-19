@@ -81,8 +81,8 @@
         ? `⚠️  FIRST THING TO DO:\n` +
           `1. Go to console.anthropic.com → sign up (free $5 credit)\n` +
           `2. Create an API key → copy it\n` +
-          `3. In THIS app: sidebar → Persona & Keys (or any panel with Settings)\n` +
-          `4. Paste key → Save\n` +
+          `3. In THIS app: sidebar → 🔑 API Keys & Settings (top of B.O.S.S Core section)\n` +
+          `4. Paste key → Save & Activate\n` +
           `5. Come back here — I'll wake up fully\n\n` +
           `Everything else is live (Lead Feed, CRM, Outreach) — AI just needs the key.\n\n`
         : `━━━ WHAT TO DO NOW ━━━\n\n` +
@@ -287,7 +287,107 @@
     }
   };
 
-  // Auto-save conversation every 30s
+  // ── CONFIG PANEL ─────────────────────────────────────────────────────────
+
+  window.bossLoadConfig = async function () {
+    try {
+      const cfg = await fetch(API + '/config').then(r => r.json()).catch(() => ({}));
+      const keyInput = document.getElementById('cfg-anthropic-key');
+      const personaInput = document.getElementById('cfg-persona');
+      const offerInput   = document.getElementById('cfg-offer');
+      const serperInput  = document.getElementById('cfg-serper-key');
+      const banner       = document.getElementById('boss-config-banner');
+      const keyStatus    = document.getElementById('cfg-key-status');
+
+      if (keyInput && cfg.anthropicApiKey) {
+        keyInput.value = cfg.anthropicApiKey;
+        if (keyStatus) {
+          keyStatus.textContent  = `✓ Key set (${cfg.anthropicApiKey.length} chars)`;
+          keyStatus.style.color  = '#c8ff00';
+        }
+        if (banner) banner.style.display = 'none';
+      } else {
+        if (keyStatus) { keyStatus.textContent = '— not set'; keyStatus.style.color = '#f55'; }
+        if (banner) banner.style.display = 'block';
+      }
+      if (personaInput && cfg.personaName) personaInput.value = cfg.personaName;
+      if (offerInput   && cfg.offer)       offerInput.value   = cfg.offer;
+      if (serperInput  && cfg.serperApiKey) serperInput.value  = cfg.serperApiKey;
+    } catch (_) {}
+  };
+
+  window.bossCfgDirty = function () {
+    const btn = document.getElementById('cfg-save-btn');
+    if (btn) btn.style.background = '#ffee00';
+  };
+
+  window.bossCfgToggleKey = function () {
+    const inp = document.getElementById('cfg-anthropic-key');
+    if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+  };
+
+  window.bossCfgSave = async function () {
+    const key     = (document.getElementById('cfg-anthropic-key')?.value || '').trim();
+    const persona = (document.getElementById('cfg-persona')?.value    || '').trim();
+    const offer   = (document.getElementById('cfg-offer')?.value      || '').trim();
+    const serper  = (document.getElementById('cfg-serper-key')?.value || '').trim();
+    const msg     = document.getElementById('cfg-save-msg');
+    const btn     = document.getElementById('cfg-save-btn');
+    const status  = document.getElementById('cfg-key-status');
+    const banner  = document.getElementById('boss-config-banner');
+
+    if (!key) {
+      if (msg) { msg.textContent = '⚠ Anthropic key is required.'; msg.style.color = '#f55'; }
+      return;
+    }
+
+    const payload = { anthropicApiKey: key };
+    if (persona)  payload.personaName  = persona;
+    if (offer)    payload.offer        = offer;
+    if (serper)   payload.serperApiKey = serper;
+
+    try {
+      if (msg) msg.textContent = 'Saving…';
+      await fetch(API + '/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (btn)    { btn.style.background = '#c8ff00'; btn.textContent = '✓ Saved!'; }
+      if (status) { status.textContent = `✓ Key set (${key.length} chars)`; status.style.color = '#c8ff00'; }
+      if (banner) banner.style.display = 'none';
+      if (msg)    { msg.textContent = '✓ B.O.S.S activated. Open the chat (bottom right) and type anything.'; msg.style.color = '#c8ff00'; }
+
+      setTimeout(() => {
+        if (btn) { btn.textContent = '✓ Save & Activate'; btn.style.background = '#c8ff00'; }
+      }, 2500);
+    } catch (err) {
+      if (msg) { msg.textContent = '✗ Save failed — is the server running?'; msg.style.color = '#f55'; }
+    }
+  };
+
+  window.bossCfgTest = async function () {
+    const msg = document.getElementById('cfg-save-msg');
+    if (msg) { msg.textContent = '⚡ Testing…'; msg.style.color = '#c8ff00'; }
+    try {
+      const r = await fetch(API + '/boss/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Reply in one sentence: B.O.S.S is online and ready.' }),
+      }).then(x => x.json());
+      if (r.ok) {
+        if (msg) { msg.textContent = `✓ Claude says: "${r.reply.slice(0, 120)}"`; msg.style.color = '#c8ff00'; }
+      } else {
+        if (msg) { msg.textContent = `✗ ${r.error || 'API error'}`; msg.style.color = '#f55'; }
+      }
+    } catch (e) {
+      if (msg) { msg.textContent = '✗ Server not reachable.'; msg.style.color = '#f55'; }
+    }
+  };
+
+  // ── Auto-save conversation every 30s ─────────────────────────────────────
+
   setInterval(() => {
     if (HISTORY.length > 2) {
       fetch(API + '/boss/state', {

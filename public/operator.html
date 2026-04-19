@@ -114,6 +114,7 @@
       <div class="nav-item" data-panel="mod-affiliates"><i class="fas fa-people-arrows"></i> Affiliate System</div>
       <div class="nav-item" data-panel="mod-system-matcher"><i class="fas fa-puzzle-piece"></i> System Matcher</div>
       <div class="nav-section" data-cat="boss" style="color:#c8ff00;opacity:.9">B.O.S.S Core</div>
+      <div class="nav-item" data-panel="boss-config" onclick="bossLoadConfig()" style="color:#c8ff00"><i class="fas fa-key"></i> API Keys &amp; Settings</div>
       <div class="nav-item" data-panel="boss-channels"><i class="fas fa-satellite-dish"></i> Channels</div>
       <div class="nav-item" data-panel="boss-agents"><i class="fas fa-robot"></i> Agents</div>
     </nav>
@@ -646,6 +647,86 @@
             </div>
             <div id="ag-spawn-result" style="font-size:.7rem;color:#666;margin-top:6px"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- ══ B.O.S.S: API KEYS & SETTINGS ══ -->
+      <div class="panel" id="panel-boss-config">
+        <div style="padding:32px;max-width:700px;margin:0 auto">
+
+          <!-- Onboarding banner — shown when no key is set -->
+          <div id="boss-config-banner" style="display:none;background:linear-gradient(135deg,#1a1a00,#2a2a00);border:1px solid #c8ff0033;border-radius:14px;padding:20px 24px;margin-bottom:28px">
+            <div style="font-size:1rem;font-weight:800;color:#c8ff00;margin-bottom:6px">⚡ First Move: Add Your Anthropic API Key</div>
+            <div style="font-size:.8rem;color:#aaa;line-height:1.7">
+              B.O.S.S needs a Claude API key to think, pitch, scan leads, and coach you.<br>
+              1. Go to <strong style="color:#fff">console.anthropic.com</strong> → <em>API Keys</em> → <em>Create Key</em><br>
+              2. Copy the key (starts with <code style="color:#c8ff00">sk-ant-</code>)<br>
+              3. Paste it below and hit <strong style="color:#c8ff00">Save &amp; Activate</strong><br>
+              <span style="color:#f55;font-size:.72rem">⚠ Your previous key was exposed — revoke it and use a fresh one.</span>
+            </div>
+          </div>
+
+          <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 6px;color:#f5f2ec">API Keys &amp; B.O.S.S Identity</h2>
+          <p style="font-size:.75rem;color:#666;margin:0 0 28px">These are stored locally on your machine only. Never shared.</p>
+
+          <!-- Anthropic -->
+          <div style="margin-bottom:20px">
+            <label style="display:block;font-size:.72rem;font-weight:700;color:#c8ff00;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase">
+              Anthropic (Claude) API Key <span style="color:#f55">*required</span>
+            </label>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-anthropic-key" type="password" placeholder="sk-ant-api03-..."
+                style="flex:1;background:#0d0d0d;border:1px solid #2a2a2a;color:#f5f2ec;padding:10px 14px;border-radius:9px;font-size:.82rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleKey()" title="Show/hide"
+                style="background:#1a1a1a;border:1px solid #2a2a2a;color:#888;padding:0 14px;border-radius:9px;cursor:pointer;font-size:.9rem">👁</button>
+            </div>
+            <div id="cfg-key-status" style="font-size:.7rem;margin-top:5px;color:#555">— not set</div>
+          </div>
+
+          <!-- Persona name -->
+          <div style="margin-bottom:20px">
+            <label style="display:block;font-size:.72rem;font-weight:700;color:#aaa;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase">
+              Your Name / Persona
+            </label>
+            <input id="cfg-persona" placeholder="e.g. Joshua"
+              style="width:100%;box-sizing:border-box;background:#0d0d0d;border:1px solid #2a2a2a;color:#f5f2ec;padding:10px 14px;border-radius:9px;font-size:.82rem"
+              oninput="bossCfgDirty()">
+          </div>
+
+          <!-- Offer -->
+          <div style="margin-bottom:20px">
+            <label style="display:block;font-size:.72rem;font-weight:700;color:#aaa;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase">
+              Your Core Offer (used in pitches)
+            </label>
+            <textarea id="cfg-offer" rows="3" placeholder="e.g. AI-powered lead generation system for local service businesses — gets 5-15 booked calls/month"
+              style="width:100%;box-sizing:border-box;background:#0d0d0d;border:1px solid #2a2a2a;color:#f5f2ec;padding:10px 14px;border-radius:9px;font-size:.82rem;resize:vertical"
+              oninput="bossCfgDirty()"></textarea>
+          </div>
+
+          <!-- Serper (optional) -->
+          <div style="margin-bottom:28px">
+            <label style="display:block;font-size:.72rem;font-weight:700;color:#aaa;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase">
+              Serper API Key <span style="color:#666;font-weight:400">(optional — powers lead feed search)</span>
+            </label>
+            <input id="cfg-serper-key" type="password" placeholder="Leave blank to skip"
+              style="width:100%;box-sizing:border-box;background:#0d0d0d;border:1px solid #2a2a2a;color:#f5f2ec;padding:10px 14px;border-radius:9px;font-size:.82rem;font-family:monospace"
+              oninput="bossCfgDirty()">
+          </div>
+
+          <!-- Actions -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button id="cfg-save-btn" onclick="bossCfgSave()"
+              style="background:#c8ff00;color:#0a0a0a;border:none;padding:11px 28px;border-radius:9px;font-weight:800;font-size:.85rem;cursor:pointer;letter-spacing:.04em">
+              ✓ Save &amp; Activate
+            </button>
+            <button onclick="bossCfgTest()"
+              style="background:#1a1a1a;border:1px solid #2a2a2a;color:#c8ff00;padding:11px 20px;border-radius:9px;font-weight:700;font-size:.82rem;cursor:pointer">
+              ⚡ Test Claude
+            </button>
+          </div>
+          <div id="cfg-save-msg" style="font-size:.75rem;margin-top:12px;color:#555"></div>
+
         </div>
       </div>
 
