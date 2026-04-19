@@ -2306,8 +2306,11 @@ function loadGraph() {
     const fs = require('fs');
     const p  = require('path').join(__dirname, 'data', 'knowledge-graph.json');
     if (!fs.existsSync(p)) return { nodes: [], edges: [] };
-    return JSON.parse(fs.readFileSync(p, 'utf8'));
-  } catch (_) { return { nodes: [], edges: [] }; }
+    // Strip UTF-8 BOM if present (PowerShell writes it)
+    let raw = fs.readFileSync(p, 'utf8');
+    if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
+    return JSON.parse(raw);
+  } catch (e) { console.error('[graph] load error:', e.message); return { nodes: [], edges: [] }; }
 }
 function saveGraph(g) {
   const fs = require('fs');
