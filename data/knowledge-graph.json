@@ -1,0 +1,235 @@
+﻿{
+    "edges":  [
+                  {
+                      "target":  "agent_scout",
+                      "source":  "agent_boss",
+                      "id":  "e1",
+                      "type":  "directs",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "agent_growth",
+                      "source":  "agent_boss",
+                      "id":  "e2",
+                      "type":  "directs",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "agent_copy",
+                      "source":  "agent_boss",
+                      "id":  "e3",
+                      "type":  "directs",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "agent_builder",
+                      "source":  "agent_boss",
+                      "id":  "e4",
+                      "type":  "directs",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "goal_revenue",
+                      "source":  "agent_boss",
+                      "id":  "e5",
+                      "type":  "targets",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "goal_clients",
+                      "source":  "goal_revenue",
+                      "id":  "e6",
+                      "type":  "requires",
+                      "weight":  0.9
+                  },
+                  {
+                      "target":  "tag_saas",
+                      "source":  "agent_scout",
+                      "id":  "e7",
+                      "type":  "monitors",
+                      "weight":  0.6
+                  },
+                  {
+                      "target":  "tag_linkedin",
+                      "source":  "agent_scout",
+                      "id":  "e8",
+                      "type":  "monitors",
+                      "weight":  0.6
+                  },
+                  {
+                      "target":  "tag_reddit",
+                      "source":  "agent_scout",
+                      "id":  "e9",
+                      "type":  "monitors",
+                      "weight":  0.6
+                  },
+                  {
+                      "target":  "goal_clients",
+                      "source":  "agent_growth",
+                      "id":  "e10",
+                      "type":  "works_toward",
+                      "weight":  0.8
+                  },
+                  {
+                      "target":  "agent_boss",
+                      "source":  "co_thesaassin",
+                      "id":  "e11",
+                      "type":  "owns",
+                      "weight":  1
+                  },
+                  {
+                      "target":  "goal_revenue",
+                      "source":  "co_thesaassin",
+                      "id":  "e12",
+                      "type":  "seeks",
+                      "weight":  0.9
+                  }
+              ],
+    "meta":  {
+                 "created":  "2026-04-19",
+                 "description":  "TheSaaSsin B.O.S.S Knowledge Graph — nodes are leads/clients/companies/agents/goals; edges are relationships",
+                 "version":  "1.0"
+             },
+    "nodes":  [
+                  {
+                      "id":  "agent_boss",
+                      "label":  "B.O.S.S",
+                      "data":  {
+                                   "role":  "Master Director",
+                                   "tier":  "cloud"
+                               },
+                      "y":  0,
+                      "type":  "agent",
+                      "z":  0,
+                      "x":  0
+                  },
+                  {
+                      "id":  "agent_scout",
+                      "label":  "Scout",
+                      "data":  {
+                                   "role":  "Market Intel",
+                                   "tier":  "groq"
+                               },
+                      "y":  30,
+                      "type":  "agent",
+                      "z":  20,
+                      "x":  80
+                  },
+                  {
+                      "id":  "agent_growth",
+                      "label":  "Growth",
+                      "data":  {
+                                   "role":  "Client Acquisition",
+                                   "tier":  "cloud"
+                               },
+                      "y":  30,
+                      "type":  "agent",
+                      "z":  20,
+                      "x":  -80
+                  },
+                  {
+                      "id":  "agent_copy",
+                      "label":  "Copywriter",
+                      "data":  {
+                                   "role":  "Copy that Converts",
+                                   "tier":  "cloud"
+                               },
+                      "y":  80,
+                      "type":  "agent",
+                      "z":  0,
+                      "x":  0
+                  },
+                  {
+                      "id":  "agent_builder",
+                      "label":  "Builder",
+                      "data":  {
+                                   "role":  "Production Code",
+                                   "tier":  "cloud"
+                               },
+                      "y":  -80,
+                      "type":  "agent",
+                      "z":  0,
+                      "x":  0
+                  },
+                  {
+                      "id":  "goal_revenue",
+                      "label":  "£5k/mo Revenue",
+                      "data":  {
+                                   "deadline":  "90 days",
+                                   "status":  "active"
+                               },
+                      "y":  0,
+                      "type":  "goal",
+                      "z":  0,
+                      "x":  200
+                  },
+                  {
+                      "id":  "goal_clients",
+                      "label":  "3 Paying Clients",
+                      "data":  {
+                                   "deadline":  "60 days",
+                                   "status":  "active"
+                               },
+                      "y":  80,
+                      "type":  "goal",
+                      "z":  40,
+                      "x":  200
+                  },
+                  {
+                      "id":  "co_thesaassin",
+                      "label":  "TheSaaSsin",
+                      "data":  {
+                                   "url":  "thesaassin.com",
+                                   "owner":  "Josh"
+                               },
+                      "y":  0,
+                      "type":  "company",
+                      "z":  0,
+                      "x":  -200
+                  },
+                  {
+                      "id":  "tag_saas",
+                      "label":  "SaaS Founder",
+                      "data":  {
+                                   "count":  0
+                               },
+                      "y":  140,
+                      "type":  "tag",
+                      "z":  60,
+                      "x":  140
+                  },
+                  {
+                      "id":  "tag_agency",
+                      "label":  "Agency Owner",
+                      "data":  {
+                                   "count":  0
+                               },
+                      "y":  140,
+                      "type":  "tag",
+                      "z":  60,
+                      "x":  -140
+                  },
+                  {
+                      "id":  "tag_linkedin",
+                      "label":  "LinkedIn",
+                      "data":  {
+                                   "count":  0
+                               },
+                      "y":  200,
+                      "type":  "tag",
+                      "z":  80,
+                      "x":  60
+                  },
+                  {
+                      "id":  "tag_reddit",
+                      "label":  "Reddit",
+                      "data":  {
+                                   "count":  0
+                               },
+                      "y":  200,
+                      "type":  "tag",
+                      "z":  80,
+                      "x":  -60
+                  }
+              ]
+}

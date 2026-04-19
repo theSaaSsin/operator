@@ -117,6 +117,8 @@
       <div class="nav-item" data-panel="boss-config" onclick="bossLoadConfig()" style="color:#ff2a2a"><i class="fas fa-key"></i> API Keys &amp; Settings</div>
       <div class="nav-item" data-panel="boss-models" onclick="bossLoadModels()" style="color:#ff2a2a"><i class="fas fa-microchip"></i> Local Models</div>
       <div class="nav-item" data-panel="boss-creative" onclick="bossLoadCreative()" style="color:#ff2a2a"><i class="fas fa-film"></i> Creative Studio</div>
+      <div class="nav-item" data-panel="panel-graph" onclick="switchPanel('panel-graph')" style="color:#ff2a2a"><i class="fas fa-project-diagram"></i> Knowledge Graph</div>
+      <div class="nav-item" data-panel="panel-design" onclick="switchPanel('panel-design')"><i class="fas fa-palette"></i> Brand Assets</div>
       <div class="nav-item" data-panel="boss-channels"><i class="fas fa-satellite-dish"></i> Channels</div>
       <div class="nav-item" data-panel="boss-agents"><i class="fas fa-robot"></i> Agents</div>
     </nav>
@@ -1010,7 +1012,42 @@
         .rt-val{font-size:.82rem;font-weight:700;color:#aaa}
       </style>
 
-<!-- boss.js MUST load after #boss-drawer and #boss-fab exist in the DOM -->
+
+  <!-- â”€â”€ KNOWLEDGE GRAPH PANEL â”€â”€ -->
+  <div class="panel" id="panel-graph" style="flex-direction:column;overflow:hidden;">
+    <div class="panel-header" style="flex-shrink:0;padding:10px 16px;">
+      <h2 style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);">Knowledge Graph</h2>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('graph-frame').src='graph.html?t='+Date.now()">â†º Refresh</button>
+        <a href="graph.html" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">â¤¢ Full Screen</a>
+      </div>
+    </div>
+    <iframe id="graph-frame" src="graph.html" style="flex:1;border:none;width:100%;height:100%;background:#0a0a0f;" loading="lazy"></iframe>
+  </div>
+
+  <!-- â”€â”€ BRAND ASSETS PANEL â”€â”€ -->
+  <div class="panel" id="panel-design" style="flex-direction:column;overflow:hidden;">
+    <div class="panel-header" style="flex-shrink:0;padding:10px 16px;">
+      <h2 style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);">Brand Assets</h2>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" id="brand-tab-1" onclick="switchBrandBoard(1)" style="border-color:rgba(255,42,42,.4);color:#ff2a2a;">Board 01 â€” Identity</button>
+        <button class="btn btn-secondary btn-sm" id="brand-tab-2" onclick="switchBrandBoard(2)">Board 02 â€” Components</button>
+        <a href="brand-board-1.html" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">â¤¢ Open</a>
+      </div>
+    </div>
+    <iframe id="brand-frame" src="brand-board-1.html" style="flex:1;border:none;width:100%;height:100%;background:#0a0a0f;" loading="lazy"></iframe>
+  </div>
+
+  <script>
+  function switchBrandBoard(n) {
+    document.getElementById('brand-frame').src = 'brand-board-'+n+'.html';
+    document.getElementById('brand-tab-1').style.borderColor = n===1 ? 'rgba(255,42,42,.4)' : '';
+    document.getElementById('brand-tab-1').style.color = n===1 ? '#ff2a2a' : '';
+    document.getElementById('brand-tab-2').style.borderColor = n===2 ? 'rgba(255,42,42,.4)' : '';
+    document.getElementById('brand-tab-2').style.color = n===2 ? '#ff2a2a' : '';
+  }
+  </script>
+  <!-- boss.js MUST load after #boss-drawer and #boss-fab exist in the DOM -->
 <script src="boss.js"></script>
 </body>
 </html>

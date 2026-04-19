@@ -2297,6 +2297,85 @@ ROUTES['GET /api/boss/router'] = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ======================================================
+// KNOWLEDGE GRAPH API
+// ======================================================
+function loadGraph() {
+  try {
+    const fs = require('fs');
+    const p  = require('path').join(__dirname, 'data', 'knowledge-graph.json');
+    if (!fs.existsSync(p)) return { nodes: [], edges: [] };
+    return JSON.parse(fs.readFileSync(p, 'utf8'));
+  } catch (_) { return { nodes: [], edges: [] }; }
+}
+function saveGraph(g) {
+  const fs = require('fs');
+  const p  = require('path').join(__dirname, 'data', 'knowledge-graph.json');
+  try { fs.mkdirSync(require('path').dirname(p), { recursive: true }); } catch (_) {}
+  fs.writeFileSync(p, JSON.stringify(g, null, 2), 'utf8');
+}
+function graphAddNode(id, type, label, data) {
+  const g = loadGraph();
+  const ex = g.nodes.find(n => n.id === id);
+  if (ex) { Object.assign(ex.data || {}, data); ex.label = label; }
+  else g.nodes.push({ id, type, label, data: data || {}, created: new Date().toISOString() });
+  saveGraph(g);
+}
+function graphAddEdge(source, target, type, weight) {
+  const g = loadGraph();
+  const eid = 'e_' + source + '_' + target + '_' + (type || 'related_to');
+  if (!g.edges.find(e => e.id === eid)) {
+    g.edges.push({ id: eid, source, target, type: type || 'related_to', weight: weight || 0.6, created: new Date().toISOString() });
+    saveGraph(g);
+  }
+}
+ROUTES['GET /api/graph'] = (_, res) => {
+  const g = loadGraph();
+  res.end(JSON.stringify({ ok: true, nodes: g.nodes || [], edges: g.edges || [], meta: g.meta || {} }));
+};
+ROUTES['POST /api/graph/node'] = (req, res) => {
+  const { id, type, label, data } = req.body || {};
+  if (!id || !type || !label) return res.end(JSON.stringify({ ok: false, error: 'id type label required' }));
+  const g = loadGraph();
+  const ex = g.nodes.find(n => n.id === id);
+  if (ex) { ex.label = label; ex.type = type; ex.data = Object.assign(ex.data || {}, data); ex.updated = new Date().toISOString(); }
+  else g.nodes.push({ id, type, label, data: data || {}, created: new Date().toISOString() });
+  saveGraph(g);
+  res.end(JSON.stringify({ ok: true }));
+};
+ROUTES['POST /api/graph/edge'] = (req, res) => {
+  const { source, target, type, weight } = req.body || {};
+  if (!source || !target) return res.end(JSON.stringify({ ok: false, error: 'source and target required' }));
+  const g = loadGraph(); const eid = 'e_' + source + '_' + target + '_' + (type || 'rel');
+  if (!g.edges.find(e => e.id === eid)) g.edges.push({ id: eid, source, target, type: type || 'related_to', weight: weight || 0.6, created: new Date().toISOString() });
+  saveGraph(g);
+  res.end(JSON.stringify({ ok: true }));
+};
+ROUTES['DELETE /api/graph/node'] = (req, res) => {
+  const nodeId = (req.body || {}).id;
+  if (!nodeId) return res.end(JSON.stringify({ ok: false, error: 'id required' }));
+  const g = loadGraph();
+  g.nodes = g.nodes.filter(n => n.id !== nodeId);
+  g.edges = g.edges.filter(e => e.source !== nodeId && e.target !== nodeId);
+  saveGraph(g);
+  res.end(JSON.stringify({ ok: true }));
+};
+ROUTES['POST /api/graph/seed'] = (req, res) => {
+  const g = loadGraph();
+  const leads = readJSON('leads.json') || [];
+  let added = 0;
+  leads.slice(0, 50).forEach(lead => {
+    const lid = 'lead_' + (lead.id || (lead.author || '').replace(/\W/g,'_') || Math.random().toString(36).slice(2));
+    if (!g.nodes.find(n => n.id === lid)) {
+      g.nodes.push({ id: lid, type: 'lead', label: lead.author || lead.name || 'Lead', data: { score: lead.score || 0, source: lead.source || '' }, created: lead.timestamp || new Date().toISOString() });
+      g.edges.push({ id: 'e_' + lid + '_tag', source: lid, target: 'tag_saas', type: 'tagged_with', weight: 0.5 });
+      added++;
+    }
+  });
+  saveGraph(g);
+  res.end(JSON.stringify({ ok: true, added, total: g.nodes.length }));
+};
 // B.O.S.S ORCHESTRATOR - Multi-agent goal execution
 // POST /api/boss/orchestrate  { goal, context? }
 // GET  /api/boss/agents       list agents
