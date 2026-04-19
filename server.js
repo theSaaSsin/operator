@@ -1,0 +1,2245 @@
+// TheSaaSsin Operator Server — pure Node, no dependencies
+const http = require('http');
+const crypto = require('crypto');
+const fs   = require('fs');
+const path = require('path');
+
+const PORT    = Number(process.env.PORT || 4000);
+const PUBLIC  = path.join(__dirname, 'public');
+const DATA    = path.join(__dirname, 'data');
+
+const MIME = {
+  '.html': 'text/html', '.css': 'text/css',
+  '.js':   'text/javascript', '.json': 'application/json',
+  '.mp4':  'video/mp4', '.ico': 'image/x-icon'
+};
+
+function readJSON(file) {
+  try { return JSON.parse(fs.readFileSync(path.join(DATA, file), 'utf8')); }
+  catch { return {}; }
+}
+function writeJSON(file, data) {
+  fs.writeFileSync(path.join(DATA, file), JSON.stringify(data, null, 2));
+}
+function body(req) {
+  return new Promise(res => {
+    let d = '';
+    req.on('data', c => d += c);
+    req.on('end', () => { try { res(JSON.parse(d)); } catch { res({}); } });
+  });
+}
+
+const WS_MAGIC = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+const WS_CLIENTS = new Set();
+
+function parseQuery(url) {
+  const qs = url.includes('?') ? url.split('?')[1] : '';
+  const out = {};
+  qs.split('&').forEach(part => {
+    if (!part) return;
+    const [k, v = ''] = part.split('=');
+    out[decodeURIComponent(k)] = decodeURIComponent(v);
+  });
+  return out;
+}
+
+function createId(prefix = 'id') {
+  return `${prefix}_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
+}
+
+function encodeWsFrame(payload) {
+  const body = Buffer.from(String(payload));
+  const len = body.length;
+  let header;
+  if (len < 126) {
+    header = Buffer.alloc(2);
+    header[1] = len;
+  } else if (len < 65536) {
+    header = Buffer.alloc(4);
+    header[1] = 126;
+    header.writeUInt16BE(len, 2);
+  } else {
+    header = Buffer.alloc(10);
+    header[1] = 127;
+    header.writeBigUInt64BE(BigInt(len), 2);
+  }
+  header[0] = 0x81;
+  return Buffer.concat([header, body]);
+}
+
+function sendWs(socket, event) {
+  if (!socket || socket.destroyed || !socket.writable) return;
+  try {
+    socket.write(encodeWsFrame(JSON.stringify(event)));
+  } catch {}
+}
+
+function broadcastFeedEvent(event, matcher = () => true) {
+  WS_CLIENTS.forEach(client => {
+    if (!matcher(client)) return;
+    sendWs(client.socket, event);
+  });
+}
+
+function setupWebSocket(req, socket) {
+  const key = req.headers['sec-websocket-key'];
+  if (!key) {
+    socket.write('HTTP/1.1 400 Bad Request\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+  const accept = crypto.createHash('sha1').update(key + WS_MAGIC).digest('base64');
+  const headers = [
+    'HTTP/1.1 101 Switching Protocols',
+    'Upgrade: websocket',
+    'Connection: Upgrade',
+    `Sec-WebSocket-Accept: ${accept}`,
+    '\r\n'
+  ];
+  socket.write(headers.join('\r\n'));
+
+  const query = parseQuery(req.url || '');
+  const client = {
+    id: createId('ws'),
+    socket,
+    sessionId: query.sessionId || '',
+    connectedAt: Date.now()
+  };
+  WS_CLIENTS.add(client);
+  sendWs(socket, { type: 'socket.ready', sessionId: client.sessionId, clientId: client.id });
+
+  socket.on('data', buffer => {
+    if (!buffer || !buffer.length) return;
+    const opcode = buffer[0] & 0x0f;
+    if (opcode === 0x8) {
+      try { socket.end(encodeWsFrame('')); } catch {}
+      socket.destroy();
+      return;
+    }
+    if (opcode === 0x9) {
+      const pong = Buffer.from(buffer);
+      pong[0] = 0x8a;
+      pong[1] = pong[1] & 0x7f;
+      try { socket.write(pong); } catch {}
+    }
+  });
+
+  const cleanup = () => WS_CLIENTS.delete(client);
+  socket.on('close', cleanup);
+  socket.on('end', cleanup);
+  socket.on('error', cleanup);
+}
+
+const DEFAULT_SERPER_SITES = [
+  'facebook.com/groups',
+  'linkedin.com',
+  'quora.com',
+  'indiehackers.com',
+  'producthunt.com',
+  'instagram.com',
+  'upwork.com',
+  'fiverr.com',
+  'maps.google.com',
+  'yelp.com',
+  'yell.com',
+  'clutch.co',
+  'g2.com',
+  'goodfirms.co',
+  'expertise.com'
+].join(' ');
+
+const DIRECTORY_SITE_HINTS = [
+  'maps.google.com',
+  'yelp.com',
+  'yell.com',
+  'clutch.co',
+  'g2.com',
+  'goodfirms.co',
+  'expertise.com'
+];
+
+const PRESENCE_GAP_TERMS = [
+  '"no website"',
+  '"without website"',
+  '"without a website"',
+  '"no landing page"',
+  '"without landing page"',
+  '"without a landing page"',
+  '"need website"',
+  '"need a website"',
+  '"need landing page"',
+  '"facebook page"',
+  '"instagram page"',
+  '"google business profile"',
+  '"google maps listing"'
+];
+
+function inferWebPlatform(domain) {
+  if (domain.includes('facebook')) return 'facebook';
+  if (domain.includes('linkedin')) return 'linkedin';
+  if (domain.includes('quora')) return 'quora';
+  if (domain.includes('indiehackers')) return 'indiehackers';
+  if (domain.includes('producthunt')) return 'producthunt';
+  if (domain.includes('instagram')) return 'instagram';
+  if (domain.includes('upwork')) return 'upwork';
+  if (domain.includes('fiverr')) return 'fiverr';
+  if (domain.includes('maps.google')) return 'maps';
+  if (DIRECTORY_SITE_HINTS.some(site => domain.includes(site.replace(/^www\./, '')))) return 'directory';
+  return 'web';
+}
+
+function buildSerperQueries(site, kw) {
+  const queries = [`${kw} site:${site}`];
+  const presenceGapQuery = `${kw} (${PRESENCE_GAP_TERMS.join(' OR ')}) site:${site}`;
+  queries.push(presenceGapQuery);
+  if (DIRECTORY_SITE_HINTS.includes(site)) {
+    queries.push(`${kw} ("directory" OR listing OR "contact" OR phone OR review) site:${site}`);
+  }
+  return [...new Set(queries)];
+}
+
+function hasPresenceGapSignal(text) {
+  const raw = String(text || '').toLowerCase();
+  return [
+    'no website', 'without website', 'without a website',
+    'no landing page', 'without landing page', 'without a landing page',
+    'need website', 'need a website', 'need landing page',
+    'facebook page', 'instagram page', 'google business profile',
+    'google maps listing'
+  ].some(sig => raw.includes(sig));
+}
+
+function clamp(value, min = 0, max = 100) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function scoreLabel(score) {
+  if (score >= 85) return 'Critical';
+  if (score >= 70) return 'High';
+  if (score >= 40) return 'Medium';
+  return 'Low';
+}
+
+function scoreColor(score) {
+  if (score >= 85) return '#ef4444';
+  if (score >= 70) return '#22c55e';
+  if (score >= 40) return '#f59e0b';
+  return '#8888a0';
+}
+
+function countMatches(raw, patterns) {
+  return patterns.reduce((count, pattern) => count + (pattern.test(raw) ? 1 : 0), 0);
+}
+
+function inferLeadNiche(raw) {
+  return /plumb|pipe|boiler|heating|gas safe/.test(raw)            ? 'Plumber'
+    : /electrician|wiring|fuse|eicr|niceic|sparky/.test(raw)       ? 'Electrician'
+    : /builder|construction|renovation|extension|joiner|carpenter/.test(raw) ? 'Builder'
+    : /cleaner|cleaning|janitorial/.test(raw)                      ? 'Cleaning Business'
+    : /landscap|garden|lawn|tree surgeon/.test(raw)                ? 'Landscaper'
+    : /roofer|roofing|guttering/.test(raw)                         ? 'Roofer'
+    : /hvac|air conditioning|heating engineer/.test(raw)           ? 'HVAC'
+    : /dentist|dental|orthodont/.test(raw)                         ? 'Dentist'
+    : /lawyer|solicitor|legal|barrister/.test(raw)                 ? 'Solicitor'
+    : /accountant|bookkeep|tax|vat|bookkeeper/.test(raw)           ? 'Accountant'
+    : /consultant|coach|advisor|freelanc|agency/.test(raw)         ? 'Consultant'
+    : /marketing|seo|ppc|paid ads|lead gen/.test(raw)              ? 'Marketing Agency'
+    : /saas|software|startup|founder|platform|tech/.test(raw)      ? 'SaaS / Tech'
+    : /shopify|ecomm|ecommerce|amazon seller|store/.test(raw)      ? 'eCommerce'
+    : /photographer|videographer|photo|video/.test(raw)            ? 'Photographer'
+    : /designer|graphic|brand|web design|ux|ui design/.test(raw)   ? 'Designer'
+    : /real estate|realtor|estate agent|property/.test(raw)        ? 'Estate Agent'
+    : /restaurant|cafe|hospitality|catering/.test(raw)             ? 'Restaurant / Hospitality'
+    : 'Business Owner';
+}
+
+function inferDomainFromUrl(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+function extractLeadEntity(post, metadata) {
+  const domain = inferDomainFromUrl(post.url || post.permalink || '');
+  const author = String(post.author || '').replace(/^u\//, '').trim();
+  const titleText = `${post.title || ''} ${post.text || ''}`.toLowerCase();
+  const companyGuess = metadata?.profile?.niche && metadata.profile.niche !== 'Business Owner'
+    ? `${metadata.profile.niche} Business`
+    : /agency/.test(titleText)
+      ? 'Agency Business'
+      : /saas|startup|platform/.test(titleText)
+        ? 'Software Company'
+        : '';
+
+  return {
+    domain,
+    author,
+    companyName: companyGuess,
+    locationHint: /london|manchester|uk|usa|canada|australia/.exec(titleText)?.[0] || '',
+    platform: post.platform || '',
+    niche: metadata?.profile?.niche || 'Business Owner'
+  };
+}
+
+function getEnabledEnrichmentProviders(cfg, groupKey) {
+  const group = cfg?.enrichment?.[groupKey];
+  if (!cfg?.enrichment?.enabled || !group?.enabled || !Array.isArray(group.providers)) return [];
+  const maxProviders = Number(cfg.enrichment.maxProvidersPerLead) || 3;
+  return group.providers
+    .filter(provider => provider && provider.enabled && provider.apiKey)
+    .slice(0, maxProviders);
+}
+
+function synthesizeFirmographicProfile(entity, metadata, providerId) {
+  const predictive = metadata?.scores?.predictive || 0;
+  const employeeEstimate = entity.niche === 'SaaS / Tech'
+    ? predictive >= 75 ? '11-50' : '1-10'
+    : predictive >= 70 ? '2-25' : '1-10';
+  const revenueBand = predictive >= 80 ? '$500k-$2m' : predictive >= 60 ? '$100k-$500k' : 'sub-$100k';
+  const growthStage = entity.niche === 'SaaS / Tech'
+    ? (predictive >= 75 ? 'growing' : 'early')
+    : (predictive >= 70 ? 'active local growth' : 'owner-led');
+
+  return {
+    provider: providerId,
+    companyName: entity.companyName || entity.domain || entity.author || 'Unknown company',
+    domain: entity.domain,
+    industry: entity.niche,
+    employeeEstimate,
+    revenueBand,
+    growthStage,
+    marketSegment: entity.niche === 'SaaS / Tech' ? 'B2B software' : 'service business',
+    confidence: clamp(55 + Math.round((metadata?.ranking?.confidence || 0) * 0.25))
+  };
+}
+
+function synthesizeIntentProfile(entity, metadata, providerId) {
+  const direct = metadata?.scores?.direct || 0;
+  const operator = metadata?.scores?.operator || 0;
+  const partner = metadata?.scores?.partner || 0;
+  const predictive = metadata?.scores?.predictive || 0;
+  const surge = clamp(Math.round((predictive * 0.6) + (metadata?.signals?.urgency || 0) * 0.25));
+
+  return {
+    provider: providerId,
+    buyingStage: direct >= 70 ? 'active evaluation' : partner >= 65 ? 'channel exploration' : operator >= 60 ? 'partner-fit' : 'early awareness',
+    intentScore: surge,
+    intentTopics: [
+      metadata?.opportunity?.demoFocus || 'growth systems',
+      metadata?.routing?.category?.label || 'lead qualification',
+      metadata?.profile?.niche || 'service growth'
+    ].filter(Boolean).slice(0, 3),
+    likelyNeed: metadata?.opportunity?.problem || 'lead generation support',
+    confidence: clamp(50 + Math.round((metadata?.ranking?.confidence || 0) * 0.3))
+  };
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 3500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    const text = await res.text();
+    let payload = {};
+    try { payload = text ? JSON.parse(text) : {}; } catch { payload = { raw: text }; }
+    if (!res.ok) {
+      const err = new Error(`${url} -> ${res.status}`);
+      err.status = res.status;
+      err.payload = payload;
+      throw err;
+    }
+    return payload;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function firstString(...values) {
+  for (const v of values) {
+    if (v === undefined || v === null) continue;
+    const s = String(v).trim();
+    if (s) return s;
+  }
+  return '';
+}
+
+const FIRMOGRAPHIC_ADAPTERS = {
+  apollo: async (provider, entity, timeoutMs) => {
+    if (!entity.domain) throw new Error('apollo: missing domain');
+    const base = provider.apiBase || 'https://api.apollo.io/api/v1';
+    const url = `${base}/organizations/enrich?domain=${encodeURIComponent(entity.domain)}&api_key=${encodeURIComponent(provider.apiKey)}`;
+    const data = await fetchWithTimeout(url, { headers: { 'Accept': 'application/json' } }, timeoutMs);
+    const org = data.organization || data.org || {};
+    return {
+      companyName:      firstString(org.name, entity.companyName, entity.domain),
+      domain:           firstString(org.website_url, org.primary_domain, entity.domain),
+      industry:         firstString(org.industry, entity.niche),
+      employeeEstimate: firstString(org.estimated_num_employees, org.employees),
+      revenueBand:      firstString(org.annual_revenue_printed, org.annual_revenue),
+      growthStage:      org.publicly_traded_symbol ? 'public' : 'private',
+      marketSegment:    firstString(org.keywords?.slice?.(0, 3)?.join?.(', '), org.industry, 'B2B'),
+      confidence:       82
+    };
+  },
+  clearbit: async (provider, entity, timeoutMs) => {
+    if (!entity.domain) throw new Error('clearbit: missing domain');
+    const base = provider.apiBase || 'https://company.clearbit.com/v2';
+    const url = `${base}/companies/find?domain=${encodeURIComponent(entity.domain)}`;
+    const data = await fetchWithTimeout(url, {
+      headers: {
+        'Authorization': `Bearer ${provider.apiKey}`,
+        'Accept': 'application/json'
+      }
+    }, timeoutMs);
+    return {
+      companyName:      firstString(data.name, entity.companyName, entity.domain),
+      domain:           firstString(data.domain, entity.domain),
+      industry:         firstString(data.category?.industry, data.category?.sector, entity.niche),
+      employeeEstimate: firstString(data.metrics?.employees, data.metrics?.employeesRange),
+      revenueBand:      firstString(data.metrics?.annualRevenue, data.metrics?.estimatedAnnualRevenue),
+      growthStage:      firstString(data.metrics?.employeesRange, data.type, 'private'),
+      marketSegment:    firstString(data.category?.sector, data.category?.industryGroup, 'B2B'),
+      confidence:       80
+    };
+  },
+  company_enrich: async (provider, entity, timeoutMs) => {
+    if (!entity.domain) throw new Error('company_enrich: missing domain');
+    const base = provider.apiBase || 'https://api.companyenrich.com';
+    const url = `${base}/companies/enrich?domain=${encodeURIComponent(entity.domain)}`;
+    const data = await fetchWithTimeout(url, {
+      headers: {
+        'Authorization': `Bearer ${provider.apiKey}`,
+        'Accept': 'application/json'
+      }
+    }, timeoutMs);
+    return {
+      companyName:      firstString(data.name, data.companyName, entity.domain),
+      domain:           firstString(data.domain, entity.domain),
+      industry:         firstString(data.industry, entity.niche),
+      employeeEstimate: firstString(data.employeeCount, data.employees, data.size),
+      revenueBand:      firstString(data.revenue, data.annualRevenue),
+      growthStage:      firstString(data.stage, data.type, 'private'),
+      marketSegment:    firstString(data.sector, data.industry, 'B2B'),
+      confidence:       75
+    };
+  },
+  infobel: async (provider, entity, timeoutMs) => {
+    if (!entity.domain && !entity.companyName) throw new Error('infobel: missing domain or company');
+    const base = provider.apiBase || 'https://api.infobelpro.com/v2';
+    const url = `${base}/companies/search?domain=${encodeURIComponent(entity.domain || '')}&name=${encodeURIComponent(entity.companyName || '')}`;
+    const data = await fetchWithTimeout(url, {
+      headers: {
+        'X-Api-Key': provider.apiKey,
+        'Accept': 'application/json'
+      }
+    }, timeoutMs);
+    const hit = Array.isArray(data.results) ? data.results[0] : (data.result || data.company || {});
+    return {
+      companyName:      firstString(hit.name, entity.companyName, entity.domain),
+      domain:           firstString(hit.website, hit.domain, entity.domain),
+      industry:         firstString(hit.industry, hit.naics, entity.niche),
+      employeeEstimate: firstString(hit.employee_count, hit.employees),
+      revenueBand:      firstString(hit.revenue, hit.revenue_range),
+      growthStage:      firstString(hit.status, hit.stage, 'private'),
+      marketSegment:    firstString(hit.sector, hit.naics_description, 'local services'),
+      confidence:       70
+    };
+  }
+};
+
+const INTENT_ADAPTERS = {
+  factors: async (provider, entity, timeoutMs) => {
+    if (!entity.domain) throw new Error('factors: missing domain');
+    const base = provider.apiBase || 'https://api.factors.ai/v1';
+    const url = `${base}/accounts/intent?domain=${encodeURIComponent(entity.domain)}`;
+    const data = await fetchWithTimeout(url, {
+      headers: {
+        'Authorization': `Bearer ${provider.apiKey}`,
+        'Accept': 'application/json'
+      }
+    }, timeoutMs);
+    const topics = Array.isArray(data.topics) ? data.topics.slice(0, 3).map(t => t.name || t) : [];
+    return {
+      buyingStage:   firstString(data.stage, data.buyingStage, 'active evaluation'),
+      intentScore:   Number.isFinite(data.intentScore) ? clamp(Math.round(data.intentScore)) : clamp(Math.round((data.score || 0) * 100)),
+      intentTopics:  topics.length ? topics : ['growth systems'],
+      likelyNeed:    firstString(data.likelyNeed, data.summary, 'lead generation systems'),
+      confidence:    clamp(Math.round((data.confidence || 0.7) * 100))
+    };
+  },
+  coresignal: async (provider, entity, timeoutMs) => {
+    if (!entity.domain) throw new Error('coresignal: missing domain');
+    const base = provider.apiBase || 'https://api.coresignal.com/cdapi/v1';
+    const url = `${base}/professional_network/company/collect?website=${encodeURIComponent(entity.domain)}`;
+    const data = await fetchWithTimeout(url, {
+      headers: {
+        'Authorization': `Bearer ${provider.apiKey}`,
+        'Accept': 'application/json'
+      }
+    }, timeoutMs);
+    const size = Number(data.employees_count || data.size || 0);
+    const growth = Number(data.employees_count_growth_1y || 0);
+    return {
+      buyingStage:   growth > 0.1 ? 'active hiring / expansion' : size > 50 ? 'active evaluation' : 'early awareness',
+      intentScore:   clamp(Math.round(30 + (growth * 400) + (size > 100 ? 20 : 0))),
+      intentTopics:  [data.industry, data.specialties?.[0], 'company growth signals'].filter(Boolean).slice(0, 3),
+      likelyNeed:    firstString(data.description?.slice?.(0, 120), 'scaling systems'),
+      confidence:    65
+    };
+  },
+  success: async (provider, entity, timeoutMs) => {
+    if (!entity.domain) throw new Error('success: missing domain');
+    const base = provider.apiBase || 'https://api.success.ai/v1';
+    const url = `${base}/intent/domain?domain=${encodeURIComponent(entity.domain)}`;
+    const data = await fetchWithTimeout(url, {
+      headers: {
+        'Authorization': `Bearer ${provider.apiKey}`,
+        'Accept': 'application/json'
+      }
+    }, timeoutMs);
+    return {
+      buyingStage:   firstString(data.buying_stage, data.stage, 'active awareness'),
+      intentScore:   Number.isFinite(data.intent_score) ? clamp(Math.round(data.intent_score)) : clamp(Math.round((data.score || 0.6) * 100)),
+      intentTopics:  Array.isArray(data.topics) ? data.topics.slice(0, 3) : ['pipeline growth'],
+      likelyNeed:    firstString(data.likely_need, data.summary, 'acquisition system'),
+      confidence:    clamp(Math.round((data.confidence || 0.65) * 100))
+    };
+  },
+  dealfront: async (provider, entity, timeoutMs) => {
+    if (!entity.domain) throw new Error('dealfront: missing domain');
+    const base = provider.apiBase || 'https://api.dealfront.com/v1';
+    const url = `${base}/companies/intent?domain=${encodeURIComponent(entity.domain)}`;
+    const data = await fetchWithTimeout(url, {
+      headers: {
+        'Authorization': `Bearer ${provider.apiKey}`,
+        'Accept': 'application/json'
+      }
+    }, timeoutMs);
+    return {
+      buyingStage:   firstString(data.buying_stage, data.stage, 'active research'),
+      intentScore:   Number.isFinite(data.intent_score) ? clamp(Math.round(data.intent_score)) : clamp(Math.round((data.score || 0.6) * 100)),
+      intentTopics:  Array.isArray(data.topics) ? data.topics.slice(0, 3) : ['sales intelligence'],
+      likelyNeed:    firstString(data.likely_need, data.summary, 'sales enablement'),
+      confidence:    clamp(Math.round((data.confidence || 0.7) * 100))
+    };
+  }
+};
+
+function hasProviderAdapter(type, providerId) {
+  if (type === 'firmographics') return !!FIRMOGRAPHIC_ADAPTERS[providerId];
+  if (type === 'intent') return !!INTENT_ADAPTERS[providerId];
+  return false;
+}
+
+async function runProviderEnrichment(provider, type, entity, metadata, timeoutMs) {
+  const startedAt = Date.now();
+  const adapter = type === 'firmographics' ? FIRMOGRAPHIC_ADAPTERS[provider.id] : INTENT_ADAPTERS[provider.id];
+
+  if (adapter) {
+    try {
+      const data = await adapter(provider, entity, timeoutMs);
+      return {
+        type,
+        provider: provider.id,
+        status: 'ok',
+        source: 'live',
+        elapsedMs: Date.now() - startedAt,
+        data: { provider: provider.id, ...data }
+      };
+    } catch (error) {
+      const synth = type === 'firmographics'
+        ? synthesizeFirmographicProfile(entity, metadata, provider.id)
+        : synthesizeIntentProfile(entity, metadata, provider.id);
+      return {
+        type,
+        provider: provider.id,
+        status: 'fallback',
+        source: 'synthesized',
+        elapsedMs: Date.now() - startedAt,
+        error: error.message || String(error),
+        data: synth
+      };
+    }
+  }
+
+  const jitter = 120 + Math.floor(Math.random() * 220);
+  await sleep(Math.min(timeoutMs, jitter));
+  const data = type === 'firmographics'
+    ? synthesizeFirmographicProfile(entity, metadata, provider.id)
+    : synthesizeIntentProfile(entity, metadata, provider.id);
+  return {
+    type,
+    provider: provider.id,
+    status: 'ok',
+    source: 'synthesized',
+    elapsedMs: Date.now() - startedAt,
+    data
+  };
+}
+
+function mergeEnrichmentIntoMetadata(metadata, enrichment) {
+  const next = JSON.parse(JSON.stringify(metadata || {}));
+  next.enrichment = next.enrichment || {
+    status: 'idle',
+    summary: '',
+    firmographics: [],
+    intent: [],
+    providerCount: 0
+  };
+
+  const firmographics = enrichment.results.filter(r => r.type === 'firmographics' && r.status === 'ok').map(r => r.data);
+  const intent = enrichment.results.filter(r => r.type === 'intent' && r.status === 'ok').map(r => r.data);
+
+  const liveCount = enrichment.results.filter(r => r.source === 'live').length;
+  const fallbackCount = enrichment.results.filter(r => r.source === 'synthesized').length;
+
+  next.enrichment.status = firmographics.length || intent.length ? 'enriched' : 'unavailable';
+  next.enrichment.firmographics = firmographics;
+  next.enrichment.intent = intent;
+  next.enrichment.providerCount = firmographics.length + intent.length;
+  next.enrichment.liveCount = liveCount;
+  next.enrichment.fallbackCount = fallbackCount;
+  next.enrichment.sourceMix = liveCount && fallbackCount ? 'mixed' : liveCount ? 'live' : 'synthesized';
+
+  const topFirmographic = firmographics[0];
+  const topIntent = intent[0];
+  const summaryBits = [];
+  if (topFirmographic) summaryBits.push(`${topFirmographic.industry}, ${topFirmographic.employeeEstimate} team, ${topFirmographic.growthStage}`);
+  if (topIntent) summaryBits.push(`${topIntent.buyingStage}, intent ${topIntent.intentScore}/100`);
+  next.enrichment.summary = summaryBits.join(' · ');
+
+  if (topIntent?.intentScore && topIntent.intentScore > (next.ranking?.overall || 0)) {
+    next.ranking.overall = clamp(Math.round((next.ranking.overall * 0.8) + (topIntent.intentScore * 0.2)));
+    next.ranking.label = scoreLabel(next.ranking.overall);
+    next.ranking.color = scoreColor(next.ranking.overall);
+  }
+
+  return next;
+}
+
+async function enrichLead(post, cfg, onUpdate) {
+  const metadata = post.metadata || buildLeadMetadata(post, '');
+  const entity = extractLeadEntity(post, metadata);
+  const timeoutMs = Number(cfg?.enrichment?.requestTimeoutMs) || 3500;
+  const firmographicProviders = getEnabledEnrichmentProviders(cfg, 'firmographics');
+  const intentProviders = getEnabledEnrichmentProviders(cfg, 'intent');
+  const providers = [
+    ...firmographicProviders.map(provider => ({ provider, type: 'firmographics' })),
+    ...intentProviders.map(provider => ({ provider, type: 'intent' }))
+  ];
+
+  if (!providers.length) {
+    const fallback = {
+      leadId: post.id,
+      status: 'skipped',
+      entity,
+      results: []
+    };
+    if (onUpdate) onUpdate(fallback, mergeEnrichmentIntoMetadata(metadata, fallback));
+    return fallback;
+  }
+
+  const results = await Promise.all(providers.map(async item => {
+    try {
+      return await runProviderEnrichment(item.provider, item.type, entity, metadata, timeoutMs);
+    } catch (error) {
+      return {
+        type: item.type,
+        provider: item.provider.id,
+        status: 'error',
+        elapsedMs: 0,
+        error: error.message
+      };
+    }
+  }));
+
+  const enrichment = {
+    leadId: post.id,
+    status: 'ok',
+    entity,
+    results
+  };
+  const mergedMetadata = mergeEnrichmentIntoMetadata(metadata, enrichment);
+  if (onUpdate) onUpdate(enrichment, mergedMetadata);
+  return { ...enrichment, metadata: mergedMetadata };
+}
+
+/* ── PREDICTIVE LEARNING LOOP ── */
+const PREDICTIVE_FILE = 'predictive-weights.json';
+const PREDICTIVE_MAX_RECENT = 500;
+const PREDICTIVE_MIN_TRIALS = 3;
+const PREDICTIVE_CAP = 12;
+
+function readPredictiveWeights() {
+  const raw = readJSON(PREDICTIVE_FILE);
+  const seeded = {
+    version: 1,
+    updatedAt: raw.updatedAt || new Date().toISOString(),
+    totals: raw.totals || { closes: 0, deads: 0 },
+    features: raw.features || {},
+    recent: Array.isArray(raw.recent) ? raw.recent : []
+  };
+  return seeded;
+}
+
+function featureSlug(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+function featureKeysFromLead(lead) {
+  if (!lead) return [];
+  const keys = [];
+  const push = (cat, val) => { const s = featureSlug(val); if (s) keys.push(`${cat}:${s}`); };
+  push('niche',       lead.niche);
+  push('platform',    lead.platform);
+  push('leadType',    lead.leadType);
+  push('painKey',     lead.painKey);
+  push('subreddit',   lead.subreddit);
+  push('buyingStage', lead.buyingStage);
+  push('industry',    lead.industry);
+  return [...new Set(keys)];
+}
+
+function featureKeysFromFeed(post, metadata) {
+  const keys = [];
+  const push = (cat, val) => { const s = featureSlug(val); if (s) keys.push(`${cat}:${s}`); };
+  push('niche',     metadata?.profile?.niche);
+  push('platform',  post?.platform);
+  push('leadType',  metadata?.routing?.primaryType);
+  push('subreddit', post?.subreddit);
+  const intent = metadata?.enrichment?.intent?.[0];
+  push('buyingStage', intent?.buyingStage);
+  const firmo = metadata?.enrichment?.firmographics?.[0];
+  push('industry', firmo?.industry);
+  return [...new Set(keys)];
+}
+
+function getPredictiveAdjustment(featureKeys) {
+  const weights = readPredictiveWeights();
+  const featureCount = Object.keys(weights.features).length;
+  if (!featureCount) return { delta: 0, signal: 'cold_start', reasons: [], sampleSize: 0 };
+
+  const baselineRate = (weights.totals.closes + 1) / (weights.totals.closes + weights.totals.deads + 2);
+  const deltas = [];
+  const reasons = [];
+  for (const k of featureKeys) {
+    const f = weights.features[k];
+    if (!f || f.trials < PREDICTIVE_MIN_TRIALS) continue;
+    const rate = (f.closes + 1) / (f.closes + f.deads + 2);
+    const d = (rate - baselineRate) * 100;
+    deltas.push(d);
+    if (Math.abs(d) >= 4) {
+      reasons.push({ key: k, closes: f.closes, deads: f.deads, delta: Math.round(d) });
+    }
+  }
+  if (!deltas.length) return { delta: 0, signal: 'not_enough_data', reasons: [], sampleSize: 0 };
+
+  const avg = deltas.reduce((s, d) => s + d, 0) / deltas.length;
+  const capped = Math.max(-PREDICTIVE_CAP, Math.min(PREDICTIVE_CAP, Math.round(avg)));
+  const signal = capped >= 4 ? 'tailwind' : capped <= -4 ? 'headwind' : 'neutral';
+  reasons.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+  return { delta: capped, signal, reasons: reasons.slice(0, 3), sampleSize: deltas.length };
+}
+
+function outcomeWeights(status) {
+  // Returns { pos, neg }. qualified is a mild positive, contacted is no-op until it resolves.
+  if (status === 'closed')    return { pos: 1,   neg: 0 };
+  if (status === 'qualified') return { pos: 0.4, neg: 0 };
+  if (status === 'dead')      return { pos: 0,   neg: 1 };
+  if (status === 'lost')      return { pos: 0,   neg: 1 };
+  return { pos: 0, neg: 0 };
+}
+
+function learnFromLeadOutcome(lead, status) {
+  const { pos, neg } = outcomeWeights(status);
+  if (!pos && !neg) return;
+  const keys = featureKeysFromLead(lead);
+  if (!keys.length) return;
+
+  const weights = readPredictiveWeights();
+  const now = new Date().toISOString();
+  weights.totals.closes += pos;
+  weights.totals.deads  += neg;
+
+  for (const k of keys) {
+    const f = weights.features[k] = weights.features[k] || { closes: 0, deads: 0, trials: 0, lastUpdated: now };
+    f.closes += pos;
+    f.deads  += neg;
+    f.trials += 1;
+    f.lastUpdated = now;
+  }
+
+  weights.recent.unshift({
+    leadId: lead.id,
+    outcome: status,
+    features: keys,
+    at: now
+  });
+  weights.recent = weights.recent.slice(0, PREDICTIVE_MAX_RECENT);
+  weights.updatedAt = now;
+
+  writeJSON(PREDICTIVE_FILE, weights);
+}
+
+function assignLeadTier(overall, intentScore, confidence, cfg) {
+  const tiers = (cfg && cfg.decisionEngine && cfg.decisionEngine.tiers) || {};
+  const autoReady  = tiers.autoReady  || { minScore: 85, minIntentScore: 70, minConfidence: 70 };
+  const replyReady = tiers.replyReady || { minScore: 65 };
+  if (overall >= autoReady.minScore && intentScore >= autoReady.minIntentScore && confidence >= autoReady.minConfidence) return 'autoReady';
+  if (overall >= replyReady.minScore) return 'replyReady';
+  return 'review';
+}
+
+function buildLeadMetadata(post, keyword) {
+  const raw = `${post.title || ''} ${post.text || ''} ${(post.comments || []).join(' ')}`.toLowerCase();
+  const platform = String(post.platform || 'web').toLowerCase();
+  const source = `${platform} ${(post.subreddit || '').toLowerCase()}`;
+  const niche = inferLeadNiche(raw);
+
+  const signals = {
+    buyerIntent: clamp(
+      countMatches(raw, [
+        /need clients?|need leads?|need more work|need bookings?/,
+        /how do i get clients?|how to get clients?|where do i find clients?/,
+        /struggling to get first client|no clients?|no customers?|no enquiries?/,
+        /desperate for clients?|need clients urgently|business failing/,
+        /traffic but no|visitors but no|not converting|no conversions?/
+      ]) * 22
+    ),
+    urgency: clamp(
+      countMatches(raw, [
+        /about to give up|considering quitting|thinking of shutting down/,
+        /running out of money|burning through savings|cant pay myself|can't pay myself/,
+        /desperate|urgent|asap|immediately|make or break/,
+        /slow month|quiet month|dry spell|clients dried up/
+      ]) * 24
+    ),
+    financialPressure: clamp(
+      countMatches(raw, [
+        /burning cash|negative roi|wasted my budget|spent thousands and nothing/,
+        /can't pay|cant pay|out of money|running out of money/,
+        /\$|£|€|budget|roi|cost/
+      ]) * 20
+    ),
+    timePressure: clamp(
+      countMatches(raw, [
+        /no time|too busy|overwhelmed|swamped|time poor/,
+        /within the hour|today|this week|fast-track/
+      ]) * 28
+    ),
+    outreachPain: clamp(
+      countMatches(raw, [
+        /cold outreach|cold email|cold dm|cold message/,
+        /no replies?|no response|ignored|left on read/,
+        /follow.?up.*nothing|ghosted/
+      ]) * 24
+    ),
+    conversionPain: clamp(
+      countMatches(raw, [
+        /not converting|no conversions?|low conversion/,
+        /traffic but no|visitors but no|clicks but no sales/,
+        /quotes? ignored|proposals? ignored|ghosted after quotes?/
+      ]) * 24
+    ),
+    visibilityGap: clamp(
+      countMatches(raw, [
+        /no reach|low traffic|not seen|visibility|discoverability/,
+        /seo not working|google rank|not ranking/,
+        /posting every day no clients|content not converting/
+      ]) * 22
+    ),
+    webPresenceGap: clamp(
+      countMatches(raw, [
+        /no website|without website|need website/,
+        /no landing page|without landing page/,
+        /google business profile|google maps listing|facebook page|instagram page/,
+        /website feedback|online presence/
+      ]) * 24
+    ),
+    localServiceFit: clamp(
+      countMatches(raw, [
+        /local business|small business|service business|my business/,
+        /plumber|electrician|builder|roofer|cleaning|landscaping|dentist|restaurant/,
+        /google maps|local seo|neighborhood|near me/
+      ]) * 22
+    ),
+    operatorFit: clamp(
+      countMatches(raw, [
+        /agency|freelancer|consultant|designer|copywriter|retainer/,
+        /my clients need|client work|client projects|subcontract|outsource/,
+        /white label|resell services|i build websites|i manage/
+      ]) * 26
+    ),
+    distributionFit: clamp(
+      countMatches(raw, [
+        /saas|software platform|marketplace|community|membership/,
+        /integration|plugin|api partner|distribution channel/,
+        /white label|reseller|franchise|affiliate program/,
+        /thousands of users|raised funding|enterprise/
+      ]) * 24
+    ),
+    authorityReach: clamp(
+      countMatches(raw, [
+        /enterprise|raised funding|series a|thousands of users/,
+        /platform|marketplace|community|directory/,
+        /revenue share|integration partner/
+      ]) * 24
+    )
+  };
+
+  const typeScores = {
+    direct: clamp(
+      15 +
+      (signals.buyerIntent * 0.38) +
+      (signals.urgency * 0.18) +
+      (signals.financialPressure * 0.12) +
+      (signals.localServiceFit * 0.15) +
+      (signals.webPresenceGap * 0.10) +
+      (signals.conversionPain * 0.12) -
+      (signals.operatorFit * 0.12) -
+      (signals.distributionFit * 0.18)
+    ),
+    operator: clamp(
+      10 +
+      (signals.operatorFit * 0.44) +
+      (signals.visibilityGap * 0.10) +
+      (signals.webPresenceGap * 0.08) +
+      (signals.authorityReach * 0.08) +
+      (signals.buyerIntent * 0.10) -
+      (signals.distributionFit * 0.08)
+    ),
+    partner: clamp(
+      8 +
+      (signals.distributionFit * 0.48) +
+      (signals.authorityReach * 0.24) +
+      (signals.operatorFit * 0.10) +
+      (signals.visibilityGap * 0.06) -
+      (signals.localServiceFit * 0.10)
+    )
+  };
+
+  const rankedTypes = Object.entries(typeScores)
+    .sort((a, b) => b[1] - a[1])
+    .map(([key]) => key);
+  const primaryType = rankedTypes[0] || 'direct';
+
+  const categoryMap = {
+    direct: {
+      key: signals.localServiceFit >= 55 || signals.webPresenceGap >= 60 ? 'direct_client' : 'high_intent_client',
+      label: signals.localServiceFit >= 55 || signals.webPresenceGap >= 60 ? 'Direct Client' : 'Direct Client',
+      tagline: signals.localServiceFit >= 55 || signals.webPresenceGap >= 60 ? 'Immediate revenue fit' : 'Strong buyer intent'
+    },
+    operator: {
+      key: 'potential_partner',
+      label: 'Potential Partner',
+      tagline: 'One relationship can yield repeat clients'
+    },
+    partner: {
+      key: 'distribution_partner',
+      label: 'Larger Distribution',
+      tagline: 'Platform or channel leverage'
+    }
+  };
+  const category = categoryMap[primaryType];
+
+  const predictiveScore = clamp(Math.round(
+    (typeScores[primaryType] * 0.42) +
+    (signals.buyerIntent * 0.18) +
+    (signals.urgency * 0.12) +
+    (signals.conversionPain * 0.08) +
+    (signals.webPresenceGap * 0.08) +
+    (signals.operatorFit * 0.06) +
+    (signals.distributionFit * 0.10) -
+    (platform === 'hn' ? 4 : 0)
+  ));
+
+  const confidence = clamp(Math.round(
+    45 +
+    (countMatches(raw, [
+      /need clients?|no clients?|no leads?|desperate/,
+      /agency|freelancer|white label|client work/,
+      /saas|platform|marketplace|integration/
+    ]) * 14)
+  ));
+
+  const criteriaMatches = [];
+  if (signals.buyerIntent >= 40) criteriaMatches.push('explicit demand or acquisition pain');
+  if (signals.urgency >= 40) criteriaMatches.push('time-sensitive or financial urgency');
+  if (signals.webPresenceGap >= 40) criteriaMatches.push('weak web presence or no landing page');
+  if (signals.conversionPain >= 40) criteriaMatches.push('conversion system gap');
+  if (signals.outreachPain >= 40) criteriaMatches.push('outreach or follow-up breakdown');
+  if (signals.operatorFit >= 40) criteriaMatches.push('agency/operator or white-label fit');
+  if (signals.distributionFit >= 40) criteriaMatches.push('platform or distribution leverage');
+  if (signals.localServiceFit >= 40) criteriaMatches.push('strong local service-business fit');
+  if (!criteriaMatches.length) criteriaMatches.push('general growth-system opportunity');
+
+  const problem = signals.outreachPain >= 50
+    ? 'Outreach is getting ignored or stalling before replies.'
+    : signals.conversionPain >= 50
+      ? 'Interest exists, but it is not turning into enquiries, bookings, or sales.'
+      : signals.webPresenceGap >= 50
+        ? 'Their online presence is weak or missing, so demand leaks away.'
+        : signals.visibilityGap >= 50
+          ? 'People are not seeing them consistently enough to build demand.'
+          : signals.distributionFit >= 50
+            ? 'They have channel potential, but the partnership angle needs packaging.'
+            : 'They have a client acquisition gap that points to a missing system.';
+
+  const rootCause = primaryType === 'partner'
+    ? 'The opportunity is leverage, not just one sale, so the value needs to be framed as integration, white-label, or distribution.'
+    : primaryType === 'operator'
+      ? 'They already serve clients, so a backend system offer is stronger than pitching a one-off direct service.'
+      : signals.webPresenceGap >= 50
+        ? 'Traffic and trust are not being captured by a clear offer, landing page, and follow-up path.'
+        : 'Demand signals exist, but there is no reliable system moving attention into closed business.';
+
+  const positioning = primaryType === 'partner'
+    ? 'Lead with leverage: position Operator as a plug-in growth layer they can distribute, integrate, or white-label.'
+    : primaryType === 'operator'
+      ? 'Lead with partnership value: help them sell more to their own clients using your backend systems under their brand.'
+      : signals.webPresenceGap >= 50
+        ? 'Lead with a quick-win rebuild: website, landing page, offer clarity, and follow-up automation.'
+        : 'Lead with a practical acquisition system that fixes the exact point where demand is leaking.';
+
+  const demoFocus = primaryType === 'partner'
+    ? 'Operator integration + white-label distribution path'
+    : primaryType === 'operator'
+      ? 'White-label backend stack for their client services'
+      : signals.outreachPain >= 50
+        ? 'Outreach sequence + landing page + follow-up automation'
+        : signals.conversionPain >= 50
+          ? 'Landing page + CRM + close-tracking flow'
+          : signals.webPresenceGap >= 50
+            ? 'Client Creator + landing page + offer positioning'
+            : 'Lead Feed + CRM + outreach workflow';
+
+  const nextAction = primaryType === 'partner'
+    ? 'Treat this as a strategic conversation, not a cold close. Show leverage, distribution upside, and integration fit.'
+    : primaryType === 'operator'
+      ? 'Pitch a partner model first: white-label delivery, resale margin, and faster client fulfillment.'
+      : predictiveScore >= 75
+        ? 'Message quickly with a pointed fix and a concrete demo angle.'
+        : 'Qualify with one smart question, then route them into a focused demo.';
+
+  const whyNow = predictiveScore >= 75
+    ? 'Multiple criteria stack together here, so this is more than a single-tag lead.'
+    : 'The signal is good, but it still benefits from qualification before heavy effort.';
+
+  const opportunitySummary = primaryType === 'partner'
+    ? 'This looks like a distribution opportunity where one relationship could unlock multiple downstream customers.'
+    : primaryType === 'operator'
+      ? 'This looks like a partner-fit operator who could resell or embed your systems for their own clients.'
+      : 'This looks like a direct client opportunity with near-term revenue potential if you solve the visible system gap.';
+
+  const opener = primaryType === 'partner'
+    ? `Saw what you're building around ${keyword || niche.toLowerCase()} and there looks like a real fit. I build the backend acquisition layer that platforms and communities can white-label or distribute. Worth a quick look?`
+    : primaryType === 'operator'
+      ? `Noticed the agency/operator angle in your post. I build the backend systems agencies and freelancers can plug into their own client delivery under their brand. Want to see what that could look like?`
+      : `Saw your post and the issue looks more like a system gap than a service problem. I can map out a quick fix around ${demoFocus.toLowerCase()} if that would help.`;
+
+  const tip = primaryType === 'partner'
+    ? 'Talk leverage first: integration, distribution, margin, and speed to market.'
+    : primaryType === 'operator'
+      ? 'Position this as a partner win, not a generic service pitch.'
+      : predictiveScore >= 75
+        ? 'Move fast and be specific about the broken step in their acquisition flow.'
+        : 'Open with empathy, qualify once, then show the exact workflow fix.';
+
+  return {
+    version: 1,
+    keyword: keyword || '',
+    profile: {
+      niche,
+      source: platform,
+      subreddit: post.subreddit || ''
+    },
+    signals,
+    scores: {
+      direct: Math.round(typeScores.direct),
+      operator: Math.round(typeScores.operator),
+      partner: Math.round(typeScores.partner),
+      predictive: predictiveScore
+    },
+    routing: {
+      primaryType,
+      secondaryTypes: rankedTypes.slice(1, 3),
+      category
+    },
+    opportunity: {
+      problem,
+      rootCause,
+      positioning,
+      demoFocus,
+      nextAction
+    },
+    summary: {
+      whyNow,
+      opportunity: opportunitySummary,
+      rationale: criteriaMatches.slice(0, 3).join(' + ')
+    },
+    explanation: {
+      criteriaMatches,
+      opener,
+      tip
+    },
+    ranking: (() => {
+      const featureKeys = [
+        niche ? `niche:${featureSlug(niche)}` : null,
+        platform ? `platform:${featureSlug(platform)}` : null,
+        primaryType ? `leadType:${featureSlug(primaryType)}` : null,
+        post.subreddit ? `subreddit:${featureSlug(post.subreddit)}` : null
+      ].filter(Boolean);
+      const adjustment = getPredictiveAdjustment(featureKeys);
+      const adjusted = clamp(predictiveScore + (adjustment.delta || 0));
+      return {
+        baseOverall: predictiveScore,
+        overall: adjusted,
+        label: scoreLabel(adjusted),
+        color: scoreColor(adjusted),
+        confidence,
+        predictive: adjustment,
+        tier: assignLeadTier(adjusted, 0, confidence, readJSON('config.json'))
+      };
+    })(),
+    scoreBreakdown: [
+      { label: 'Buyer intent',       value: signals.buyerIntent },
+      { label: 'Urgency',            value: signals.urgency },
+      { label: 'Financial pressure', value: signals.financialPressure },
+      { label: 'Conversion pain',    value: signals.conversionPain },
+      { label: 'Outreach pain',      value: signals.outreachPain },
+      { label: 'Web presence gap',   value: signals.webPresenceGap },
+      { label: 'Operator fit',       value: signals.operatorFit },
+      { label: 'Distribution fit',   value: signals.distributionFit },
+      { label: 'Local service fit',  value: signals.localServiceFit }
+    ].filter(s => s.value > 0).sort((a, b) => b.value - a.value),
+    source: {
+      platform,
+      subreddit: post.subreddit || '',
+      platformNote: platform === 'reddit' ? 'Reddit signal — community text, high specificity'
+        : platform === 'x' ? 'X/Twitter — real-time signal, variable quality'
+        : platform === 'hn' ? 'Hacker News — tech/founder audience'
+        : 'Web / Serper — aggregated search signal'
+    }
+  };
+}
+
+const VALID_MODULE_STATUS = new Set(['active', 'building', 'planned', 'later']);
+const DEFAULT_ACTIVE_MODULES = new Set([1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 16, 21]);
+const DEFAULT_BUILDING_MODULES = new Set([7, 12, 13]);
+
+function defaultModuleStatus(n) {
+  if (DEFAULT_ACTIVE_MODULES.has(n)) return 'active';
+  if (DEFAULT_BUILDING_MODULES.has(n)) return 'building';
+  if (n >= 61) return 'later';
+  return 'planned';
+}
+
+function ensureModulesDB() {
+  const db = readJSON('modules.json');
+  const now = new Date().toISOString();
+  const out = { updatedAt: db.updatedAt || now, modules: {} };
+  let changed = false;
+
+  for (let n = 1; n <= 70; n++) {
+    const key = String(n);
+    const existing = db.modules?.[key] || {};
+    const status = VALID_MODULE_STATUS.has(existing.status) ? existing.status : defaultModuleStatus(n);
+    out.modules[key] = {
+      n,
+      status,
+      note: typeof existing.note === 'string' ? existing.note : '',
+      lastUpdated: existing.lastUpdated || null
+    };
+    if (!db.modules?.[key] || existing.status !== status || typeof existing.note !== 'string') changed = true;
+  }
+
+  if (!db.modules || Object.keys(db.modules).length !== 70) changed = true;
+  if (changed) writeJSON('modules.json', out);
+  return changed ? out : db;
+}
+
+// ── B.O.S.S modules (memory palace + multi-channel agent swarm) ──────────────
+const bossChannels = require('./channels/registry');
+const bossSwarm    = require('./channels/agents');
+
+// Freeform Claude call — returns raw markdown text (for B.O.S.S Jarvis chat)
+function callClaudeFreeform(apiKey, system, messages, maxTokens) {
+  return new Promise((resolve) => {
+    const https = require('https');
+    const payload = JSON.stringify({
+      model:      'claude-3-5-haiku-20241022',
+      max_tokens: maxTokens,
+      system,
+      messages,
+    });
+    const options = {
+      hostname: 'api.anthropic.com',
+      path:     '/v1/messages',
+      method:   'POST',
+      headers: {
+        'Content-Type':      'application/json',
+        'x-api-key':         apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Length':    Buffer.byteLength(payload),
+      },
+    };
+    const apiReq = https.request(options, apiRes => {
+      let d = '';
+      apiRes.on('data', c => d += c);
+      apiRes.on('end', () => {
+        try {
+          const r = JSON.parse(d);
+          if (r.error) { resolve({ ok: false, error: r.error.message }); return; }
+          resolve({ ok: true, reply: r.content?.[0]?.text || '' });
+        } catch (e) { resolve({ ok: false, error: e.message }); }
+      });
+    });
+    apiReq.on('error', e => resolve({ ok: false, error: e.message }));
+    apiReq.write(payload);
+    apiReq.end();
+  });
+}
+
+// Read/write B.O.S.S memory palace (data/boss-state.json)
+function bossReadState() {
+  const raw = readJSON('boss-state.json');
+  return Object.keys(raw).length ? raw : {
+    current_goal: 'Turn this operator into a full personal AI business system.',
+    created_at: new Date().toISOString(),
+  };
+}
+function bossWriteState(patch) {
+  const next = { ...bossReadState(), ...patch, updated_at: new Date().toISOString() };
+  writeJSON('boss-state.json', next);
+  return next;
+}
+
+function callClaude(apiKey, prompt, maxTokens, res) {
+  const https   = require('https');
+  const payload = JSON.stringify({
+    model:      'claude-3-5-haiku-20241022',
+    max_tokens: maxTokens,
+    messages:   [{ role: 'user', content: prompt }]
+  });
+  const options = {
+    hostname: 'api.anthropic.com',
+    path:     '/v1/messages',
+    method:   'POST',
+    headers: {
+      'Content-Type':      'application/json',
+      'x-api-key':         apiKey,
+      'anthropic-version': '2023-06-01',
+      'Content-Length':    Buffer.byteLength(payload)
+    }
+  };
+  const apiReq = https.request(options, apiRes => {
+    let d = '';
+    apiRes.on('data', chunk => d += chunk);
+    apiRes.on('end', () => {
+      try {
+        const result = JSON.parse(d);
+        if (result.error) { res.end(JSON.stringify({ ok: false, error: result.error.message })); return; }
+        const text = result.content?.[0]?.text || '';
+        const match = text.match(/\{[\s\S]*?\}/);
+        if (match) {
+          res.end(JSON.stringify({ ok: true, ...JSON.parse(match[0]) }));
+        } else {
+          res.end(JSON.stringify({ ok: false, error: 'parse_fail', raw: text.substring(0, 200) }));
+        }
+      } catch (e) {
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+    });
+  });
+  apiReq.on('error', e => res.end(JSON.stringify({ ok: false, error: e.message })));
+  apiReq.write(payload);
+  apiReq.end();
+}
+
+const ROUTES = {
+  'GET /api/feed': async (req, res) => {
+    const qs  = req.url.includes('?') ? req.url.split('?')[1] : '';
+    const kw  = decodeURIComponent((qs.match(/q=([^&]*)/) || [])[1] || 'need clients');
+    const sessionId = decodeURIComponent((qs.match(/sessionId=([^&]*)/) || [])[1] || '');
+    const scanId = decodeURIComponent((qs.match(/scanId=([^&]*)/) || [])[1] || createId('scan'));
+    const H   = { 'User-Agent': 'TheSaaSsin-Operator/1.0 (lead discovery)' };
+    const emit = (type, payload = {}) => broadcastFeedEvent(
+      { type, scanId, sessionId, keyword: kw, ...payload },
+      client => !sessionId || client.sessionId === sessionId
+    );
+
+    emit('feed.scan.started', { startedAt: Date.now() });
+
+    // Search each high-signal sub individually — Reddit ignores restrict_sr on multi-sub URLs
+    const TARGET_SUBS = [
+      // Core business
+      'smallbusiness','Entrepreneur','EntrepreneurRideAlong','sweatystartup',
+      'sidehustle','solopreneur','BusinessOwners','growmybusiness',
+      // Freelance & sales
+      'freelance','sales','forhire','WorkOnline','hiring',
+      // Marketing & agency
+      'digital_marketing','agency','SEO','PPC','copywriting','socialmediamarketing',
+      // Creative & photography
+      'photography','weddingphotography','videography','graphic_design','web_design',
+      // Trades & home services
+      'HomeImprovement','Plumbing','HVAC','landscaping','cleaning_business',
+      // Tech freelance
+      'webdev','startups',
+      // Ecommerce
+      'ecommerce','shopify','AmazonSeller',
+      // Fitness & health
+      'personaltraining','fitness',
+      // Real estate & finance
+      'realestate','realtors','FinancialPlanning','personalfinance',
+      // Coaching & consulting
+      'consulting','Coaching'
+    ];
+
+    function parsePost(p) {
+      return {
+        id:        p.id,
+        title:     p.title || '',
+        text:      (p.selftext || p.title || '').substring(0, 500),
+        author:    p.author || 'unknown',
+        subreddit: p.subreddit || '',
+        url:       `https://reddit.com${p.permalink}`,
+        permalink: p.permalink,
+        created:   p.created_utc,
+        score:     p.score || 0,
+        platform:  'reddit',
+        comments:  []
+      };
+    }
+
+    try {
+      // Fetch subs in batches of 8 to avoid Reddit rate-limiting
+      const BATCH = 8;
+      const subResults = [];
+      for (let i = 0; i < TARGET_SUBS.length; i += BATCH) {
+        const batch = TARGET_SUBS.slice(i, i + BATCH);
+        const results = await Promise.all(batch.map(async sub => {
+          try {
+            const url = `https://www.reddit.com/r/${sub}/search.json?q=${encodeURIComponent(kw)}&restrict_sr=1&sort=new&t=month&limit=5`;
+            const r   = await fetch(url, { headers: H });
+            const d   = await r.json();
+            return (d.data?.children || []).map(c => parsePost(c.data));
+          } catch { return []; }
+        }));
+        subResults.push(...results);
+        if (i + BATCH < TARGET_SUBS.length) await new Promise(r => setTimeout(r, 400));
+      }
+
+      // Merge, deduplicate by id
+      const seen = new Set();
+      const posts = subResults.flat().filter(p => {
+        if (seen.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
+      });
+
+      // Fetch comments for top 6 posts in parallel (pain is often in comments)
+      await Promise.all(posts.slice(0, 6).map(async post => {
+        try {
+          const cr = await fetch(
+            `https://www.reddit.com/r/${post.subreddit}/comments/${post.id}.json?limit=10&sort=top&depth=1`,
+            { headers: H }
+          );
+          const cd = await cr.json();
+          post.comments = ((cd[1]?.data?.children) || [])
+            .filter(c => c.kind === 't1')
+            .map(c => (c.data.body || '').substring(0, 300))
+            .filter(b => b.length > 30 && b !== '[deleted]' && b !== '[removed]')
+            .slice(0, 5);
+        } catch { post.comments = []; }
+      }));
+
+      // ── X (Twitter) search — only if bearer token configured ──
+      const cfg = readJSON('config.json');
+      if (cfg.xBearerToken) {
+        try {
+          const xUrl = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(kw + ' -is:retweet lang:en')}&max_results=20&tweet.fields=created_at,author_id,text,public_metrics&expansions=author_id&user.fields=username,name`;
+          const xRes = await fetch(xUrl, {
+            headers: { Authorization: `Bearer ${cfg.xBearerToken}` }
+          });
+          const xData = await xRes.json();
+          const users = {};
+          (xData.includes?.users || []).forEach(u => { users[u.id] = u; });
+          (xData.data || []).forEach(t => {
+            const user = users[t.author_id] || {};
+            posts.push({
+              id:        'x_' + t.id,
+              title:     t.text.substring(0, 120),
+              text:      t.text.substring(0, 500),
+              author:    user.username || 'unknown',
+              subreddit: '',
+              url:       `https://x.com/${user.username || 'i'}/status/${t.id}`,
+              permalink: `/x/${t.id}`,
+              created:   new Date(t.created_at).getTime() / 1000,
+              score:     t.public_metrics?.like_count || 0,
+              platform:  'x',
+              comments:  []
+            });
+          });
+        } catch { /* X failed silently — Reddit results still returned */ }
+      }
+
+      // ── Hacker News via Algolia — free, no auth ──
+      try {
+        const hnUrl  = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(kw)}&tags=(story,comment)&hitsPerPage=30`;
+        const hnRes  = await fetch(hnUrl, { headers: H });
+        const hnData = await hnRes.json();
+        (hnData.hits || []).forEach(h => {
+          const body = (h.story_text || h.title || '').replace(/<[^>]+>/g, '').substring(0, 500);
+          posts.push({
+            id:        'hn_' + h.objectID,
+            title:     h.title || '',
+            text:      body,
+            author:    h.author || 'unknown',
+            subreddit: '',
+            url:       h.url || `https://news.ycombinator.com/item?id=${h.objectID}`,
+            permalink: `/hn/${h.objectID}`,
+            created:   h.created_at ? new Date(h.created_at).getTime() / 1000 : 0,
+            score:     h.points || 0,
+            platform:  'hn',
+            comments:  (h._highlightResult?.story_text?.value || '').replace(/<[^>]+>/g,'').substring(0,200) ? [(h._highlightResult?.story_text?.value||'').replace(/<[^>]+>/g,'').substring(0,200)] : []
+          });
+        });
+      } catch { /* HN failed silently */ }
+
+      // ── Serper.dev — one query per platform so each gets a full 10 results ──
+      if (cfg.serperApiKey) {
+        const sites = (cfg.serperSearchSites || DEFAULT_SERPER_SITES).split(/\s+/).filter(Boolean);
+        const serperKey = cfg.serperApiKey;
+
+        const serperResults = await Promise.all(sites.map(async site => {
+          try {
+            const queryResults = await Promise.all(buildSerperQueries(site, kw).map(async (query, qIndex) => {
+              try {
+                const res  = await fetch('https://google.serper.dev/search', {
+                  method: 'POST',
+                  headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ q: query, num: 8, tbs: 'qdr:m' })
+                });
+                const data = await res.json();
+                return (data.organic || []).map((item, i) => {
+                  const link = item.link || '';
+                  const domain = (item.displayLink || link || '').replace(/^www\./, '').toLowerCase();
+                  const text = `${item.title || ''} ${item.snippet || ''}`;
+                  const noWebsiteSignal = hasPresenceGapSignal(text);
+                  return {
+                    id:        `sr_${site.replace(/\W/g,'')}_${qIndex}_${i}_${Buffer.from(link || `${site}_${i}`).toString('base64').replace(/[+/=]/g, '').slice(0, 18)}`,
+                    title:     item.title || '',
+                    text:      (item.snippet || '').substring(0, 500),
+                    author:    domain,
+                    subreddit: '',
+                    url:       link,
+                    permalink: link,
+                    created:   Date.now() / 1000,
+                    score:     noWebsiteSignal ? 42 : (DIRECTORY_SITE_HINTS.includes(site) ? 28 : 0),
+                    platform:  inferWebPlatform(domain),
+                    comments:  [],
+                    sourceQuery: query,
+                    noWebsiteSignal,
+                    directoryHit: DIRECTORY_SITE_HINTS.includes(site)
+                  };
+                });
+              } catch { return []; }
+            }));
+            return queryResults.flat();
+          } catch { return []; }
+        }));
+
+        const seenWeb = new Set();
+        serperResults.flat().forEach(p => {
+          const key = p.url || `${p.platform}|${p.title}|${p.author}`;
+          if (seenWeb.has(key)) return;
+          seenWeb.add(key);
+          posts.push(p);
+        });
+      }
+
+      const enrichedPosts = posts.map(post => ({
+        ...post,
+        metadata: buildLeadMetadata(post, kw)
+      }));
+
+      enrichedPosts.forEach((post, index) => {
+        emit('feed.scan.lead', { lead: post, index });
+      });
+
+      const enrichmentJobs = enrichedPosts.map(async post => {
+        const result = await enrichLead(post, cfg, (enrichment, mergedMetadata) => {
+          post.metadata = mergedMetadata;
+          if (post.metadata && post.metadata.ranking) {
+            const intentScore = (post.metadata.enrichment && post.metadata.enrichment.intent && post.metadata.enrichment.intent[0] && post.metadata.enrichment.intent[0].intentScore) || 0;
+            post.metadata.ranking.tier = assignLeadTier(
+              post.metadata.ranking.overall,
+              intentScore,
+              post.metadata.ranking.confidence,
+              cfg
+            );
+          }
+          emit('feed.lead.enriched', {
+            leadId: post.id,
+            metadata: mergedMetadata,
+            enrichment: {
+              status: enrichment.status,
+              entity: enrichment.entity,
+              providers: enrichment.results.map(item => ({
+                type: item.type,
+                provider: item.provider,
+                status: item.status
+              }))
+            }
+          });
+        });
+        if (result && result.metadata) {
+          post.metadata = result.metadata;
+          if (post.metadata.ranking) {
+            const intentScore = (post.metadata.enrichment && post.metadata.enrichment.intent && post.metadata.enrichment.intent[0] && post.metadata.enrichment.intent[0].intentScore) || 0;
+            post.metadata.ranking.tier = assignLeadTier(
+              post.metadata.ranking.overall,
+              intentScore,
+              post.metadata.ranking.confidence,
+              cfg
+            );
+          }
+        }
+      });
+
+      await Promise.allSettled(enrichmentJobs);
+
+      emit('feed.scan.completed', {
+        total: enrichedPosts.length,
+        xConfigured: !!cfg.xBearerToken,
+        googleConfigured: !!cfg.serperApiKey
+      });
+
+      res.end(JSON.stringify({
+        ok: true, posts: enrichedPosts, keyword: kw, scanId, sessionId,
+        xConfigured:      !!cfg.xBearerToken,
+        googleConfigured: !!cfg.serperApiKey
+      }));
+    } catch (e) {
+      emit('feed.scan.error', { error: e.message });
+      res.end(JSON.stringify({ ok: false, posts: [], error: e.message, scanId, sessionId }));
+    }
+  },
+
+  'GET /api/enrichment/status': (_, res) => {
+    const cfg = readJSON('config.json');
+    const enrichment = cfg.enrichment || {};
+    const buildGroup = (groupKey) => {
+      const group = enrichment[groupKey] || {};
+      const providers = Array.isArray(group.providers) ? group.providers : [];
+      return {
+        enabled: group.enabled !== false,
+        providers: providers.map(p => ({
+          id: p.id,
+          enabled: !!p.enabled,
+          hasKey: !!p.apiKey,
+          hasAdapter: hasProviderAdapter(groupKey, p.id),
+          status: !p.enabled ? 'disabled'
+                : !p.apiKey ? 'missing_key'
+                : hasProviderAdapter(groupKey, p.id) ? 'live_ready' : 'synthesized_only'
+        }))
+      };
+    };
+    res.end(JSON.stringify({
+      ok: true,
+      enabled: enrichment.enabled !== false,
+      requestTimeoutMs: enrichment.requestTimeoutMs || 3500,
+      maxProvidersPerLead: enrichment.maxProvidersPerLead || 0,
+      firmographics: buildGroup('firmographics'),
+      intent: buildGroup('intent')
+    }));
+  },
+
+  'POST /api/enrichment/providers': async (req, res) => {
+    const data = await body(req);
+    const cfg = readJSON('config.json');
+    cfg.enrichment = cfg.enrichment || {};
+    const allowedGroups = ['firmographics', 'intent'];
+    const updates = Array.isArray(data.updates) ? data.updates : [];
+
+    let changed = 0;
+    for (const u of updates) {
+      if (!u || !allowedGroups.includes(u.group) || !u.id) continue;
+      const group = cfg.enrichment[u.group] = cfg.enrichment[u.group] || { enabled: true, providers: [] };
+      group.providers = Array.isArray(group.providers) ? group.providers : [];
+      let prov = group.providers.find(p => p.id === u.id);
+      if (!prov) {
+        prov = { id: u.id, enabled: false, apiKey: '' };
+        group.providers.push(prov);
+      }
+      if (typeof u.enabled === 'boolean') prov.enabled = u.enabled;
+      if (typeof u.apiKey === 'string') prov.apiKey = u.apiKey.trim();
+      if (typeof u.apiBase === 'string') prov.apiBase = u.apiBase.trim();
+      changed++;
+    }
+
+    if (typeof data.enabled === 'boolean') cfg.enrichment.enabled = data.enabled;
+    if (Number.isFinite(data.requestTimeoutMs)) cfg.enrichment.requestTimeoutMs = Math.max(500, Math.min(20000, data.requestTimeoutMs));
+
+    if (data.groups && typeof data.groups === 'object') {
+      for (const g of allowedGroups) {
+        if (data.groups[g] && typeof data.groups[g].enabled === 'boolean') {
+          cfg.enrichment[g] = cfg.enrichment[g] || { providers: [] };
+          cfg.enrichment[g].enabled = data.groups[g].enabled;
+        }
+      }
+    }
+
+    writeJSON('config.json', cfg);
+    res.end(JSON.stringify({ ok: true, changed }));
+  },
+
+  'GET /api/config':  (_, res) => { res.end(JSON.stringify(readJSON('config.json'))); },
+  'POST /api/config': async (req, res) => {
+    const data = await body(req);
+    const cfg  = readJSON('config.json');
+    writeJSON('config.json', { ...cfg, ...data });
+    res.end(JSON.stringify({ ok: true }));
+  },
+
+  /* ── MODULE REGISTRY (foundation for all 70 modules) ── */
+  'GET /api/modules': (_, res) => {
+    const db = ensureModulesDB();
+    res.end(JSON.stringify({ ok: true, ...db }));
+  },
+
+  'PATCH /api/modules': async (req, res) => {
+    const data = await body(req);
+    const db = ensureModulesDB();
+    const updates = Array.isArray(data.updates) ? data.updates : [data];
+    const changed = [];
+    const now = new Date().toISOString();
+
+    updates.forEach(update => {
+      const n = Number(update.n);
+      if (!Number.isInteger(n) || n < 1 || n > 70) return;
+      const key = String(n);
+      const current = db.modules[key] || { n, status: defaultModuleStatus(n), note: '', lastUpdated: null };
+      const nextStatus = VALID_MODULE_STATUS.has(update.status) ? update.status : current.status;
+      const nextNote = typeof update.note === 'string' ? update.note.substring(0, 240) : current.note;
+
+      const changedThis = nextStatus !== current.status || nextNote !== current.note;
+      if (changedThis) {
+        db.modules[key] = { ...current, status: nextStatus, note: nextNote, lastUpdated: now };
+        changed.push({ n, status: nextStatus, note: nextNote });
+      }
+    });
+
+    if (changed.length) {
+      db.updatedAt = now;
+      writeJSON('modules.json', db);
+    }
+    res.end(JSON.stringify({ ok: true, changed, updatedAt: db.updatedAt }));
+  },
+
+  /* ── SYSTEM MATCHER ENGINE (module 7 foundation) ── */
+  'POST /api/system-match': async (req, res) => {
+    const data = await body(req);
+    const niche  = String(data.niche || '');
+    const goal   = String(data.goal || '');
+    const pain   = String(data.pain || '');
+    const source = String(data.source || '');
+    const input  = `${niche} ${goal} ${pain} ${source}`.toLowerCase();
+
+    const painSignals = [
+      { key: 'no_clients',       re: /no clients?|no customer|no sales|zero clients?|can't find clients?/ },
+      { key: 'no_time',          re: /no time|too busy|overwhelmed|swamped|time poor/ },
+      { key: 'no_content',       re: /no content|can't create content|dont post|don't post|inconsistent content/ },
+      { key: 'no_leads',         re: /no leads?|lead flow is low|not enough leads?|dry pipeline/ },
+      { key: 'low_conversions',  re: /low conversion|not converting|few bookings?|few closes?|poor close rate/ },
+      { key: 'low_visibility',   re: /low visibility|no reach|no audience|not seen|low traffic/ }
+    ];
+
+    const painPoints = painSignals.filter(p => p.re.test(input)).map(p => p.key);
+    if (!painPoints.length) painPoints.push('no_leads');
+
+    const PAIN_TO_MODULES = {
+      no_clients: [
+        'Lead Feed Engine',
+        'Cold Outreach Msg Generator',
+        'Multi-Platform Outreach Sender',
+        'CRM Pipeline'
+      ],
+      no_time: [
+        'Workflow Automation Builder',
+        'Follow-Up Automation',
+        'CRM Automation',
+        'Outreach Queue Manager'
+      ],
+      no_content: [
+        'Content Idea Generator',
+        'Short-Form Content Generator',
+        'Social Media Post Generator',
+        'Content Scheduler'
+      ],
+      no_leads: [
+        'Lead Feed Engine',
+        'Keyword Detection Engine',
+        'Lead Intent Analyzer',
+        'CRM Pipeline'
+      ],
+      low_conversions: [
+        'Funnel Builder',
+        'Offer Generator',
+        'Proposal Builder',
+        'Objection Handling Scripts'
+      ],
+      low_visibility: [
+        'Social Media Lead Scraper',
+        'Social Media Post Generator',
+        'Engagement Booster System',
+        'Content Performance Tracker'
+      ]
+    };
+
+    const score = {};
+    painPoints.forEach(p => {
+      (PAIN_TO_MODULES[p] || []).forEach((moduleName, idx) => {
+        const weight = Math.max(1, 5 - idx);
+        score[moduleName] = (score[moduleName] || 0) + weight;
+      });
+    });
+
+    const recommendedModules = Object.keys(score)
+      .sort((a, b) => score[b] - score[a] || a.localeCompare(b))
+      .slice(0, 5);
+
+    const priority = painPoints.some(p => p === 'no_clients' || p === 'no_leads')
+      ? 'high'
+      : painPoints.some(p => p === 'low_conversions' || p === 'no_time')
+        ? 'medium'
+        : 'normal';
+
+    const painLabel = painPoints.join(', ');
+    const moduleLabel = recommendedModules.join(', ');
+    const reasoning = `Detected pain points (${painLabel}) and prioritized the smallest high-impact stack: ${moduleLabel}.`;
+
+    const type = (/agency|consult|service|freelance/.test(input) || painPoints.includes('no_clients') || painPoints.includes('no_leads'))
+      ? 'direct'
+      : /partner|referral|collab/.test(input)
+        ? 'partner'
+        : 'distribution';
+
+    res.end(JSON.stringify({
+      ok: true,
+      type,
+      painPoints,
+      recommendedModules,
+      priority,
+      confidence: Math.min(0.98, 0.55 + (painPoints.length * 0.08)),
+      reasoning
+    }));
+  },
+
+  'GET /api/clients':  (_, res) => { res.end(JSON.stringify(readJSON('clients.json'))); },
+  'GET /api/leads':    (_, res) => { res.end(JSON.stringify(readJSON('leads.json'))); },
+  'GET /api/outreach': (_, res) => { res.end(JSON.stringify(readJSON('outreach_queue.json'))); },
+
+  'POST /api/clients': async (req, res) => {
+    const data = await body(req);
+    const db   = readJSON('clients.json');
+    data.id    = Date.now();
+    data.createdAt  = new Date().toISOString();
+    data.lastUpdated = new Date().toISOString();
+    data.status = 'active';
+    data.systems = data.systems || { landingPage: '', outreach: [], crm: {} };
+    db.clients.push(data);
+    writeJSON('clients.json', db);
+    res.end(JSON.stringify({ ok: true, client: data }));
+  },
+
+  'PATCH /api/clients': async (req, res) => {
+    const data = await body(req);
+    const db   = readJSON('clients.json');
+    let updated = null;
+    db.clients = db.clients.map(c => {
+      if (c.id === data.id) {
+        updated = { ...c, ...data, lastUpdated: new Date().toISOString() };
+        return updated;
+      }
+      return c;
+    });
+    writeJSON('clients.json', db);
+    res.end(JSON.stringify({ ok: true, client: updated }));
+  },
+
+  'POST /api/leads': async (req, res) => {
+    const data = await body(req);
+    const db   = readJSON('leads.json');
+    const avoidDb = readJSON('avoid_leads.json');
+    if (data.id && avoidDb.avoided && avoidDb.avoided.some(l => l.id === data.id)) {
+      res.statusCode = 400;
+      res.end(JSON.stringify({ ok: false, error: 'lead is in avoid list' }));
+      return;
+    }
+    data.id    = Date.now();
+    data.createdAt = new Date().toISOString();
+    data.status = data.status || 'new';
+    data.score  = data.score  || 0;
+    data.leadType = data.leadType || 'direct';
+    data.painKey = data.painKey || 'growth_gap';
+    data.painLabel = data.painLabel || '';
+    data.painChallenge = data.painChallenge || '';
+    data.demoFocus = data.demoFocus || '';
+    data.platform = data.platform || '';
+    data.subreddit = data.subreddit || '';
+    data.postTitle = data.postTitle || '';
+    data.niche     = data.niche || '';
+    data.buyingStage = data.buyingStage || '';
+    data.industry    = data.industry || '';
+    data.intentScore = Number.isFinite(data.intentScore) ? data.intentScore : null;
+    data.baseScore   = Number.isFinite(data.baseScore) ? data.baseScore : data.score;
+    db.leads.push(data);
+    writeJSON('leads.json', db);
+    res.end(JSON.stringify({ ok: true, lead: data }));
+  },
+
+  'PATCH /api/leads': async (req, res) => {
+    const data = await body(req);
+    const db   = readJSON('leads.json');
+    let before = null, after = null;
+    db.leads = db.leads.map(l => {
+      if (l.id === data.id) {
+        before = l;
+        after = { ...l, ...data };
+        return after;
+      }
+      return l;
+    });
+    writeJSON('leads.json', db);
+    if (before && after && before.status !== after.status) {
+      try { learnFromLeadOutcome(after, after.status); }
+      catch (e) { console.error('predictive learn failed', e); }
+    }
+    res.end(JSON.stringify({ ok: true }));
+  },
+
+  'DELETE /api/leads': async (req, res) => {
+    const data = await body(req);
+    if (!data.id) { res.statusCode = 400; res.end(JSON.stringify({ ok: false, error: 'id required' })); return; }
+    const db   = readJSON('leads.json');
+    const lead = db.leads.find(l => l.id === data.id);
+    if (!lead) { res.statusCode = 404; res.end(JSON.stringify({ ok: false, error: 'lead not found' })); return; }
+    db.leads = db.leads.filter(l => l.id !== data.id);
+    writeJSON('leads.json', db);
+    const avoidDb = readJSON('avoid_leads.json');
+    avoidDb.avoided = avoidDb.avoided || [];
+    avoidDb.avoided.push({ ...lead, removedAt: new Date().toISOString() });
+    writeJSON('avoid_leads.json', avoidDb);
+    res.end(JSON.stringify({ ok: true }));
+  },
+
+  'GET /api/predictive/weights': (_, res) => {
+    const weights = readPredictiveWeights();
+    const featureEntries = Object.entries(weights.features)
+      .map(([key, f]) => {
+        const rate = (f.closes + 1) / (f.closes + f.deads + 2);
+        return { key, closes: f.closes, deads: f.deads, trials: f.trials, rate: Math.round(rate * 100), lastUpdated: f.lastUpdated };
+      })
+      .sort((a, b) => b.trials - a.trials);
+    const baseline = (weights.totals.closes + 1) / (weights.totals.closes + weights.totals.deads + 2);
+    res.end(JSON.stringify({
+      ok: true,
+      version: weights.version,
+      updatedAt: weights.updatedAt,
+      totals: weights.totals,
+      baselineRate: Math.round(baseline * 100),
+      features: featureEntries,
+      recent: weights.recent.slice(0, 50)
+    }));
+  },
+
+  'POST /api/predictive/reset': (_, res) => {
+    writeJSON(PREDICTIVE_FILE, {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      totals: { closes: 0, deads: 0 },
+      features: {},
+      recent: []
+    });
+    res.end(JSON.stringify({ ok: true }));
+  },
+
+  'POST /api/outreach': async (req, res) => {
+    const data = await body(req);
+    const db   = readJSON('outreach_queue.json');
+    data.id    = Date.now();
+    data.status = 'pending';
+    data.createdAt = new Date().toISOString();
+    data.leadType = data.leadType || 'direct';
+    data.painKey = data.painKey || 'growth_gap';
+    data.painLabel = data.painLabel || '';
+    data.painChallenge = data.painChallenge || '';
+    db.queue.push(data);
+    writeJSON('outreach_queue.json', db);
+    res.end(JSON.stringify({ ok: true }));
+  },
+
+  'PATCH /api/outreach': async (req, res) => {
+    const data = await body(req);
+    const db   = readJSON('outreach_queue.json');
+    const msg = db.queue.find(q => q.id === data.id);
+    db.queue   = db.queue.map(q => q.id === data.id ? { ...q, status: data.status } : q);
+    writeJSON('outreach_queue.json', db);
+    if (msg && data.status === 'removed' && msg.leadId) {
+      const leads = readJSON('leads.json');
+      const lead = leads.leads.find(l => l.id === msg.leadId);
+      if (lead) {
+        leads.leads = leads.leads.filter(l => l.id !== msg.leadId);
+        writeJSON('leads.json', leads);
+        const avoidDb = readJSON('avoid_leads.json');
+        avoidDb.avoided = avoidDb.avoided || [];
+        avoidDb.avoided.push({ ...lead, removedAt: new Date().toISOString(), source: 'outreach_removed' });
+        writeJSON('avoid_leads.json', avoidDb);
+      }
+    }
+    res.end(JSON.stringify({ ok: true }));
+  },
+
+  /* ── ANALYTICS ── */
+  'GET /api/analytics': (_, res) => { res.end(JSON.stringify(readJSON('analytics.json'))); },
+
+  'POST /api/analytics': async (req, res) => {
+    const data = await body(req);
+    const db   = readJSON('analytics.json');
+    if (!Array.isArray(db.outreach)) db.outreach = [];
+    const entry = { ...data, id: Date.now(), timestamp: new Date().toISOString(), status: 'sent' };
+    db.outreach.unshift(entry);
+    writeJSON('analytics.json', db);
+    res.end(JSON.stringify({ ok: true, id: entry.id }));
+  },
+
+  'PATCH /api/analytics': async (req, res) => {
+    const data = await body(req);
+    const db   = readJSON('analytics.json');
+    db.outreach = (db.outreach || []).map(o =>
+      o.id === data.id ? { ...o, ...data, statusUpdatedAt: new Date().toISOString() } : o
+    );
+    writeJSON('analytics.json', db);
+    res.end(JSON.stringify({ ok: true }));
+  },
+
+  /* ── MODULE SETTINGS ── */
+  'GET /api/module-settings': (_, res) => {
+    res.end(JSON.stringify(readJSON('module-settings.json')));
+  },
+
+  'PATCH /api/module-settings': async (req, res) => {
+    const data = await body(req);
+    const n = data.module;
+    if (!n) { res.end(JSON.stringify({ ok: false, error: 'missing module number' })); return; }
+    const db = readJSON('module-settings.json');
+    if (!db.settings) db.settings = {};
+    db.settings[n] = { ...(db.settings[n] || {}), ...data.settings, updatedAt: new Date().toISOString() };
+    writeJSON('module-settings.json', db);
+    res.end(JSON.stringify({ ok: true, settings: db.settings[n] }));
+  },
+
+  /* ── INTEGRATIONS ── */
+  'GET /api/integrations': (_, res) => {
+    res.end(JSON.stringify(readJSON('integrations.json')));
+  },
+
+  'POST /api/integrations': async (req, res) => {
+    const data = await body(req);
+    const db = readJSON('integrations.json');
+    if (!Array.isArray(db.integrations)) db.integrations = [];
+    const entry = { ...data, id: Date.now(), createdAt: new Date().toISOString(), enabled: true };
+    db.integrations.push(entry);
+    writeJSON('integrations.json', db);
+    res.end(JSON.stringify({ ok: true, integration: entry }));
+  },
+
+  'PATCH /api/integrations': async (req, res) => {
+    const data = await body(req);
+    const db = readJSON('integrations.json');
+    db.integrations = (db.integrations || []).map(i =>
+      i.id === data.id ? { ...i, ...data, updatedAt: new Date().toISOString() } : i
+    );
+    writeJSON('integrations.json', db);
+    res.end(JSON.stringify({ ok: true }));
+  },
+
+  'DELETE /api/integrations': async (req, res) => {
+    const data = await body(req);
+    const db = readJSON('integrations.json');
+    db.integrations = (db.integrations || []).filter(i => i.id !== data.id);
+    writeJSON('integrations.json', db);
+    res.end(JSON.stringify({ ok: true }));
+  },
+
+  /* ── WEBHOOK RECEIVER (external tools fire into this) ── */
+  'POST /api/webhook': async (req, res) => {
+    const data = await body(req);
+    const db = readJSON('integrations.json');
+    const webhookLog = readJSON('webhook-log.json');
+    if (!Array.isArray(webhookLog.events)) webhookLog.events = [];
+    webhookLog.events.unshift({ ...data, receivedAt: new Date().toISOString(), id: Date.now() });
+    if (webhookLog.events.length > 500) webhookLog.events = webhookLog.events.slice(0, 500);
+    writeJSON('webhook-log.json', webhookLog);
+    res.end(JSON.stringify({ ok: true, received: true }));
+  },
+
+  'GET /api/webhook-log': (_, res) => {
+    res.end(JSON.stringify(readJSON('webhook-log.json')));
+  },
+
+  /* ── AI ASSIST — calls Claude Haiku to refine context engine output ── */
+  'POST /api/ai': async (req, res) => {
+    const cfg = readJSON('config.json');
+    if (!cfg.anthropicApiKey) { res.end(JSON.stringify({ ok: false, error: 'no_key' })); return; }
+    const data = await body(req);
+    if (!data.prompt) { res.end(JSON.stringify({ ok: false, error: 'no_prompt' })); return; }
+    return callClaude(cfg.anthropicApiKey, data.prompt, 500, res);
+  },
+
+  'POST /api/ai/draft-message': async (req, res) => {
+    const cfg  = readJSON('config.json');
+    if (!cfg.anthropicApiKey) { res.end(JSON.stringify({ ok: false, error: 'no_key' })); return; }
+    const data = await body(req);
+    const meta = data.leadMeta || {};
+    const firmo  = meta.enrichment && meta.enrichment.firmographics && meta.enrichment.firmographics[0];
+    const intent = meta.enrichment && meta.enrichment.intent && meta.enrichment.intent[0];
+    const opp    = meta.opportunity || {};
+    const tone   = data.tone || 'direct';
+
+    const prompt = `You are a sharp sales operator writing a first outreach DM. Write a single short message (under 50 words, no subject line, no greeting, no sign-off) based on the signal below. Tone: ${tone}.
+
+Lead signal:
+- Pain: ${opp.problem || 'unknown'}
+- Root cause: ${opp.rootCause || ''}
+- Angle: ${opp.positioning || ''}
+- Niche: ${meta.profile && meta.profile.niche || 'unknown'}
+- Company: ${firmo ? firmo.companyName || '' : data.author || 'unknown'}
+- Industry: ${firmo ? firmo.industry || '' : ''}
+- Intent stage: ${intent ? intent.buyingStage || '' : ''}
+- Intent score: ${intent ? intent.intentScore || '' : ''}
+- Likely need: ${intent ? intent.likelyNeed || '' : opp.demoFocus || ''}
+- Original post snippet: ${data.postSnippet || ''}
+
+Return ONLY a JSON object: { "dm": "the message", "rationale": "one sentence on why this angle" }`;
+
+    return callClaude(cfg.anthropicApiKey, prompt, 300, res);
+  },
+
+  'POST /api/ai/rewrite-message': async (req, res) => {
+    const cfg  = readJSON('config.json');
+    if (!cfg.anthropicApiKey) { res.end(JSON.stringify({ ok: false, error: 'no_key' })); return; }
+    const data = await body(req);
+    if (!data.draft) { res.end(JSON.stringify({ ok: false, error: 'no_draft' })); return; }
+    const presetInstructions = {
+      shorter:      'Rewrite to be at most 25 words. Keep the core hook. Cut everything else.',
+      warmer:       'Rewrite to be more human and empathetic. Sound like a person, not a tool.',
+      stronger_cta: 'Rewrite with a clearer, more direct call to action at the end. One specific ask.',
+      custom:       data.customPrompt || 'Improve the message.'
+    };
+    const instruction = presetInstructions[data.preset] || presetInstructions.custom;
+    const prompt = `${instruction}\n\nOriginal message:\n"${data.draft}"\n\nReturn ONLY a JSON object: { "dm": "rewritten message" }`;
+    return callClaude(cfg.anthropicApiKey, prompt, 200, res);
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // B.O.S.S — Jarvis-tier AI backbone
+  // ═══════════════════════════════════════════════════════════
+
+  // Memory palace
+  'GET /api/boss/state': (_, res) => {
+    res.end(JSON.stringify({ ok: true, state: bossReadState() }));
+  },
+  'POST /api/boss/state': async (req, res) => {
+    const patch = await body(req);
+    res.end(JSON.stringify({ ok: true, state: bossWriteState(patch || {}) }));
+  },
+
+  // Jarvis chat — full persona, context-aware, multi-turn
+  'POST /api/boss/chat': async (req, res) => {
+    const cfg  = readJSON('config.json');
+    const data = await body(req);
+    if (!cfg.anthropicApiKey) { res.end(JSON.stringify({ ok: false, error: 'Add your Anthropic key in Settings → API Keys' })); return; }
+    const state    = bossReadState();
+    const messages = Array.isArray(data.messages) ? data.messages.slice(-12) : [];
+    const userName = data.userName || cfg.personaName || 'Boss';
+    const system   = `You are B.O.S.S (Business Optimization System Service) — the personal Jarvis-tier AI operator for ${userName}.
+
+IDENTITY:
+- You run their entire business from this dashboard: lead generation, outreach, CRM, content, channels, automation.
+- You are sharp, concise, confident — like a brilliant co-founder who never wastes words.
+- You use British spelling. You DON'T say "I'm an AI" or pad with disclaimers.
+- Brief by default (<4 lines). Go deep only when asked.
+
+CURRENT GOAL: ${state.current_goal || 'Build momentum — find leads, close clients, scale channels.'}
+
+CAPABILITIES YOU CAN INVOKE:
+- /scan <keyword>   → Lead Feed scan (Reddit)
+- /pitch <name>     → Write a full pitch doc for a lead
+- /channels         → Show all active channels (Telegram, X, LinkedIn, etc.)
+- /coach            → Proactive next-move advice
+- /status           → Memory palace + system state
+
+CONTEXT: Today is ${new Date().toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}.`;
+
+    const r = await callClaudeFreeform(cfg.anthropicApiKey, system, messages, Math.min(Number(data.maxTokens) || 600, 1400));
+    res.end(JSON.stringify(r));
+  },
+
+  // Coach — proactive next-move
+  'POST /api/boss/coach/tick': async (req, res) => {
+    const cfg = readJSON('config.json');
+    if (!cfg.anthropicApiKey) { res.end(JSON.stringify({ ok: false, error: 'no_key' })); return; }
+    const state = bossReadState();
+    const leads = readJSON('leads.json');
+    const leadCount = (leads.leads || []).length;
+    const prompt = `You are B.O.S.S, a sharp AI operator. The user has ${leadCount} leads in their CRM.
+Current goal: "${state.current_goal || 'build momentum'}".
+Give ONE punchy next-move suggestion. Return ONLY: { "headline": "short action (max 8 words)", "why": "1 sentence", "do_now": "specific micro-action", "vibe": "green|amber|red" }`;
+    return callClaude(cfg.anthropicApiKey, prompt, 180, res);
+  },
+  'GET /api/boss/coach/latest': (_, res) => {
+    const state = bossReadState();
+    res.end(JSON.stringify({ ok: true, latest: state.coach_latest || null }));
+  },
+
+  // Pitch generator — full pitch document for a lead
+  'POST /api/boss/pitch': async (req, res) => {
+    const cfg  = readJSON('config.json');
+    const data = await body(req);
+    if (!cfg.anthropicApiKey) { res.end(JSON.stringify({ ok: false, error: 'no_key' })); return; }
+    const persona = cfg.personaName || 'B.O.S.S';
+    const offer   = cfg.offer || 'AI-powered lead generation system';
+    const prompt  = `Write a sharp sales pitch document for this lead:
+
+LEAD: ${JSON.stringify(data.lead || {})}
+YOUR OFFER: ${offer}
+YOUR NAME: ${persona}
+
+Return JSON only:
+{
+  "subject": "email subject line (punchy, <10 words)",
+  "hook": "opening line that speaks to their exact pain (1-2 sentences)",
+  "problem": "their problem restated back (2-3 sentences)",
+  "solution": "how your offer solves it specifically (3-4 sentences)",
+  "proof": "one specific result/claim + social proof (2 sentences)",
+  "cta": "clear single call to action (1 sentence)",
+  "dm_short": "Reddit/Twitter DM version (<280 chars)",
+  "email_full": "full email version (Subject + 5 short paragraphs)",
+  "score": <lead score 1-100 based on intent signals>
+}`;
+    return callClaude(cfg.anthropicApiKey, prompt, 800, res);
+  },
+
+  // Channels — multi-platform surface
+  'GET /api/channels': (_, res) => {
+    res.end(JSON.stringify({ ok: true, channels: bossChannels.publicList() }));
+  },
+  'GET /api/channels/agents': (_, res) => {
+    res.end(JSON.stringify({ ok: true, agents: bossSwarm.list() }));
+  },
+
+  'POST /api/predictive/signal': async (req, res) => {
+    const data = await body(req);
+    const outcome = data.outcome;
+    const features = Array.isArray(data.features) ? data.features : [];
+    const SIGNAL_WEIGHTS = {
+      reply_sent:      { pos: 0.5, neg: 0 },
+      auto_sent:       { pos: 0.3, neg: 0 },
+      saved_from_feed: { pos: 0.2, neg: 0 },
+      ignored:         { pos: 0,   neg: 0.5 },
+      auto_cancelled:  { pos: 0,   neg: 0.2 }
+    };
+    const w = SIGNAL_WEIGHTS[outcome];
+    if (!w || !features.length) { res.end(JSON.stringify({ ok: true, skipped: true })); return; }
+    const weights = readPredictiveWeights();
+    const now = new Date().toISOString();
+    weights.totals.closes += w.pos;
+    weights.totals.deads  += w.neg;
+    for (const k of features) {
+      const f = weights.features[k] = weights.features[k] || { closes: 0, deads: 0, trials: 0, lastUpdated: now };
+      f.closes += w.pos;
+      f.deads  += w.neg;
+      f.trials += 1;
+      f.lastUpdated = now;
+    }
+    weights.recent.unshift({ outcome, features, at: now });
+    weights.recent = weights.recent.slice(0, PREDICTIVE_MAX_RECENT);
+    weights.updatedAt = now;
+    writeJSON(PREDICTIVE_FILE, weights);
+    res.end(JSON.stringify({ ok: true }));
+  }
+};
+
+const server = http.createServer(async (req, res) => {
+  const key = `${req.method} ${req.url.split('?')[0]}`;
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Content-Type', 'application/json');
+
+  if (ROUTES[key]) return ROUTES[key](req, res);
+
+  // ── Channel prefix routes: /api/channels/<id>/{send|spawn|webhook} ──────
+  if (req.url.startsWith('/api/channels/')) {
+    const parts  = req.url.split('?')[0].split('/');
+    const chanId = parts[3];
+    const action = parts[4];
+    const ch     = bossChannels.get(chanId);
+    if (req.method === 'POST' && action === 'send') {
+      if (!ch) { res.end(JSON.stringify({ ok: false, error: `unknown channel: ${chanId}` })); return; }
+      const d = await body(req);
+      if (!ch.configured()) { res.end(JSON.stringify({ ok: false, error: `${chanId} not configured — add env key` })); return; }
+      return res.end(JSON.stringify(await ch.send(d)));
+    }
+    if (req.method === 'POST' && action === 'spawn') {
+      const d = await body(req);
+      return res.end(JSON.stringify({ ok: true, agent: bossSwarm.spawn(chanId, d) }));
+    }
+    if (req.method === 'POST' && action === 'webhook') {
+      const payload = await body(req);
+      const norm = ch ? ch.ingest(payload) : null;
+      if (!norm) { res.end(JSON.stringify({ ok: true })); return; }
+      bossSwarm.pushMessage(chanId, norm.chatId, 'user', norm.text);
+      const cfg = readJSON('config.json');
+      const persona = bossSwarm.getPersona(chanId);
+      const system  = `You are B.O.S.S on ${chanId}. Tone: ${persona.tone || 'sharp, brief'}. Reply in under 3 sentences.`;
+      if (cfg.anthropicApiKey) {
+        const msgs = [...bossSwarm.recentMessages(chanId, norm.chatId, 6), { role: 'user', content: norm.text }];
+        const r = await callClaudeFreeform(cfg.anthropicApiKey, system, msgs, 300);
+        const reply = r.ok ? r.reply : '⚠️ B.O.S.S is thinking…';
+        bossSwarm.pushMessage(chanId, norm.chatId, 'assistant', reply);
+        if (ch.configured()) ch.send({ to: norm.chatId, text: reply }).catch(() => {});
+      }
+      return res.end(JSON.stringify({ ok: true }));
+    }
+  }
+
+  // Static files
+  let filePath = req.url === '/' ? '/operator.html' : req.url;
+  filePath = path.join(PUBLIC, filePath);
+  const ext = path.extname(filePath);
+  res.setHeader('Content-Type', MIME[ext] || 'text/plain');
+  fs.readFile(filePath, (err, data) => {
+    if (err) { res.writeHead(404); res.end('Not found'); return; }
+    res.writeHead(200);
+    res.end(data);
+  });
+});
+
+server.on('upgrade', (req, socket) => {
+  const pathname = (req.url || '').split('?')[0];
+  if (pathname !== '/ws') {
+    socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+  setupWebSocket(req, socket);
+});
+
+server.listen(PORT, () => console.log(`Operator → http://localhost:${PORT}`));

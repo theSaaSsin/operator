@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<title>B.O.S.S — Business Optimization System Service</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="operator.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sidebar-logo">
+      <div class="s-logo" style="font-size:20px;letter-spacing:.08em"><span style="color:#c8ff00">B.O.S.S</span></div>
+      <div class="s-tag">Business Operating System</div>
+    </div>
+    <nav>
+      <div class="nav-item active" data-panel="dashboard">
+        <i class="fas fa-th-large"></i> Dashboard
+      </div>
+      <div class="nav-item" data-panel="execute">
+        <i class="fas fa-bolt"></i> Execute
+      </div>
+
+      <div class="nav-section" data-cat="core">Core Layer <span class="nav-cat-count" id="cat-count-core"></span></div>
+      <div class="nav-item" data-panel="client">
+        <i class="fas fa-user-plus"></i> Client Creator
+      </div>
+      <div class="nav-item" data-panel="feed">
+        <i class="fas fa-satellite-dish"></i> Lead Feed
+      </div>
+      <div class="nav-item" data-panel="crm">
+        <i class="fas fa-chart-line"></i> CRM Pipeline
+      </div>
+      <div class="nav-item" data-panel="outreach">
+        <i class="fas fa-paper-plane"></i> Outreach Queue
+      </div>
+      <div class="nav-item" data-panel="analytics" onclick="loadAnalytics()">
+        <i class="fas fa-chart-bar"></i> Analytics
+      </div>
+
+      <div class="nav-section" data-cat="acquisition">Acquisition <span class="nav-cat-count" id="cat-count-acquisition"></span></div>
+      <div class="nav-item" data-panel="mod-keyword-detect"><i class="fas fa-crosshairs"></i> Keyword Detection</div>
+      <div class="nav-item" data-panel="mod-intent"><i class="fas fa-brain"></i> Intent Analyzer</div>
+      <div class="nav-item" data-panel="mod-outreach-send"><i class="fas fa-share-nodes"></i> Outreach Sender</div>
+      <div class="nav-item" data-panel="mod-followup"><i class="fas fa-clock-rotate-left"></i> Follow-Up Auto</div>
+      <div class="nav-item" data-panel="mod-reply-detect"><i class="fas fa-reply"></i> Reply Detection</div>
+      <div class="nav-item" data-panel="mod-booking"><i class="fas fa-calendar-check"></i> Booking</div>
+      <div class="nav-item" data-panel="mod-competitor-hijack"><i class="fas fa-user-secret"></i> Competitor Hijack</div>
+      <div class="nav-item" data-panel="mod-local-finder"><i class="fas fa-map-pin"></i> Local Lead Finder</div>
+      <div class="nav-item" data-panel="mod-cold-outreach"><i class="fas fa-comment-dots"></i> Cold Outreach Gen</div>
+
+      <div class="nav-section" data-cat="sales">Sales / Conversion <span class="nav-cat-count" id="cat-count-sales"></span></div>
+      <div class="nav-item" data-panel="mod-funnel"><i class="fas fa-filter"></i> Funnel Builder</div>
+      <div class="nav-item" data-panel="mod-offer"><i class="fas fa-gift"></i> Offer Generator</div>
+      <div class="nav-item" data-panel="mod-proposal"><i class="fas fa-file-invoice"></i> Proposal Builder</div>
+      <div class="nav-item" data-panel="mod-demo-viz"><i class="fas fa-eye"></i> Demo Visualizer</div>
+      <div class="nav-item" data-panel="mod-close-track"><i class="fas fa-handshake"></i> Close Tracking</div>
+      <div class="nav-item" data-panel="mod-landing-page"><i class="fas fa-globe"></i> Landing Page Gen</div>
+      <div class="nav-item" data-panel="mod-testimonials"><i class="fas fa-star"></i> Testimonials / Proof</div>
+      <div class="nav-item" data-panel="mod-call-script"><i class="fas fa-phone"></i> Call Script Gen</div>
+      <div class="nav-item" data-panel="mod-pricing"><i class="fas fa-tags"></i> Pricing Builder</div>
+      <div class="nav-item" data-panel="mod-objections"><i class="fas fa-shield-halved"></i> Objection Scripts</div>
+
+      <div class="nav-section" data-cat="content">Content / Brand <span class="nav-cat-count" id="cat-count-content"></span></div>
+      <div class="nav-item" data-panel="mod-content-ideas"><i class="fas fa-lightbulb"></i> Content Ideas</div>
+      <div class="nav-item" data-panel="mod-social-posts"><i class="fas fa-thumbs-up"></i> Social Posts</div>
+      <div class="nav-item" data-panel="mod-scheduler"><i class="fas fa-calendar-days"></i> Scheduler</div>
+      <div class="nav-item" data-panel="mod-brand"><i class="fas fa-palette"></i> Brand Builder</div>
+      <div class="nav-item" data-panel="mod-content-perf"><i class="fas fa-chart-simple"></i> Content Stats</div>
+      <div class="nav-item" data-panel="mod-short-form"><i class="fas fa-video"></i> Short-Form Content</div>
+      <div class="nav-item" data-panel="mod-long-form"><i class="fas fa-newspaper"></i> Long-Form Content</div>
+      <div class="nav-item" data-panel="mod-visual-assets"><i class="fas fa-image"></i> Visual Assets</div>
+      <div class="nav-item" data-panel="mod-profile-optimizer"><i class="fas fa-user-circle"></i> Profile Optimizer</div>
+      <div class="nav-item" data-panel="mod-engagement"><i class="fas fa-comments"></i> Engagement Booster</div>
+
+      <div class="nav-section" data-cat="automation">Automation <span class="nav-cat-count" id="cat-count-automation"></span></div>
+      <div class="nav-item" data-panel="mod-workflows"><i class="fas fa-diagram-project"></i> Workflows</div>
+      <div class="nav-item" data-panel="mod-onboarding"><i class="fas fa-user-check"></i> Client Onboarding</div>
+      <div class="nav-item" data-panel="mod-data-sync"><i class="fas fa-database"></i> Data Sync</div>
+      <div class="nav-item" data-panel="mod-file-assets"><i class="fas fa-folder-open"></i> File Assets</div>
+      <div class="nav-item" data-panel="mod-templates"><i class="fas fa-book"></i> Template Library</div>
+      <div class="nav-item" data-panel="mod-clone"><i class="fas fa-clone"></i> System Cloning</div>
+      <div class="nav-item" data-panel="mod-crm-auto"><i class="fas fa-robot"></i> CRM Auto</div>
+      <div class="nav-item" data-panel="mod-email-auto"><i class="fas fa-envelope-open-text"></i> Email Auto</div>
+      <div class="nav-item" data-panel="mod-notifications"><i class="fas fa-bell"></i> Notifications</div>
+      <div class="nav-item" data-panel="mod-tasks"><i class="fas fa-list-check"></i> Task Manager</div>
+
+      <div class="nav-section" data-cat="delivery">Client Delivery <span class="nav-cat-count" id="cat-count-delivery"></span></div>
+      <div class="nav-item" data-panel="mod-client-dash"><i class="fas fa-gauge-high"></i> Client Dashboard</div>
+      <div class="nav-item" data-panel="mod-system-viz"><i class="fas fa-sitemap"></i> System Visual</div>
+      <div class="nav-item" data-panel="mod-progress"><i class="fas fa-bars-progress"></i> Progress</div>
+      <div class="nav-item" data-panel="mod-support"><i class="fas fa-headset"></i> Support</div>
+      <div class="nav-item" data-panel="mod-training"><i class="fas fa-graduation-cap"></i> Training / Tutorials</div>
+      <div class="nav-item" data-panel="mod-performance"><i class="fas fa-chart-line"></i> Performance Dashboard</div>
+      <div class="nav-item" data-panel="mod-change-requests"><i class="fas fa-pen-to-square"></i> Change Requests</div>
+      <div class="nav-item" data-panel="mod-access-control"><i class="fas fa-lock"></i> Access Control</div>
+      <div class="nav-item" data-panel="mod-export"><i class="fas fa-file-export"></i> System Export</div>
+      <div class="nav-item" data-panel="mod-whitelabel"><i class="fas fa-tag"></i> White-Label</div>
+
+      <div class="nav-section" data-cat="expansion">Expansion <span class="nav-cat-count" id="cat-count-expansion"></span></div>
+      <div class="nav-item" data-panel="mod-api-layer"><i class="fas fa-plug"></i> API Layer</div>
+      <div class="nav-item" data-panel="mod-billing"><i class="fas fa-credit-card"></i> Billing</div>
+      <div class="nav-item" data-panel="mod-teams"><i class="fas fa-users"></i> Teams</div>
+      <div class="nav-item" data-panel="mod-global-analytics"><i class="fas fa-earth-americas"></i> Global Analytics</div>
+      <div class="nav-item" data-panel="mod-partners"><i class="fas fa-handshake"></i> Partner Management</div>
+      <div class="nav-item" data-panel="mod-resellers"><i class="fas fa-store"></i> Reseller Dashboard</div>
+      <div class="nav-item" data-panel="mod-marketplace"><i class="fas fa-plug"></i> Marketplace</div>
+      <div class="nav-item" data-panel="mod-plugins"><i class="fas fa-puzzle-piece"></i> Plugins</div>
+      <div class="nav-item" data-panel="mod-revenue"><i class="fas fa-receipt"></i> Revenue Tracking</div>
+      <div class="nav-item" data-panel="mod-affiliates"><i class="fas fa-people-arrows"></i> Affiliate System</div>
+      <div class="nav-item" data-panel="mod-system-matcher"><i class="fas fa-puzzle-piece"></i> System Matcher</div>
+      <div class="nav-section" data-cat="boss" style="color:#c8ff00;opacity:.9">B.O.S.S Core</div>
+      <div class="nav-item" data-panel="boss-channels"><i class="fas fa-satellite-dish"></i> Channels</div>
+      <div class="nav-item" data-panel="boss-agents"><i class="fas fa-robot"></i> Agents</div>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="status-dot" style="background:#c8ff00;box-shadow:0 0 8px rgba(200,255,0,.5)"></span>B.O.S.S Online
+      <span class="sidebar-version" id="sidebar-version">v0.2</span>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="topbar">
+      <div id="topbar-title">Client Creator</div>
+      <div id="topbar-meta"><span style="color:#c8ff00;font-weight:700;letter-spacing:.06em">B.O.S.S</span> &nbsp;·&nbsp; <span id="clock"></span></div>
+      <button id="btn-ai-status" onclick="showAISetup()" title="AI Assist — click to configure" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:.75rem;cursor:pointer;font-family:inherit;font-weight:600;letter-spacing:.03em;transition:all .18s;">⚡ AI Off</button>
+      <button id="btn-mobile-link" onclick="showMobileLink()" title="Open on phone">
+        <i class="fas fa-mobile-screen"></i>
+      </button>
+    </div>
+
+    <!-- MOBILE LINK MODAL -->
+    <div id="mobile-modal" onclick="if(event.target===this)closeMobileModal()">
+      <div id="mobile-modal-box">
+        <div id="mobile-modal-title"><i class="fas fa-mobile-screen"></i> Open on iPhone</div>
+        <div id="mobile-modal-status">Fetching tunnel URL...</div>
+        <div id="mobile-qr-wrap"></div>
+        <div id="mobile-url-row">
+          <input id="mobile-url-input" type="text" readonly onclick="this.select()">
+          <button onclick="copyMobileUrl()"><i class="fas fa-copy"></i></button>
+        </div>
+        <div id="mobile-modal-tip">Scan with iPhone camera · or tap Copy and open in Safari</div>
+        <button id="mobile-modal-close" onclick="closeMobileModal()">Close</button>
+      </div>
+    </div>
+
+    <!-- MOBILE BOTTOM NAV -->
+    <div id="mobile-nav-bar">
+      <button class="mob-nav-btn active" data-panel="dashboard">
+        <i class="fas fa-th-large"></i>Home
+      </button>
+      <button class="mob-nav-btn" data-panel="client">
+        <i class="fas fa-user-plus"></i>Build
+      </button>
+      <button class="mob-nav-btn" data-panel="feed">
+        <i class="fas fa-satellite-dish"></i>Leads
+      </button>
+      <button class="mob-nav-btn" data-panel="crm">
+        <i class="fas fa-chart-line"></i>CRM
+      </button>
+      <button class="mob-nav-btn" data-panel="outreach">
+        <i class="fas fa-paper-plane"></i>Out
+      </button>
+      <button class="mob-nav-btn" data-panel="analytics" onclick="loadAnalytics()">
+        <i class="fas fa-chart-bar"></i>Stats
+      </button>
+    </div>
+
+    <div id="content">
+
+      <!-- ── PANEL: EXECUTE (Decision-Execution Engine) ── -->
+      <div class="panel" id="panel-execute">
+        <div class="exec-wrap">
+          <div class="exec-header">
+            <h2><i class="fas fa-bolt" style="color:var(--accent);margin-right:8px"></i>Execution Engine</h2>
+            <p class="exec-sub">Paste messy input. Get diagnosis → opportunity → action → output message → next stage.</p>
+          </div>
+          <div class="exec-input-row">
+            <textarea id="exec-input" class="exec-textarea" placeholder="Paste a lead idea, problem statement, customer friction, competitor threat, or revenue gap. Raw is fine — the engine strips the noise."></textarea>
+            <div class="exec-controls">
+              <select id="exec-type" class="exec-select">
+                <option value="lead">Lead / Prospect</option>
+                <option value="problem">Problem Statement</option>
+                <option value="friction">Customer Friction</option>
+                <option value="competitor">Competitor Threat</option>
+                <option value="revenue">Revenue Gap</option>
+              </select>
+              <button class="btn btn-secondary" id="btn-exec-fill-lead" title="Pre-fill from active Lead Feed context">
+                <i class="fas fa-satellite-dish"></i> From Active Lead
+              </button>
+              <button class="btn btn-primary" id="btn-exec-run" style="margin-left:auto">
+                <i class="fas fa-bolt"></i> Execute
+              </button>
+            </div>
+          </div>
+          <div class="exec-loading" id="exec-loading" style="display:none">
+            <i class="fas fa-circle-notch fa-spin"></i> Running diagnosis…
+          </div>
+          <div class="exec-output" id="exec-output" style="display:none">
+            <div class="exec-section" data-sec="diagnosis">
+              <div class="exec-section-head"><span>DIAGNOSIS</span><button class="exec-copy-btn" data-copy="diagnosis">copy</button></div>
+              <div class="exec-section-body" id="exec-diagnosis"></div>
+            </div>
+            <div class="exec-section" data-sec="opportunity">
+              <div class="exec-section-head"><span>OPPORTUNITY</span><button class="exec-copy-btn" data-copy="opportunity">copy</button></div>
+              <div class="exec-section-body" id="exec-opportunity"></div>
+            </div>
+            <div class="exec-section" data-sec="actions">
+              <div class="exec-section-head"><span>ACTION PLAN</span><button class="exec-copy-btn" data-copy="actions">copy</button></div>
+              <div class="exec-section-body" id="exec-actions"></div>
+            </div>
+            <div class="exec-section exec-message" data-sec="message">
+              <div class="exec-section-head"><span>OUTPUT MESSAGE</span><button class="exec-copy-btn" data-copy="message">copy</button></div>
+              <div class="exec-section-body" id="exec-message"></div>
+            </div>
+            <div class="exec-section" data-sec="next">
+              <div class="exec-section-head"><span>NEXT STAGE</span><button class="exec-copy-btn" data-copy="next">copy</button></div>
+              <div class="exec-section-body" id="exec-next"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: DASHBOARD ── -->
+      <div class="panel active" id="panel-dashboard">
+        <div class="dash-scroll">
+          <div class="dash-hero">
+            <div class="dash-hero-left">
+              <h1 class="dash-title">The<span>SaaS</span>sin</h1>
+              <p class="dash-subtitle">Full Module System — Operator Command Center</p>
+            </div>
+            <div class="dash-hero-stats" id="dash-hero-stats"></div>
+          </div>
+          <div class="dash-grid" id="dash-grid">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: CLIENT CREATOR ── -->
+      <div class="panel" id="panel-client">
+
+        <!-- LEFT: form + client list -->
+        <div class="client-left">
+          <div class="panel-header">
+            <h2>New Client</h2>
+            <button class="btn btn-secondary btn-sm" id="btn-clear-form">Clear</button>
+          </div>
+          <div class="form-body">
+            <div class="field">
+              <label>Business Name</label>
+              <input type="text" id="f-name" placeholder="e.g. Apex Plumbing">
+            </div>
+            <div class="field">
+              <label>Niche / Industry</label>
+              <input type="text" id="f-niche" placeholder="e.g. Plumber, SaaS, Personal Trainer, Solicitor">
+            </div>
+            <div class="field">
+              <label>Specific Service / Core Offer</label>
+              <input type="text" id="f-offer" placeholder="e.g. Emergency boiler repairs, 24/7 call-out">
+            </div>
+            <div class="field">
+              <label>Target Customer <span class="opt-label">who do they serve?</span></label>
+              <input type="text" id="f-target" placeholder="e.g. Homeowners in Manchester, B2B startups, Busy mums">
+            </div>
+            <div class="field">
+              <label>Key Result / USP <span class="opt-label">what sets them apart?</span></label>
+              <input type="text" id="f-usp" placeholder="e.g. Fixed in 24hrs, No hidden fees, 10-year guarantee">
+            </div>
+            <div class="field">
+              <label>Price Point</label>
+              <div class="tone-btns">
+                <button class="tone-btn" data-price="budget">Budget</button>
+                <button class="tone-btn active" data-price="mid">Professional</button>
+                <button class="tone-btn" data-price="premium">Premium</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Business Stage</label>
+              <div class="tone-btns">
+                <button class="tone-btn" data-stage="new">Just Starting</button>
+                <button class="tone-btn active" data-stage="growing">Growing</button>
+                <button class="tone-btn" data-stage="established">Established</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Primary Goal</label>
+              <select id="f-goal">
+                <option value="leads">More Leads</option>
+                <option value="bookings">More Bookings</option>
+                <option value="awareness">Brand Awareness</option>
+                <option value="revenue">Increase Revenue</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Tone</label>
+              <div class="tone-btns">
+                <button class="tone-btn" data-tone="aggressive">Aggressive</button>
+                <button class="tone-btn active" data-tone="professional">Professional</button>
+                <button class="tone-btn" data-tone="friendly">Friendly</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Location / Market</label>
+              <input type="text" id="f-location" placeholder="e.g. London, UK">
+            </div>
+            <div class="field">
+              <label>Notes (optional)</label>
+              <textarea id="f-notes" placeholder="Anything extra — competitors, previous results, specific angles..."></textarea>
+            </div>
+            <div class="field">
+              <label>System Components</label>
+              <div class="sys-checks">
+                <label class="sys-check"><input type="checkbox" id="sys-landing" checked><span>Landing Page</span></label>
+                <label class="sys-check"><input type="checkbox" id="sys-crm" checked><span>CRM Pipeline</span></label>
+                <label class="sys-check"><input type="checkbox" id="sys-outreach" checked><span>Outreach Sequence</span></label>
+                <label class="sys-check"><input type="checkbox" id="sys-followup" checked><span>Follow-up System</span></label>
+                <label class="sys-check"><input type="checkbox" id="sys-booking"><span>Booking System</span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── STYLE CONTROLS ── -->
+          <div class="style-section">
+            <div class="style-header" id="style-toggle">
+              <span><i class="fas fa-palette"></i> Style Controls</span>
+              <i class="fas fa-chevron-down" id="style-chevron"></i>
+            </div>
+            <div class="style-body" id="style-body">
+              <div class="style-row">
+                <label>Primary Colour</label>
+                <div class="color-row">
+                  <input type="color" id="s-primary" value="#ff2a2a">
+                  <input type="text"  id="s-primary-hex" value="#ff2a2a" maxlength="7" placeholder="#ff2a2a">
+                </div>
+              </div>
+              <div class="style-row">
+                <label>Accent / Text</label>
+                <div class="color-row">
+                  <input type="color" id="s-accent" value="#ffffff">
+                  <input type="text"  id="s-accent-hex" value="#ffffff" maxlength="7" placeholder="#ffffff">
+                </div>
+              </div>
+              <div class="style-row">
+                <label>Theme</label>
+                <div class="theme-btns">
+                  <button class="theme-btn active" data-theme="dark">Dark</button>
+                  <button class="theme-btn" data-theme="light">Light</button>
+                  <button class="theme-btn" data-theme="contrast">Contrast</button>
+                </div>
+              </div>
+              <div class="style-row">
+                <label>Image Style</label>
+                <select id="s-imgstyle">
+                  <option value="auto">Auto (niche-matched)</option>
+                  <option value="industrial">Industrial / Trade</option>
+                  <option value="fitness">Fitness / Active</option>
+                  <option value="corporate">Corporate / Business</option>
+                  <option value="tech">Tech / Digital</option>
+                  <option value="neutral">Clean / Minimal</option>
+                </select>
+              </div>
+              <div class="style-row">
+                <label>Hero Image URL <span class="opt-label">(optional override)</span></label>
+                <input type="text" id="s-imgurl" placeholder="https://... or leave blank for auto">
+              </div>
+            </div>
+          </div>
+
+          <div class="generate-bar">
+            <button class="btn btn-primary" id="btn-save-client" style="flex:1">
+              <i class="fas fa-save"></i> Save Client
+            </button>
+            <button class="btn btn-secondary" id="btn-generate" title="Generate system for selected client">
+              <i class="fas fa-bolt"></i> Generate
+            </button>
+          </div>
+
+          <!-- Saved clients list -->
+          <div class="panel-header" style="margin-top:8px">
+            <h2>Saved Clients</h2>
+            <span id="client-count" style="font-size:.72rem;color:var(--muted)">0</span>
+          </div>
+          <div class="client-list" id="client-list">
+            <div class="empty-state">
+              <i class="fas fa-users"></i>
+              <p>No clients yet</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: live preview -->
+        <div class="client-right">
+          <div class="panel-header">
+            <h2>Live Preview</h2>
+            <div style="display:flex;gap:8px" id="preview-actions">
+              <button class="btn btn-secondary btn-sm" id="btn-toggle-analytics" onclick="toggleAnalyticsDrawer()">
+                <i class="fas fa-chart-bar"></i> Analytics <i class="fas fa-chevron-down" style="font-size:.65rem;margin-left:2px"></i>
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btn-download" style="display:none">
+                <i class="fas fa-download"></i> Download HTML
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btn-copy-html" style="display:none">
+                <i class="fas fa-copy"></i> Copy HTML
+              </button>
+            </div>
+          </div>
+          <div class="an-drawer" id="an-drawer">
+            <div class="an-drawer-head">
+              <h3><i class="fas fa-chart-bar" style="color:var(--accent);margin-right:6px"></i>Outreach Analytics</h3>
+              <button class="btn btn-secondary btn-sm" onclick="toggleAnalyticsDrawer()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="an-drawer-body" id="an-drawer-body">
+              <div class="an-empty"><i class="fas fa-chart-bar"></i><p>Copy a DM from the Lead Feed to start tracking</p></div>
+            </div>
+          </div>
+          <div class="pkg-bar" id="pkg-bar"></div>
+          <div class="preview-wrap">
+            <div class="preview-placeholder" id="preview-placeholder">
+              <i class="fas fa-eye-slash"></i>
+              <p>Fill in the form and click Generate System</p>
+            </div>
+            <div class="variant-shell" id="variant-shell" style="display:none">
+              <div class="variant-tabs" id="variant-tabs">
+                <button class="variant-tab active" onclick="setActiveVariant(0)">
+                  <span class="vt-label">V1</span><span class="vt-name">Bold</span>
+                </button>
+                <button class="variant-tab" onclick="setActiveVariant(1)">
+                  <span class="vt-label">V2</span><span class="vt-name">Clean</span>
+                </button>
+                <button class="variant-tab" onclick="setActiveVariant(2)">
+                  <span class="vt-label">V3</span><span class="vt-name">Light</span>
+                </button>
+                <button class="vt-edit-toggle" id="btn-variant-edit" onclick="toggleVariantEdit()">✏ Edit</button>
+                <button class="vt-use-btn" id="btn-use-variant" onclick="useActiveVariant()">
+                  ✓ Use This
+                </button>
+              </div>
+              <div class="variant-edit-panel" id="variant-edit-panel" style="display:none">
+                <div class="vep-row">
+                  <span class="vep-label">Shape</span>
+                  <div class="vep-btns" id="vep-shape-btns">
+                    <button class="vep-btn active" onclick="applyBtnShape('pill',this)">Pill</button>
+                    <button class="vep-btn" onclick="applyBtnShape('rounded',this)">Rounded</button>
+                    <button class="vep-btn" onclick="applyBtnShape('sharp',this)">Sharp</button>
+                    <button class="vep-btn" onclick="applyBtnShape('square',this)">Square</button>
+                  </div>
+                </div>
+                <div class="vep-row">
+                  <span class="vep-label">Style</span>
+                  <div class="vep-btns" id="vep-style-btns">
+                    <button class="vep-btn active" onclick="applyBtnStyle('filled',this)">Filled</button>
+                    <button class="vep-btn" onclick="applyBtnStyle('outline',this)">Outline</button>
+                    <button class="vep-btn" onclick="applyBtnStyle('ghost',this)">Ghost</button>
+                  </div>
+                </div>
+                <div class="vep-row vep-replace-row">
+                  <span class="vep-label">Replace</span>
+                  <input class="vep-input" id="vep-find" placeholder="Text to find…" />
+                  <input class="vep-input" id="vep-replace-val" placeholder="Replace with…" />
+                  <button class="vep-apply" onclick="applyTextReplace()">Apply</button>
+                </div>
+              </div>
+              <div class="variant-frames">
+                <div class="variant-frame-wrap active-frame" id="vfw-0"><iframe id="variant-frame-0" class="variant-frame"></iframe></div>
+                <div class="variant-frame-wrap" id="vfw-1"><iframe id="variant-frame-1" class="variant-frame"></iframe></div>
+                <div class="variant-frame-wrap" id="vfw-2"><iframe id="variant-frame-2" class="variant-frame"></iframe></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: LEAD FEED ── -->
+      <div class="panel" id="panel-feed">
+        <div class="feed-topbar">
+          <div class="feed-topbar-row">
+            <div class="feed-keywords" id="feed-keywords">
+              <!-- Pills injected by JS from KW_POOL on load + shuffle -->
+              <button class="kw-btn kw-refresh" id="btn-feed-shuffle" title="Shuffle keyword suggestions"><i class="fas fa-rotate-right"></i></button>
+            </div>
+          </div>
+          <div class="feed-topbar-row">
+            <input type="text" id="feed-custom-kw" placeholder="Custom keyword..." style="padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.8rem;flex:1;font-family:inherit;outline:none;">
+            <button class="btn btn-secondary btn-sm" id="btn-enrichment-settings" style="flex-shrink:0" title="Enrichment providers">
+              <i class="fas fa-sliders"></i> Providers
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-feed-refresh" style="flex-shrink:0">
+              <i class="fas fa-rotate-right"></i> Fetch Leads
+            </button>
+          </div>
+        </div>
+        <div class="feed-meta" id="feed-meta"></div>
+        <div class="lead-type-filters" id="lead-type-filters" style="display:none">
+          <button class="ltf-btn active" data-type="all"    onclick="filterLeadType('all')">All</button>
+          <button class="ltf-btn" data-type="direct"   onclick="filterLeadType('direct')">💰 Direct</button>
+          <button class="ltf-btn" data-type="operator" onclick="filterLeadType('operator')">⚡ Operator</button>
+          <button class="ltf-btn" data-type="partner"  onclick="filterLeadType('partner')">🚀 Big Play</button>
+        </div>
+        <div class="feed-grid" id="feed-grid">
+          <div class="feed-empty">
+            <i class="fas fa-satellite-dish"></i>
+            <p>Select a keyword and click Fetch Leads</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: CRM ── -->
+      <div class="panel" id="panel-crm">
+        <div class="crm-topbar">
+          <h2>CRM / Lead Pipeline</h2>
+          <div class="spacer"></div>
+          <button class="btn btn-secondary btn-sm" id="btn-add-lead">
+            <i class="fas fa-plus"></i> Add Lead
+          </button>
+          <button class="btn btn-secondary btn-sm" id="btn-export-csv" style="margin-left:8px">
+            <i class="fas fa-file-csv"></i> Export CSV
+          </button>
+        </div>
+        <div class="stats-row" id="crm-stats">
+          <div class="stat-box"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Total Leads</div></div>
+          <div class="stat-box"><div class="stat-num" id="stat-new">0</div><div class="stat-label">New</div></div>
+          <div class="stat-box"><div class="stat-num" id="stat-contacted">0</div><div class="stat-label">Contacted</div></div>
+          <div class="stat-box"><div class="stat-num" id="stat-closed">0</div><div class="stat-label">Closed</div></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Business</th>
+                <th>Status</th>
+                <th>Score</th>
+                <th>Added</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="leads-tbody">
+              <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted);font-size:.8rem">No leads yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── PANEL: OUTREACH ── -->
+      <div class="panel" id="panel-outreach">
+        <div class="out-tabs">
+          <div class="out-tab active" data-status="pending">Pending <span id="count-pending" class="badge badge-new" style="margin-left:4px">0</span></div>
+          <div class="out-tab" data-status="approved">Approved <span id="count-approved" class="badge badge-active" style="margin-left:4px">0</span></div>
+          <div class="out-tab" data-status="sent">Sent <span id="count-sent" class="badge badge-pending" style="margin-left:4px">0</span></div>
+          <div class="out-tab" data-status="removed">Removed <span id="count-removed" class="badge badge-muted" style="margin-left:4px">0</span></div>
+        </div>
+        <div class="out-list" id="out-list"></div>
+      </div>
+
+      <!-- ── PANEL: ANALYTICS ── -->
+      <div class="panel" id="panel-analytics">
+        <div class="an-topbar">
+          <h2><i class="fas fa-chart-bar" style="color:var(--accent);margin-right:8px"></i>Outreach Analytics</h2>
+          <button class="btn btn-secondary btn-sm" onclick="loadAnalytics()"><i class="fas fa-rotate-right"></i> Refresh</button>
+        </div>
+        <div id="an-body" class="an-body">
+          <div class="an-empty"><i class="fas fa-chart-bar"></i><p>Copy a DM from the Lead Feed to start tracking performance</p></div>
+        </div>
+      </div>
+
+      <!-- ── DYNAMIC MODULE PANEL (lazy-loaded) ── -->
+      <div class="panel" id="panel-module">
+        <div class="mod-topbar" id="mod-topbar">
+          <div class="mod-topbar-left">
+            <button class="btn btn-secondary btn-sm mod-back-btn" onclick="switchPanel('dashboard')"><i class="fas fa-arrow-left"></i></button>
+            <h2 id="mod-title">Module</h2>
+          </div>
+          <div class="mod-topbar-right">
+            <button class="btn btn-secondary btn-sm" id="mod-settings-btn" onclick="toggleModSettings()" title="Module settings"><i class="fas fa-gear"></i></button>
+            <button class="btn btn-secondary btn-sm" id="mod-refresh-btn" onclick="refreshCurrentModule()"><i class="fas fa-rotate-right"></i></button>
+          </div>
+        </div>
+        <div class="mod-layout">
+          <div class="mod-body" id="mod-body"></div>
+          <div class="mod-sidebar" id="mod-sidebar" style="display:none">
+            <div class="mod-sidebar-header">
+              <h3>Settings</h3>
+              <button class="btn btn-secondary btn-sm" onclick="toggleModSettings()"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="mod-sidebar-body" id="mod-sidebar-body"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ B.O.S.S: CHANNELS PANEL ══ -->
+      <div class="panel" id="panel-boss-channels">
+        <div style="padding:28px;max-width:1100px;margin:0 auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+            <div>
+              <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 3px">Channels</h2>
+              <p style="font-size:.75rem;color:var(--muted,#666);margin:0">B.O.S.S on every platform — Telegram, X, LinkedIn, Instagram, Discord, Slack</p>
+            </div>
+            <button onclick="bossLoadChannels()" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#c8ff00;padding:7px 16px;border-radius:100px;font-size:11px;cursor:pointer">↻ Refresh</button>
+          </div>
+          <div id="boss-channels-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:28px">
+            <div style="color:#666;font-size:.8rem">Loading…</div>
+          </div>
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:20px">
+            <div style="font-weight:700;font-size:.75rem;margin-bottom:10px;color:#c8ff00">⚡ Quick Send</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+              <select id="ch-send-id" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem">
+                <option value="telegram">Telegram</option><option value="discord">Discord</option><option value="slack">Slack</option>
+              </select>
+              <input id="ch-send-to" placeholder="Chat ID / channel" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem;flex:1;min-width:160px">
+              <textarea id="ch-send-text" placeholder="Message…" rows="2" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem;flex:2;min-width:200px;resize:vertical"></textarea>
+              <button onclick="bossChannelSend()" style="background:#c8ff00;color:#0a0a0a;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:.78rem;cursor:pointer">Send</button>
+            </div>
+            <div id="ch-send-result" style="font-size:.7rem;color:#666;margin-top:6px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ B.O.S.S: AGENTS PANEL ══ -->
+      <div class="panel" id="panel-boss-agents">
+        <div style="padding:28px;max-width:1100px;margin:0 auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+            <div>
+              <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 3px">Channel Agents</h2>
+              <p style="font-size:.75rem;color:var(--muted,#666);margin:0">Each channel gets its own persona, memory, and task queue</p>
+            </div>
+            <button onclick="bossLoadAgents()" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#c8ff00;padding:7px 16px;border-radius:100px;font-size:11px;cursor:pointer">↻ Refresh</button>
+          </div>
+          <div id="boss-agents-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:24px">
+            <div style="color:#666;font-size:.8rem">No agents yet — use Spawn below</div>
+          </div>
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:20px">
+            <div style="font-weight:700;font-size:.75rem;margin-bottom:10px;color:#c8ff00">🤖 Spawn Agent Persona</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+              <select id="ag-spawn-id" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem">
+                <option value="telegram">Telegram</option><option value="discord">Discord</option><option value="slack">Slack</option><option value="x">X</option><option value="linkedin">LinkedIn</option>
+              </select>
+              <input id="ag-spawn-name" placeholder="Name (e.g. B.O.S.S)" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem;flex:1">
+              <input id="ag-spawn-tone" placeholder="Tone override" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem;flex:2">
+              <button onclick="bossSpawnAgent()" style="background:#c8ff00;color:#0a0a0a;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:.78rem;cursor:pointer">Spawn</button>
+            </div>
+            <div id="ag-spawn-result" style="font-size:.7rem;color:#666;margin-top:6px"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ADD LEAD MODAL (inline) -->
+<div id="modal-lead" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9998;align-items:center;justify-content:center;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px;width:380px;display:flex;flex-direction:column;gap:14px;">
+    <h3 style="font-size:.9rem;font-weight:700">Add Lead</h3>
+    <div class="field"><label>Name</label><input type="text" id="lead-name" placeholder="Contact name"></div>
+    <div class="field"><label>Business</label><input type="text" id="lead-biz" placeholder="Company / business"></div>
+    <div class="field"><label>Status</label>
+      <select id="lead-status">
+        <option value="new">New</option>
+        <option value="contacted">Contacted</option>
+        <option value="qualified">Qualified</option>
+        <option value="closed">Closed</option>
+      </select>
+    </div>
+    <div class="field"><label>Score (0–100)</label><input type="number" id="lead-score" min="0" max="100" value="50"></div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn btn-primary" style="flex:1" id="btn-save-lead">Save Lead</button>
+      <button class="btn btn-secondary" id="btn-cancel-lead">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div class="side-drawer-backdrop" id="drawer-backdrop"></div>
+
+<!-- ENRICHMENT DRAWER -->
+<aside id="enrichment-drawer" class="side-drawer">
+  <div class="side-drawer-header">
+    <span class="side-drawer-title">Enrichment Providers</span>
+    <button class="btn btn-secondary btn-sm" onclick="closeDrawer('enrichment-drawer')"><i class="fas fa-xmark"></i></button>
+  </div>
+  <div class="side-drawer-body">
+    <div class="enrichment-global">
+      <label class="enrichment-check"><input type="checkbox" id="enrichment-enabled"> <span>Enrichment enabled</span></label>
+      <label class="enrichment-inline">Timeout (ms) <input type="number" id="enrichment-timeout" min="500" max="20000" step="100" style="width:90px"></label>
+    </div>
+    <div class="enrichment-groups" id="enrichment-groups" style="margin-top:12px"><div class="enrichment-loading">Loading…</div></div>
+    <div class="enrichment-footnote" id="enrichment-footnote" style="margin-top:10px"></div>
+  </div>
+  <div class="side-drawer-footer">
+    <button class="btn btn-secondary btn-sm" id="btn-enrichment-reload"><i class="fas fa-rotate-right"></i> Reload</button>
+    <button class="btn btn-primary btn-sm" id="btn-enrichment-save"><i class="fas fa-floppy-disk"></i> Save</button>
+  </div>
+</aside>
+
+<!-- LEAD DETAIL DRAWER -->
+<aside id="lead-detail-drawer" class="side-drawer">
+  <div class="side-drawer-header">
+    <span class="side-drawer-title" id="ldd-title">Lead Detail</span>
+    <button class="btn btn-secondary btn-sm" onclick="closeDrawer('lead-detail-drawer')"><i class="fas fa-xmark"></i></button>
+  </div>
+  <div class="side-drawer-body" id="ldd-body"></div>
+  <div class="side-drawer-footer" id="ldd-footer"></div>
+</aside>
+
+<!-- REPLY DRAWER -->
+<aside id="reply-drawer" class="side-drawer">
+  <div class="side-drawer-header">
+    <div>
+      <div class="side-drawer-title">Reply to Lead</div>
+      <div style="font-size:.7rem;color:var(--muted);margin-top:2px" id="reply-drawer-sub">AI-drafted · edit then approve</div>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="closeDrawer('reply-drawer')"><i class="fas fa-xmark"></i></button>
+  </div>
+  <div class="side-drawer-body">
+    <div id="reply-drawer-loading" style="color:var(--muted);font-size:.8rem;padding:20px 0">Generating draft…</div>
+    <textarea id="reply-draft-area" style="display:none;width:100%;min-height:180px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.82rem;line-height:1.55;resize:vertical;outline:none" placeholder="Message will appear here…"></textarea>
+    <div id="reply-ai-actions" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn btn-secondary btn-sm" onclick="aiRewriteMessage('shorter')">Shorter</button>
+      <button class="btn btn-secondary btn-sm" onclick="aiRewriteMessage('warmer')">Warmer</button>
+      <button class="btn btn-secondary btn-sm" onclick="aiRewriteMessage('stronger_cta')">Stronger CTA</button>
+      <button class="btn btn-secondary btn-sm" onclick="promptAIRewrite()">Custom…</button>
+    </div>
+    <div id="reply-rationale" style="margin-top:10px;font-size:.7rem;color:var(--muted);display:none"></div>
+  </div>
+  <div class="side-drawer-footer">
+    <button class="btn btn-primary btn-sm" id="reply-send-btn" disabled onclick="sendReply()"><i class="fas fa-paper-plane"></i> Send</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeDrawer('reply-drawer')">Cancel</button>
+  </div>
+</aside>
+
+<!-- AUTO-MSG CONFIRM STRIP -->
+<div id="auto-confirm-strip" hidden style="position:fixed;top:0;left:0;right:0;z-index:1300;background:var(--card);border-bottom:2px solid var(--accent);padding:10px 20px;display:flex;gap:12px;align-items:flex-start">
+  <div style="flex:1">
+    <div style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:4px">Auto-message ready <span id="auto-confirm-tier" style="margin-left:6px"></span></div>
+    <div id="auto-confirm-preview" style="font-size:.78rem;color:var(--muted);line-height:1.5;max-height:60px;overflow:hidden"></div>
+  </div>
+  <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
+    <button class="btn btn-primary btn-sm" id="auto-confirm-send"><i class="fas fa-paper-plane"></i> Send</button>
+    <button class="btn btn-secondary btn-sm" id="auto-confirm-edit">Edit</button>
+    <button class="btn btn-secondary btn-sm" id="auto-confirm-cancel"><i class="fas fa-xmark"></i></button>
+    <span id="auto-confirm-countdown" style="font-size:.68rem;color:var(--muted);width:28px;text-align:right"></span>
+  </div>
+</div>
+
+<script src="operator.js"></script>
+<script src="boss.js"></script>
+
+<!-- ═══ B.O.S.S JARVIS CHAT ═══ -->
+<button id="boss-fab" onclick="bossToggle()" title="Chat with B.O.S.S (⌘K)">B.O.S.S</button>
+<div id="boss-drawer">
+  <div id="boss-head">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="boss-pulse-dot"></div>
+      <div>
+        <div style="font-weight:800;font-size:.95rem;letter-spacing:.04em;color:#c8ff00">B.O.S.S</div>
+        <div style="font-size:.68rem;color:#666;letter-spacing:.08em;text-transform:uppercase" id="boss-status">Jarvis mode · online</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button onclick="bossMic()" id="boss-mic-btn" title="Voice" style="background:none;border:1px solid #1f1f1f;color:#888;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.8rem">🎤</button>
+      <button onclick="bossToggle()" style="background:none;border:none;color:#666;font-size:1.2rem;cursor:pointer">✕</button>
+    </div>
+  </div>
+  <div id="boss-msgs"></div>
+  <div id="boss-slash" style="display:none;padding:6px 10px;border-top:1px solid #1a1a1a;background:#050505;display:flex;flex-wrap:wrap;gap:5px"></div>
+  <form id="boss-form" onsubmit="bossSend(event)">
+    <input id="boss-input" placeholder="Ask B.O.S.S anything… or type /" autocomplete="off">
+    <button type="submit" style="background:#c8ff00;color:#0a0a0a;border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;font-weight:900;font-size:.9rem">↑</button>
+  </form>
+</div>
+
+<style>
+  #boss-fab{position:fixed;bottom:24px;right:24px;width:60px;height:60px;border-radius:50%;background:#c8ff00;border:none;color:#0a0a0a;font-size:.62rem;font-weight:900;cursor:pointer;z-index:9998;box-shadow:0 0 24px rgba(200,255,0,.4),0 10px 30px rgba(0,0,0,.5);letter-spacing:.05em;transition:transform .3s,box-shadow .3s}
+  #boss-fab:hover{transform:scale(1.08) translateY(-2px);box-shadow:0 0 40px rgba(200,255,0,.6),0 14px 40px rgba(0,0,0,.5)}
+  #boss-drawer{position:fixed;right:20px;bottom:96px;width:380px;max-width:calc(100vw - 40px);height:560px;max-height:80vh;background:#0c0c0c;border:1px solid #1f1f1f;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.8);display:none;flex-direction:column;z-index:9999;overflow:hidden;font-family:Inter,-apple-system,sans-serif}
+  #boss-drawer.open{display:flex;animation:bossIn .3s cubic-bezier(.22,1,.36,1)}
+  @keyframes bossIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  #boss-head{padding:14px 16px;border-bottom:1px solid #1a1a1a;display:flex;justify-content:space-between;align-items:center;background:#080808}
+  .boss-pulse-dot{width:9px;height:9px;border-radius:50%;background:#c8ff00;box-shadow:0 0 10px rgba(200,255,0,.6);animation:bossPulseAnim 2s infinite;flex-shrink:0}
+  @keyframes bossPulseAnim{0%,100%{opacity:1}50%{opacity:.35}}
+  #boss-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+  #boss-msgs::-webkit-scrollbar{width:4px}
+  #boss-msgs::-webkit-scrollbar-thumb{background:#1a1a1a;border-radius:2px}
+  .boss-msg{padding:10px 13px;border-radius:13px;max-width:88%;font-size:.85rem;line-height:1.5;word-wrap:break-word}
+  .boss-msg.user{background:#c8ff00;color:#0a0a0a;align-self:flex-end;font-weight:600}
+  .boss-msg.bot{background:#141414;color:#f0f0f0;align-self:flex-start;border:1px solid #1f1f1f;white-space:pre-wrap}
+  .boss-msg.bot code{background:#050505;color:#c8ff00;padding:2px 5px;border-radius:4px;font-family:monospace;font-size:.8rem}
+  .boss-typing{display:flex;gap:4px;padding:12px 14px;align-self:flex-start}
+  .boss-typing span{width:6px;height:6px;border-radius:50%;background:#c8ff00;animation:bossBounce 1.2s infinite}
+  .boss-typing span:nth-child(2){animation-delay:.15s}.boss-typing span:nth-child(3){animation-delay:.3s}
+  @keyframes bossBounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1}}
+  #boss-form{display:flex;padding:10px;gap:8px;border-top:1px solid #1a1a1a;background:#080808}
+  #boss-input{flex:1;background:#141414;border:1px solid #1f1f1f;border-radius:100px;color:#f0f0f0;padding:8px 14px;font-size:.85rem;outline:none}
+  #boss-input:focus{border-color:#c8ff00}
+  #boss-mic-btn.listening{background:#c8ff00 !important;color:#0a0a0a !important}
+</style>
+</body>
+</html>

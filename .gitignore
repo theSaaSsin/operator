@@ -1,0 +1,58 @@
+# Windows system files
+NTUSER.DAT*
+ntuser.dat*
+ntuser.ini
+*.TxR.*
+*.TM.blf
+*.TMContainer*
+
+# User profile directories (not project files)
+AppData/
+Contacts/
+Downloads/
+Favorites/
+IntelGraphicsProfiles/
+Links/
+Music/
+OneDrive/
+Saved Games/
+Searches/
+Videos/
+
+# Claude / editor internals
+.claude.json
+.claude/
+.codex/
+.codegpt/
+.bash_history
+.vscode/
+.cursor/
+.continue/
+.kiro/
+.gemini/
+.hermes/
+.jetbrains/
+.agents/
+.mcp-auth/
+.pencil/
+.pinokio/
+.conda/
+.cache/
+.config/
+IdeaProjects/
+thesaassin/
+thesaassin-1/
+notes/
+backups/
+docs/
+dev/
+variants/
+*.ico
+*.lnk
+*.vbs
+boss.ico
+
+# Sensitive data — keep local only
+data/clients.json
+data/leads.json
+data/outreach_queue.json
