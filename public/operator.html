@@ -831,7 +831,6 @@
 </div>
 
 <script src="operator.js"></script>
-<script src="boss.js"></script>
 
 <!-- ═══ B.O.S.S JARVIS CHAT ═══ -->
 <button id="boss-fab" onclick="bossToggle()" title="Chat with B.O.S.S (⌘K)">B.O.S.S</button>
@@ -882,5 +881,8 @@
   #boss-input:focus{border-color:#c8ff00}
   #boss-mic-btn.listening{background:#c8ff00 !important;color:#0a0a0a !important}
 </style>
+
+<!-- boss.js MUST load after #boss-drawer and #boss-fab exist in the DOM -->
+<script src="boss.js"></script>
 </body>
 </html>
