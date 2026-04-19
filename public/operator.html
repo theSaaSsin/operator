@@ -115,7 +115,6 @@
       <div class="nav-item" data-panel="mod-system-matcher"><i class="fas fa-puzzle-piece"></i> System Matcher</div>
       <div class="nav-section" data-cat="boss" style="color:#ff2a2a;opacity:.9">B.O.S.S Core</div>
       <div class="nav-item" data-panel="boss-config" onclick="bossLoadConfig()" style="color:#ff2a2a"><i class="fas fa-key"></i> API Keys &amp; Settings</div>
-      <div class="nav-item" data-panel="boss-models" onclick="bossLoadModels()" style="color:#ff2a2a"><i class="fas fa-microchip"></i> Local Models</div>
       <div class="nav-item" data-panel="boss-creative" onclick="bossLoadCreative()" style="color:#ff2a2a"><i class="fas fa-film"></i> Creative Studio</div>
       <div class="nav-item" onclick="window.open('/offaxis.html','_blank')" style="color:#ff2a2a"><i class="fas fa-cube"></i> Off-Axis 3D Viewer</div>
       <div class="nav-item" data-panel="panel-graph" onclick="switchPanel('panel-graph')" style="color:#ff2a2a"><i class="fas fa-project-diagram"></i> Knowledge Graph</div>
@@ -657,80 +656,117 @@
 
       <!-- ══ B.O.S.S: API KEYS & SETTINGS ══ -->
       <div class="panel" id="panel-boss-config">
-        <div style="padding:32px;max-width:700px;margin:0 auto">
+        <div style="padding:32px;max-width:680px;margin:0 auto">
 
-          <!-- Onboarding banner — shown when no key is set -->
-          <div id="boss-config-banner" style="display:none;background:linear-gradient(135deg,#1a1a00,#2a2a00);border:1px solid #ff2a2a33;border-radius:14px;padding:20px 24px;margin-bottom:28px">
-            <div style="font-size:1rem;font-weight:800;color:#ff2a2a;margin-bottom:6px">⚡ First Move: Add Your Anthropic API Key</div>
-            <div style="font-size:.8rem;color:#aaa;line-height:1.7">
-              B.O.S.S needs a Claude API key to think, pitch, scan leads, and coach you.<br>
-              1. Go to <strong style="color:#fff">console.anthropic.com</strong> → <em>API Keys</em> → <em>Create Key</em><br>
-              2. Copy the key (starts with <code style="color:#ff2a2a">sk-ant-</code>)<br>
-              3. Paste it below and hit <strong style="color:#ff2a2a">Save &amp; Activate</strong><br>
-              <span style="color:#f55;font-size:.72rem">⚠ Your previous key was exposed — revoke it and use a fresh one.</span>
+          <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 4px;color:#f5f2ec">API Keys &amp; Settings</h2>
+          <p style="font-size:.73rem;color:#555;margin:0 0 24px">Stored locally only. Never shared. Keys load in priority order top → bottom.</p>
+
+          <!-- ── AI ON/OFF MASTER TOGGLE ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px">
+            <div>
+              <div style="font-weight:700;font-size:.82rem;color:#f0f0f5">AI Brain</div>
+              <div style="font-size:.7rem;color:#555;margin-top:2px">Turn off to use B.O.S.S as a pure CRM with no AI calls</div>
+            </div>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none">
+              <span id="ai-toggle-label" style="font-size:.72rem;font-weight:700;color:#2cb67d">ON</span>
+              <div id="ai-toggle-track" onclick="bossToggleAI()" style="width:44px;height:24px;background:#2cb67d;border-radius:100px;position:relative;cursor:pointer;transition:background .2s">
+                <div id="ai-toggle-thumb" style="position:absolute;top:3px;left:22px;width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 4px #0006"></div>
+              </div>
+            </label>
+          </div>
+
+          <!-- ── GROQ — recommended free tier ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#00aaff">GROQ</span>
+                <span style="font-size:.65rem;color:#2cb67d;font-weight:700;margin-left:8px;background:#2cb67d18;padding:2px 7px;border-radius:100px">FREE · fastest</span>
+              </div>
+              <a href="https://console.groq.com/keys" target="_blank" style="font-size:.65rem;color:#00aaff;text-decoration:none;opacity:.7">Get key →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Llama 3.3 70B at 800 tok/s — used for chat, analysis, research</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-groq-key" type="password" placeholder="gsk_..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleVisible('cfg-groq-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
             </div>
           </div>
 
-          <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 6px;color:#f5f2ec">API Keys &amp; B.O.S.S Identity</h2>
-          <p style="font-size:.75rem;color:#666;margin:0 0 28px">These are stored locally on your machine only. Never shared.</p>
+          <!-- ── OPENROUTER — free models no card ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#ff9500">OPENROUTER</span>
+                <span style="font-size:.65rem;color:#ff9500;font-weight:700;margin-left:8px;background:#ff950018;padding:2px 7px;border-radius:100px">FREE models · no card</span>
+              </div>
+              <a href="https://openrouter.ai/keys" target="_blank" style="font-size:.65rem;color:#ff9500;text-decoration:none;opacity:.7">Get key →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Auto-fallback when Groq hits rate limits — Llama, Qwen, Mistral all free</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-openrouter-key" type="password" placeholder="sk-or-v1-..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleVisible('cfg-openrouter-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
+            </div>
+          </div>
 
-          <!-- Anthropic -->
-          <div style="margin-bottom:20px">
-            <label style="display:block;font-size:.72rem;font-weight:700;color:#ff2a2a;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase">
-              Anthropic (Claude) API Key <span style="color:#f55">*required</span>
-            </label>
+          <!-- ── ANTHROPIC CLAUDE — heavy lifting backup ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#aa44ff">ANTHROPIC CLAUDE</span>
+                <span style="font-size:.65rem;color:#aa44ff;font-weight:700;margin-left:8px;background:#aa44ff18;padding:2px 7px;border-radius:100px">paid · best quality</span>
+              </div>
+              <a href="https://console.anthropic.com/billing" target="_blank" style="font-size:.65rem;color:#aa44ff;text-decoration:none;opacity:.7">Top up →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Used only for code, long pitches, orchestration — falls back to Groq when balance is low</div>
             <div style="display:flex;gap:8px">
               <input id="cfg-anthropic-key" type="password" placeholder="sk-ant-api03-..."
-                style="flex:1;background:#0d0d0d;border:1px solid #2a2a2a;color:#f5f2ec;padding:10px 14px;border-radius:9px;font-size:.82rem;font-family:monospace"
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.82rem;font-family:monospace"
                 oninput="bossCfgDirty()">
-              <button onclick="bossCfgToggleKey()" title="Show/hide"
-                style="background:#1a1a1a;border:1px solid #2a2a2a;color:#888;padding:0 14px;border-radius:9px;cursor:pointer;font-size:.9rem">👁</button>
+              <button onclick="bossCfgToggleKey()" title="Show/hide" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer;font-size:.9rem">👁</button>
             </div>
-            <div id="cfg-key-status" style="font-size:.7rem;margin-top:5px;color:#555">— not set</div>
+            <div id="cfg-key-status" style="font-size:.68rem;margin-top:5px;color:#555">— not set</div>
           </div>
 
-          <!-- Persona name -->
-          <div style="margin-bottom:20px">
-            <label style="display:block;font-size:.72rem;font-weight:700;color:#aaa;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase">
-              Your Name / Persona
-            </label>
-            <input id="cfg-persona" placeholder="e.g. Joshua"
-              style="width:100%;box-sizing:border-box;background:#0d0d0d;border:1px solid #2a2a2a;color:#f5f2ec;padding:10px 14px;border-radius:9px;font-size:.82rem"
-              oninput="bossCfgDirty()">
+          <!-- ── IDENTITY ── -->
+          <div style="font-size:.68rem;font-weight:700;color:#444;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Identity</div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div>
+              <label style="display:block;font-size:.68rem;font-weight:700;color:#666;margin-bottom:5px">Your Name</label>
+              <input id="cfg-persona" placeholder="Joshua"
+                style="width:100%;box-sizing:border-box;background:#0d0d0d;border:1px solid #1a1a1a;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.8rem"
+                oninput="bossCfgDirty()">
+            </div>
+            <div>
+              <label style="display:block;font-size:.68rem;font-weight:700;color:#666;margin-bottom:5px">Serper Key <span style="color:#333">(lead search)</span></label>
+              <input id="cfg-serper-key" type="password" placeholder="optional"
+                style="width:100%;box-sizing:border-box;background:#0d0d0d;border:1px solid #1a1a1a;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+            </div>
           </div>
 
-          <!-- Offer -->
-          <div style="margin-bottom:20px">
-            <label style="display:block;font-size:.72rem;font-weight:700;color:#aaa;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase">
-              Your Core Offer (used in pitches)
-            </label>
-            <textarea id="cfg-offer" rows="3" placeholder="e.g. AI-powered lead generation system for local service businesses — gets 5-15 booked calls/month"
-              style="width:100%;box-sizing:border-box;background:#0d0d0d;border:1px solid #2a2a2a;color:#f5f2ec;padding:10px 14px;border-radius:9px;font-size:.82rem;resize:vertical"
+          <div style="margin-bottom:24px">
+            <label style="display:block;font-size:.68rem;font-weight:700;color:#666;margin-bottom:5px">Core Offer (used in pitches)</label>
+            <textarea id="cfg-offer" rows="2" placeholder="AI-powered client acquisition system for SaaS/agency founders"
+              style="width:100%;box-sizing:border-box;background:#0d0d0d;border:1px solid #1a1a1a;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.8rem;resize:vertical"
               oninput="bossCfgDirty()"></textarea>
           </div>
 
-          <!-- Serper (optional) -->
-          <div style="margin-bottom:28px">
-            <label style="display:block;font-size:.72rem;font-weight:700;color:#aaa;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase">
-              Serper API Key <span style="color:#666;font-weight:400">(optional — powers lead feed search)</span>
-            </label>
-            <input id="cfg-serper-key" type="password" placeholder="Leave blank to skip"
-              style="width:100%;box-sizing:border-box;background:#0d0d0d;border:1px solid #2a2a2a;color:#f5f2ec;padding:10px 14px;border-radius:9px;font-size:.82rem;font-family:monospace"
-              oninput="bossCfgDirty()">
-          </div>
-
-          <!-- Actions -->
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <!-- ── ACTIONS ── -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
             <button id="cfg-save-btn" onclick="bossCfgSave()"
               style="background:#ff2a2a;color:#0a0a0a;border:none;padding:11px 28px;border-radius:9px;font-weight:800;font-size:.85rem;cursor:pointer;letter-spacing:.04em">
-              ✓ Save &amp; Activate
+              ✓ Save
             </button>
             <button onclick="bossCfgTest()"
-              style="background:#1a1a1a;border:1px solid #2a2a2a;color:#ff2a2a;padding:11px 20px;border-radius:9px;font-weight:700;font-size:.82rem;cursor:pointer">
-              ⚡ Test Claude
+              style="background:#0d0d0d;border:1px solid #222;color:#aaa;padding:11px 18px;border-radius:9px;font-weight:700;font-size:.78rem;cursor:pointer">
+              ⚡ Test connection
             </button>
           </div>
-          <div id="cfg-save-msg" style="font-size:.75rem;margin-top:12px;color:#555"></div>
+          <div id="cfg-save-msg" style="font-size:.73rem;margin-top:10px;color:#555"></div>
 
         </div>
       </div>
@@ -886,79 +922,6 @@
   #boss-input:focus{border-color:#ff2a2a}
   #boss-mic-btn.listening{background:#ff2a2a !important;color:#0a0a0a !important}
 </style>
-
-      <!-- ══ B.O.S.S: LOCAL MODELS ══ -->
-      <div class="panel" id="panel-boss-models">
-        <div style="padding:32px;max-width:900px;margin:0 auto">
-          <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 4px">Local AI Models</h2>
-          <p style="font-size:.75rem;color:#666;margin:0 0 6px">Run AI on your machine — free, private, instant. Powered by Ollama.</p>
-
-          <!-- Ollama install banner -->
-          <div id="ollama-install-banner" style="display:none;background:#0d0d0d;border:1px solid #ff2a2a33;border-radius:12px;padding:18px 22px;margin-bottom:24px">
-            <div style="font-weight:800;color:#ff2a2a;margin-bottom:6px">⬇ Install Ollama first</div>
-            <div style="font-size:.78rem;color:#aaa;line-height:1.7">
-              1. Download → <strong style="color:#fff">ollama.com/download</strong> → Windows installer<br>
-              2. Install it (takes 1 min, runs as a background service)<br>
-              3. Come back here and pull a model below<br>
-              4. B.O.S.S will automatically use it for quick/cheap tasks — saving your Claude tokens for the important stuff
-            </div>
-          </div>
-
-          <!-- Router status -->
-          <div id="router-status-bar" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px">
-            <div class="router-tile" id="rt-local"><div class="rt-dot"></div><div><div class="rt-label">Local (Ollama)</div><div class="rt-val" id="rt-local-val">checking…</div></div></div>
-            <div class="router-tile" id="rt-groq"><div class="rt-dot"></div><div><div class="rt-label">Groq (Fast)</div><div class="rt-val" id="rt-groq-val">checking…</div></div></div>
-            <div class="router-tile" id="rt-cloud"><div class="rt-dot"></div><div><div class="rt-label">Claude (Cloud)</div><div class="rt-val" id="rt-cloud-val">checking…</div></div></div>
-          </div>
-
-          <!-- Recommended models -->
-          <div style="font-size:.72rem;font-weight:700;color:#ff2a2a;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Recommended Models</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:28px" id="model-recs">
-            ${[
-              {name:'qwen2.5:7b',   size:'4.7 GB',label:'Best all-rounder',      badge:'RECOMMENDED', col:'#ff2a2a'},
-              {name:'llama3.2:3b',  size:'2.0 GB',label:'Instant fast tasks',    badge:'FASTEST',     col:'#00aaff'},
-              {name:'qwen2.5-coder:7b',size:'4.7 GB',label:'Code generation',    badge:'CODE',        col:'#aa44ff'},
-              {name:'llama3.1:8b',  size:'4.9 GB',label:'Strong general model',  badge:'SOLID',       col:'#ff8844'},
-            ].map(m => `
-            <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px">
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <span style="font-weight:700;font-size:.85rem;color:#f5f2ec">${m.name}</span>
-                <span style="background:${m.col}22;color:${m.col};font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:100px">${m.badge}</span>
-              </div>
-              <div style="font-size:.72rem;color:#888">${m.label} · ${m.size}</div>
-              <button onclick="bossPullModel('${m.name}')" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#ff2a2a;padding:6px;border-radius:8px;font-size:.72rem;font-weight:700;cursor:pointer;margin-top:4px">⬇ Pull Model</button>
-            </div>`).join('')}
-          </div>
-
-          <!-- Downloaded models -->
-          <div style="font-size:.72rem;font-weight:700;color:#aaa;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Downloaded Models</div>
-          <div id="local-models-list" style="font-size:.78rem;color:#666">Loading…</div>
-
-          <!-- Groq key (free tier) -->
-          <div style="margin-top:28px;background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:20px">
-            <div style="font-weight:700;font-size:.8rem;color:#00aaff;margin-bottom:4px">⚡ Groq API Key — Free Tier</div>
-            <div style="font-size:.72rem;color:#888;margin-bottom:10px">Groq runs 70B models at 800 tokens/sec for free. B.O.S.S uses it for analysis, research, content ideas.</div>
-            <div style="display:flex;gap:8px">
-              <input id="cfg-groq-key" type="password" placeholder="gsk_..."
-                style="flex:1;background:#080808;border:1px solid #2a2a2a;color:#f5f2ec;padding:9px 13px;border-radius:8px;font-size:.78rem;font-family:monospace">
-              <button onclick="bossGroqSave()" style="background:#00aaff;color:#000;border:none;padding:9px 18px;border-radius:8px;font-weight:700;font-size:.75rem;cursor:pointer">Save</button>
-              <a href="https://console.groq.com/keys" target="_blank" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#00aaff;padding:9px 14px;border-radius:8px;font-size:.72rem;text-decoration:none;display:flex;align-items:center">Get Key →</a>
-            </div>
-          </div>
-          <!-- OpenRouter key (truly free models) -->
-          <div style="margin-top:16px;background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:20px">
-            <div style="font-weight:700;font-size:.8rem;color:#ff9500;margin-bottom:4px">🔓 OpenRouter — Free Models (No Credits Needed)</div>
-            <div style="font-size:.72rem;color:#888;margin-bottom:10px">Access Llama 3.3 70B, Qwen 2.5 Coder, Mistral — all FREE. B.O.S.S uses this as automatic fallback when Groq hits rate limits.</div>
-            <div style="display:flex;gap:8px">
-              <input id="cfg-openrouter-key" type="password" placeholder="sk-or-v1-..."
-                style="flex:1;background:#080808;border:1px solid #2a2a2a;color:#f5f2ec;padding:9px 13px;border-radius:8px;font-size:.78rem;font-family:monospace">
-              <button onclick="bossOpenrouterSave()" style="background:#ff9500;color:#000;border:none;padding:9px 18px;border-radius:8px;font-weight:700;font-size:.75rem;cursor:pointer">Save</button>
-              <a href="https://openrouter.ai/keys" target="_blank" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#ff9500;padding:9px 14px;border-radius:8px;font-size:.72rem;text-decoration:none;display:flex;align-items:center">Get Key →</a>
-            </div>
-          </div>
-          <div id="models-msg" style="font-size:.72rem;margin-top:10px;color:#555"></div>
-        </div>
-      </div>
 
       <!-- ══ B.O.S.S: CREATIVE STUDIO ══ -->
       <div class="panel" id="panel-boss-creative">

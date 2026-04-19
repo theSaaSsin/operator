@@ -294,36 +294,70 @@
 
   // ── CONFIG PANEL ─────────────────────────────────────────────────────────
 
+  // AI on/off state — persisted in localStorage
+  let AI_ENABLED = localStorage.getItem('boss_ai_enabled') !== 'false';
+
+  function applyAIToggleUI() {
+    const track = document.getElementById('ai-toggle-track');
+    const thumb = document.getElementById('ai-toggle-thumb');
+    const label = document.getElementById('ai-toggle-label');
+    if (!track) return;
+    if (AI_ENABLED) {
+      track.style.background = '#2cb67d';
+      if (thumb) thumb.style.left = '22px';
+      if (label) { label.textContent = 'ON'; label.style.color = '#2cb67d'; }
+    } else {
+      track.style.background = '#333';
+      if (thumb) thumb.style.left = '3px';
+      if (label) { label.textContent = 'OFF'; label.style.color = '#555'; }
+    }
+  }
+
+  window.bossToggleAI = function () {
+    AI_ENABLED = !AI_ENABLED;
+    localStorage.setItem('boss_ai_enabled', AI_ENABLED);
+    applyAIToggleUI();
+    const msg = AI_ENABLED
+      ? 'AI brain <strong style="color:#2cb67d">ON</strong> — B.O.S.S will respond normally.'
+      : 'AI brain <strong style="color:#555">OFF</strong> — B.O.S.S will not make any AI calls. CRM still works.';
+    addMsgRich('bot', msg);
+  };
+
   window.bossLoadConfig = async function () {
+    applyAIToggleUI();
     try {
       const cfg = await fetch(API + '/config').then(r => r.json()).catch(() => ({}));
-      const keyInput = document.getElementById('cfg-anthropic-key');
-      const personaInput = document.getElementById('cfg-persona');
-      const offerInput   = document.getElementById('cfg-offer');
-      const serperInput  = document.getElementById('cfg-serper-key');
-      const banner       = document.getElementById('boss-config-banner');
-      const keyStatus    = document.getElementById('cfg-key-status');
-
-      if (keyInput && cfg.anthropicApiKey) {
-        keyInput.value = cfg.anthropicApiKey;
-        if (keyStatus) {
-          keyStatus.textContent  = `✓ Key set (${cfg.anthropicApiKey.length} chars)`;
-          keyStatus.style.color  = '#2cb67d';
-        }
-        if (banner) banner.style.display = 'none';
-      } else {
-        if (keyStatus) { keyStatus.textContent = '— not set'; keyStatus.style.color = '#f55'; }
-        if (banner) banner.style.display = 'block';
+      const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+      set('cfg-anthropic-key',  cfg.anthropicApiKey);
+      set('cfg-groq-key',       cfg.groqApiKey);
+      set('cfg-openrouter-key', cfg.openrouterApiKey);
+      set('cfg-persona',        cfg.personaName);
+      set('cfg-offer',          cfg.offer);
+      set('cfg-serper-key',     cfg.serperApiKey);
+      const keyStatus = document.getElementById('cfg-key-status');
+      if (keyStatus) {
+        if (cfg.anthropicApiKey) { keyStatus.textContent = `✓ set (${cfg.anthropicApiKey.length} chars)`; keyStatus.style.color = '#2cb67d'; }
+        else                     { keyStatus.textContent = '— not set'; keyStatus.style.color = '#555'; }
       }
-      if (personaInput && cfg.personaName) personaInput.value = cfg.personaName;
-      if (offerInput   && cfg.offer)       offerInput.value   = cfg.offer;
-      if (serperInput  && cfg.serperApiKey) serperInput.value  = cfg.serperApiKey;
+      // Live provider status under save button
+      try {
+        const st = await fetch(API + '/boss/router').then(r => r.json());
+        const saveMsg = document.getElementById('cfg-save-msg');
+        if (saveMsg) {
+          const badges = [];
+          if (st.groq)            badges.push('<span style="color:#00aaff;font-weight:700">GROQ ✓</span>');
+          if (st.openrouter)      badges.push('<span style="color:#ff9500;font-weight:700">OPENROUTER ✓</span>');
+          if (st.anthropic)       badges.push('<span style="color:#aa44ff;font-weight:700">CLAUDE ✓</span>');
+          if (st.ollama?.running) badges.push('<span style="color:#2cb67d;font-weight:700">OLLAMA ✓</span>');
+          saveMsg.innerHTML = badges.length ? 'Active: ' + badges.join(' · ') : '<span style="color:#f55">No providers active</span>';
+        }
+      } catch(_) {}
     } catch (_) {}
   };
 
   window.bossCfgDirty = function () {
     const btn = document.getElementById('cfg-save-btn');
-    if (btn) btn.style.background = '#ffee00';
+    if (btn) { btn.style.background = '#c4a000'; btn.textContent = '● Save'; }
   };
 
   window.bossCfgToggleKey = function () {
@@ -331,63 +365,68 @@
     if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
   };
 
-  window.bossCfgSave = async function () {
-    const key     = (document.getElementById('cfg-anthropic-key')?.value || '').trim();
-    const persona = (document.getElementById('cfg-persona')?.value    || '').trim();
-    const offer   = (document.getElementById('cfg-offer')?.value      || '').trim();
-    const serper  = (document.getElementById('cfg-serper-key')?.value || '').trim();
-    const msg     = document.getElementById('cfg-save-msg');
-    const btn     = document.getElementById('cfg-save-btn');
-    const status  = document.getElementById('cfg-key-status');
-    const banner  = document.getElementById('boss-config-banner');
+  window.bossCfgToggleVisible = function (id) {
+    const inp = document.getElementById(id);
+    if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+  };
 
-    if (!key) {
-      if (msg) { msg.textContent = '⚠ Anthropic key is required.'; msg.style.color = '#f55'; }
+  window.bossCfgSave = async function () {
+    const get  = id => (document.getElementById(id)?.value || '').trim();
+    const msg  = document.getElementById('cfg-save-msg');
+    const btn  = document.getElementById('cfg-save-btn');
+
+    const payload = {};
+    const ant = get('cfg-anthropic-key');
+    const grq = get('cfg-groq-key');
+    const ort = get('cfg-openrouter-key');
+    const per = get('cfg-persona');
+    const off = get('cfg-offer');
+    const ser = get('cfg-serper-key');
+
+    if (ant) payload.anthropicApiKey  = ant;
+    if (grq) payload.groqApiKey       = grq;
+    if (ort) payload.openrouterApiKey = ort;
+    if (per) payload.personaName      = per;
+    if (off) payload.offer            = off;
+    if (ser) payload.serperApiKey     = ser;
+
+    if (!ant && !grq && !ort) {
+      if (msg) { msg.innerHTML = '<span style="color:#f55">Add at least one API key to activate B.O.S.S.</span>'; }
       return;
     }
 
-    const payload = { anthropicApiKey: key };
-    if (persona)  payload.personaName  = persona;
-    if (offer)    payload.offer        = offer;
-    if (serper)   payload.serperApiKey = serper;
-
     try {
-      if (msg) msg.textContent = 'Saving…';
-      await fetch(API + '/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      if (msg) { msg.textContent = 'Saving…'; msg.style.color = '#aaa'; }
+      await fetch(API + '/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
 
-      if (btn)    { btn.style.background = '#ff2a2a'; btn.textContent = '✓ Saved!'; }
-      if (status) { status.textContent = `✓ Key set (${key.length} chars)`; status.style.color = '#2cb67d'; }
-      if (banner) banner.style.display = 'none';
-      if (msg)    { msg.textContent = '✓ B.O.S.S activated. Open the chat (bottom right) and type anything.'; msg.style.color = '#ff2a2a'; }
+      if (btn) { btn.style.background = '#ff2a2a'; btn.textContent = '✓ Saved'; }
+      const active = [ant && 'Claude', grq && 'Groq', ort && 'OpenRouter'].filter(Boolean).join(' + ');
+      if (msg) { msg.innerHTML = `<span style="color:#2cb67d">✓ Saved — ${active} active. Chat away.</span>`; }
+      const keyStatus = document.getElementById('cfg-key-status');
+      if (keyStatus && ant) { keyStatus.textContent = `✓ set (${ant.length} chars)`; keyStatus.style.color = '#2cb67d'; }
 
-      setTimeout(() => {
-        if (btn) { btn.textContent = '✓ Save & Activate'; btn.style.background = '#ff2a2a'; }
-      }, 2500);
+      setTimeout(() => { if (btn) { btn.textContent = '✓ Save'; btn.style.background = '#ff2a2a'; } }, 2500);
     } catch (err) {
-      if (msg) { msg.textContent = '✗ Save failed — is the server running?'; msg.style.color = '#f55'; }
+      if (msg) { msg.innerHTML = '<span style="color:#f55">✗ Save failed — is the server running on port 4000?</span>'; }
     }
   };
 
   window.bossCfgTest = async function () {
     const msg = document.getElementById('cfg-save-msg');
-    if (msg) { msg.textContent = '⚡ Testing…'; msg.style.color = '#ff2a2a'; }
+    if (msg) { msg.innerHTML = '<span style="color:#aaa">Testing connection…</span>'; }
     try {
       const r = await fetch(API + '/boss/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: 'Reply in one sentence: B.O.S.S is online and ready.' }),
+        body: JSON.stringify({ message: 'Say exactly: B.O.S.S online.' }),
       }).then(x => x.json());
       if (r.ok) {
-        if (msg) { msg.textContent = `✓ Claude says: "${r.reply.slice(0, 120)}"`; msg.style.color = '#ff2a2a'; }
+        if (msg) { msg.innerHTML = `<span style="color:#2cb67d">✓ ${r.provider?.toUpperCase()} replied: "${r.reply?.slice(0,80)}"</span>`; }
       } else {
-        if (msg) { msg.textContent = `✗ ${r.error || 'API error'}`; msg.style.color = '#f55'; }
+        if (msg) { msg.innerHTML = `<span style="color:#f55">✗ ${r.error || 'API error'}</span>`; }
       }
     } catch (e) {
-      if (msg) { msg.textContent = '✗ Server not reachable.'; msg.style.color = '#f55'; }
+      if (msg) { msg.innerHTML = '<span style="color:#f55">✗ Server not reachable — run: node server.js</span>'; }
     }
   };
 
@@ -512,8 +551,16 @@
     }
 
     addMsg('user', text);
-    showTyping();
     HISTORY.push({ role: 'user', content: text });
+
+    // AI off — just echo back a notice
+    if (!AI_ENABLED) {
+      removeTyping();
+      addMsgRich('bot', '🔇 AI is off — go to <b>API Keys & Settings</b> to turn it back on.');
+      return;
+    }
+
+    showTyping();
 
     try {
       const r = await fetch(API + '/boss/chat', {
