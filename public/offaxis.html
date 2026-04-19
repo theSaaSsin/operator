@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Off-Axis 3D · TheSaaSsin</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#0a0a0f;color:#f0f0f5;font-family:'Inter',system-ui,sans-serif;overflow:hidden;height:100vh}
+
+  #canvas-wrap{position:fixed;inset:0;z-index:0}
+  #three-canvas{display:block;width:100%;height:100%}
+
+  /* HUD */
+  #hud{position:fixed;inset:0;z-index:10;pointer-events:none}
+
+  /* top bar */
+  #top-bar{position:absolute;top:0;left:0;right:0;height:56px;background:linear-gradient(#0a0a0fcc,transparent);display:flex;align-items:center;padding:0 24px;gap:16px;pointer-events:all}
+  .logo{font-size:.85rem;font-weight:900;letter-spacing:.12em;color:#ff2a2a;text-transform:uppercase}
+  .scene-name{font-size:.75rem;color:#aaa;letter-spacing:.06em}
+  #top-bar .spacer{flex:1}
+  .hud-btn{background:#0d0d0f;border:1px solid #222;color:#aaa;padding:6px 14px;border-radius:8px;font-size:.7rem;font-weight:600;cursor:pointer;transition:all .2s;pointer-events:all;letter-spacing:.04em}
+  .hud-btn:hover,.hud-btn.active{background:#ff2a2a22;border-color:#ff2a2a;color:#ff2a2a}
+  .hud-btn.green:hover,.hud-btn.green.active{background:#2cb67d22;border-color:#2cb67d;color:#2cb67d}
+
+  /* scene picker */
+  #scene-picker{position:absolute;bottom:88px;left:50%;transform:translateX(-50%);display:flex;gap:10px;pointer-events:all}
+  .scene-dot{width:44px;height:44px;border-radius:50%;border:2px solid #333;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:#0d0d0f}
+  .scene-dot:hover,.scene-dot.active{border-color:#ff2a2a;box-shadow:0 0 16px #ff2a2a66;transform:scale(1.15)}
+
+  /* bottom bar */
+  #bottom-bar{position:absolute;bottom:0;left:0;right:0;height:72px;background:linear-gradient(transparent,#0a0a0fcc);display:flex;align-items:center;padding:0 24px;gap:16px;pointer-events:all}
+  .nav-arrow{background:#0d0d0f88;border:1px solid #333;color:#aaa;width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:all .2s}
+  .nav-arrow:hover{background:#ff2a2a22;border-color:#ff2a2a;color:#ff2a2a}
+  #bottom-bar .spacer{flex:1}
+  #face-status{font-size:.65rem;color:#555;letter-spacing:.04em;display:flex;align-items:center;gap:6px}
+  .face-dot{width:6px;height:6px;border-radius:50%;background:#555}
+  .face-dot.active{background:#2cb67d;box-shadow:0 0 8px #2cb67d}
+
+  /* webcam preview */
+  #cam-wrap{position:absolute;bottom:88px;right:24px;width:120px;height:90px;border-radius:12px;overflow:hidden;border:1px solid #222;display:none}
+  #cam-wrap.visible{display:block}
+  #webcam{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+  #cam-canvas{position:absolute;inset:0;pointer-events:none}
+
+  /* portfolio overlay */
+  #portfolio-panel{position:absolute;inset:0;background:#0a0a0fee;display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;pointer-events:all;z-index:20}
+  #portfolio-panel.visible{display:flex}
+  .portfolio-grid{display:grid;grid-template-columns:repeat(3,240px);gap:16px;max-height:70vh;overflow-y:auto}
+  .portfolio-card{background:#0d0d0f;border:1px solid #1a1a1a;border-radius:16px;overflow:hidden;cursor:pointer;transition:all .2s}
+  .portfolio-card:hover{border-color:#ff2a2a;transform:translateY(-4px);box-shadow:0 8px 32px #ff2a2a22}
+  .portfolio-card img,.portfolio-card canvas{width:100%;height:140px;object-fit:cover;display:block}
+  .portfolio-card-info{padding:12px}
+  .portfolio-card-info h4{font-size:.8rem;font-weight:700;margin-bottom:4px}
+  .portfolio-card-info p{font-size:.68rem;color:#666}
+
+  /* info chip */
+  #info-chip{position:absolute;top:70px;left:50%;transform:translateX(-50%);background:#0d0d0fcc;border:1px solid #222;border-radius:100px;padding:6px 16px;font-size:.68rem;color:#888;letter-spacing:.04em;pointer-events:none;white-space:nowrap;transition:opacity .5s}
+
+  /* loading */
+  #loader{position:fixed;inset:0;background:#0a0a0f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:100}
+  .loader-bar{width:240px;height:2px;background:#1a1a1a;border-radius:2px;overflow:hidden}
+  .loader-fill{height:100%;background:#ff2a2a;border-radius:2px;transition:width .3s}
+  #loader p{font-size:.72rem;color:#555;letter-spacing:.08em}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div style="font-size:.9rem;font-weight:800;letter-spacing:.15em;color:#ff2a2a;text-transform:uppercase">LOADING ENVIRONMENTS</div>
+  <div class="loader-bar"><div class="loader-fill" id="loader-fill" style="width:0%"></div></div>
+  <p id="loader-msg">Initialising Three.js…</p>
+</div>
+
+<div id="canvas-wrap">
+  <canvas id="three-canvas"></canvas>
+</div>
+
+<div id="hud">
+  <div id="top-bar">
+    <div class="logo">TheSaaSsin</div>
+    <div class="scene-name" id="scene-label">CYBERPUNK CITY</div>
+    <div class="spacer"></div>
+    <button class="hud-btn green" id="btn-face" onclick="toggleFaceTrack()">👁 Face Track</button>
+    <button class="hud-btn" id="btn-cam" onclick="toggleCam()">📷 Cam</button>
+    <button class="hud-btn" id="btn-portfolio" onclick="togglePortfolio()">🗂 Portfolio</button>
+    <button class="hud-btn" onclick="captureScene()">📸 Capture</button>
+    <a href="/" class="hud-btn">← Operator</a>
+  </div>
+
+  <div id="info-chip" id="info-chip">← → to change scene · drag to orbit · scroll to zoom</div>
+
+  <div id="scene-picker">
+    <div class="scene-dot active" data-idx="0" onclick="switchScene(0)" title="Cyberpunk City">🏙</div>
+    <div class="scene-dot" data-idx="1" onclick="switchScene(1)" title="Egyptian Temple">🏛</div>
+    <div class="scene-dot" data-idx="2" onclick="switchScene(2)" title="Space Nebula">🌌</div>
+    <div class="scene-dot" data-idx="3" onclick="switchScene(3)" title="Neon Forest">🌲</div>
+    <div class="scene-dot" data-idx="4" onclick="switchScene(4)" title="TheSaaSsin HQ">⚡</div>
+    <div class="scene-dot" data-idx="5" onclick="switchScene(5)" title="Ocean Depth">🌊</div>
+  </div>
+
+  <div id="bottom-bar">
+    <div class="nav-arrow" onclick="prevScene()">&#8592;</div>
+    <div class="nav-arrow" onclick="nextScene()">&#8594;</div>
+    <div class="spacer"></div>
+    <div id="face-status">
+      <div class="face-dot" id="face-dot"></div>
+      <span id="face-label">Face tracking off</span>
+    </div>
+  </div>
+
+  <div id="cam-wrap">
+    <video id="webcam" autoplay muted playsinline></video>
+    <canvas id="cam-canvas"></canvas>
+  </div>
+</div>
+
+<!-- Portfolio overlay -->
+<div id="portfolio-panel">
+  <div style="font-size:1rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase">Portfolio Gallery</div>
+  <div class="portfolio-grid" id="portfolio-grid"></div>
+  <button class="hud-btn" onclick="togglePortfolio()">✕ Close</button>
+</div>
+
+<!-- Three.js r128 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- MediaPipe FaceMesh -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  THREE.JS SETUP
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const canvas  = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+renderer.toneMapping       = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+camera.position.set(0, 2, 12);
+
+// Virtual camera pivot (off-axis offset applied here)
+const camPivot  = new THREE.Group();
+const camTarget = new THREE.Vector3(0, 0, 0);
+scene.add(camPivot);
+
+// Off-axis state
+let faceOffset  = { x: 0, y: 0, z: 0 };
+let smoothOffset = { x: 0, y: 0, z: 0 };
+const PARALLAX  = 3.5;   // how far camera shifts per normalised face offset
+const SMOOTH    = 0.08;  // lerp speed
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SCENE LIBRARY
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let sceneGroup = new THREE.Group();
+scene.add(sceneGroup);
+let currentScene = 0;
+let captures = [];
+
+const SCENES = [
+  { name: 'CYBERPUNK CITY',   emoji: '🏙', build: buildCyberpunk   },
+  { name: 'EGYPTIAN TEMPLE',  emoji: '🏛', build: buildEgyptian    },
+  { name: 'SPACE NEBULA',     emoji: '🌌', build: buildNebula      },
+  { name: 'NEON FOREST',      emoji: '🌲', build: buildNeonForest  },
+  { name: 'SAASSIN HQ',       emoji: '⚡', build: buildSaassinHQ   },
+  { name: 'OCEAN DEPTH',      emoji: '🌊', build: buildOcean       },
+];
+
+// ─── fog + ambient helper ───────────────────────────────────
+function setAtmosphere(fogColor, fogNear, fogFar, ambientColor, ambientInt) {
+  scene.fog        = new THREE.Fog(fogColor, fogNear, fogFar);
+  renderer.setClearColor(fogColor, 1);
+  // remove old ambient
+  scene.children.filter(c => c.isAmbientLight || c.isDirectionalLight).forEach(c => scene.remove(c));
+  scene.add(new THREE.AmbientLight(ambientColor, ambientInt));
+}
+
+// ─── Box helper ────────────────────────────────────────────
+function box(w, h, d, color, x, y, z, emissive = 0) {
+  const m = new THREE.Mesh(
+    new THREE.BoxGeometry(w, h, d),
+    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: emissive, metalness: 0.6, roughness: 0.4 })
+  );
+  m.position.set(x, y, z);
+  m.castShadow = m.receiveShadow = true;
+  return m;
+}
+
+// ─── particle field helper ──────────────────────────────────
+function particles(count, spread, color, size = 0.04) {
+  const geo   = new THREE.BufferGeometry();
+  const pos   = new Float32Array(count * 3);
+  for (let i = 0; i < count * 3; i++) pos[i] = (Math.random() - 0.5) * spread;
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  return new THREE.Points(geo, new THREE.PointsMaterial({ color, size, transparent: true, opacity: 0.8, sizeAttenuation: true }));
+}
+
+// ─── floor ─────────────────────────────────────────────────
+function floor(color, gridColor) {
+  const g = new THREE.Mesh(
+    new THREE.PlaneGeometry(200, 200, 40, 40),
+    new THREE.MeshStandardMaterial({ color, wireframe: false, metalness: 0.8, roughness: 0.3 })
+  );
+  g.rotation.x = -Math.PI / 2;
+  g.receiveShadow = true;
+  return g;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SCENE 0 — CYBERPUNK CITY
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildCyberpunk(g) {
+  setAtmosphere(0x0a020f, 20, 120, 0x220033, 0.4);
+
+  g.add(floor(0x080010));
+
+  // Buildings grid
+  const cols = [0xff2a2a, 0x1de5ff, 0x7f5af0, 0xff6b35, 0x00ff88];
+  for (let i = 0; i < 60; i++) {
+    const h  = 4 + Math.random() * 18;
+    const c  = cols[Math.floor(Math.random() * cols.length)];
+    const bx = (Math.random() - 0.5) * 80;
+    const bz = -20 - Math.random() * 80;
+    const b  = box(2 + Math.random() * 3, h, 2 + Math.random() * 3, 0x111122, bx, h / 2, bz, 0);
+    // window glow strips
+    b.material.emissive.set(c);
+    b.material.emissiveIntensity = 0.05;
+    g.add(b);
+    // roof light
+    const pt = new THREE.PointLight(c, 0.8, 12);
+    pt.position.set(bx, h + 0.5, bz);
+    g.add(pt);
+  }
+
+  // Neon ground lines
+  const lineMat = new THREE.LineBasicMaterial({ color: 0xff2a2a, linewidth: 1 });
+  for (let i = -40; i <= 40; i += 5) {
+    const pts = [new THREE.Vector3(i, 0.01, -120), new THREE.Vector3(i, 0.01, 20)];
+    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat));
+  }
+
+  // Flying particles (rain)
+  g.add(particles(2000, 120, 0x1de5ff, 0.03));
+
+  // Main street lamp
+  const lamp = new THREE.PointLight(0xff2a2a, 3, 30);
+  lamp.position.set(0, 6, 2);
+  g.add(lamp);
+
+  // Animate: buildings flicker, lamp pulse
+  g.userData.tick = (t) => {
+    lamp.intensity = 2.5 + Math.sin(t * 3) * 0.5;
+    g.children.forEach((c, i) => {
+      if (c.isPoints) c.rotation.y = t * 0.02;
+    });
+  };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SCENE 1 — EGYPTIAN TEMPLE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildEgyptian(g) {
+  setAtmosphere(0x100800, 30, 150, 0x664400, 0.6);
+  g.add(floor(0x1a0e00));
+
+  // Columns
+  for (let i = -3; i <= 3; i++) {
+    if (i === 0) continue;
+    const col = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.6, 0.8, 10, 8),
+      new THREE.MeshStandardMaterial({ color: 0xc4a060, roughness: 0.8 })
+    );
+    col.position.set(i * 5, 5, -10);
+    col.castShadow = true;
+    g.add(col);
+    // Capital
+    const cap = box(2, 0.5, 2, 0xb89050, i * 5, 10.25, -10);
+    g.add(cap);
+  }
+
+  // Pyramid backdrop
+  const pyramid = new THREE.Mesh(
+    new THREE.ConeGeometry(30, 35, 4),
+    new THREE.MeshStandardMaterial({ color: 0x8b6914, roughness: 1, metalness: 0 })
+  );
+  pyramid.position.set(0, 17.5, -80);
+  pyramid.rotation.y = Math.PI / 4;
+  g.add(pyramid);
+
+  // Sand particles
+  g.add(particles(800, 80, 0xc4a060, 0.05));
+
+  // Torch lights
+  [-12, 12].forEach(x => {
+    const torch = new THREE.PointLight(0xff8800, 3, 20);
+    torch.position.set(x, 2, -8);
+    g.add(torch);
+    g.userData['torch_' + x] = torch;
+  });
+
+  // Sun
+  const sun = new THREE.DirectionalLight(0xffaa44, 2);
+  sun.position.set(30, 40, 20);
+  sun.castShadow = true;
+  g.add(sun);
+
+  g.userData.tick = (t) => {
+    const fl = 2.5 + Math.sin(t * 5 + 1) * 0.5;
+    if (g.userData['torch_-12']) g.userData['torch_-12'].intensity = fl;
+    if (g.userData['torch_12'])  g.userData['torch_12'].intensity  = fl + Math.sin(t * 7) * 0.3;
+    g.children.forEach(c => { if (c.isPoints) c.position.x = Math.sin(t * 0.1) * 2; });
+  };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SCENE 2 — SPACE NEBULA
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildNebula(g) {
+  setAtmosphere(0x000008, 80, 500, 0x112244, 0.3);
+  scene.fog = new THREE.FogExp2(0x000008, 0.004);
+
+  // Star field
+  g.add(particles(5000, 400, 0xffffff, 0.04));
+  g.add(particles(1000, 200, 0x8888ff, 0.06));
+  g.add(particles(500,  100, 0xff4488, 0.08));
+
+  // Nebula cloud volumes (billboards)
+  const nbMat = new THREE.MeshBasicMaterial({ color: 0x330066, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
+  for (let i = 0; i < 12; i++) {
+    const s = 20 + Math.random() * 40;
+    const nb = new THREE.Mesh(new THREE.SphereGeometry(s, 6, 6), nbMat.clone());
+    nb.material.color.setHSL(Math.random() * 0.3 + 0.6, 0.8, 0.3);
+    nb.position.set((Math.random() - 0.5) * 200, (Math.random() - 0.5) * 80, -50 - Math.random() * 200);
+    g.add(nb);
+  }
+
+  // Planets
+  const planet1 = new THREE.Mesh(
+    new THREE.SphereGeometry(8, 32, 32),
+    new THREE.MeshStandardMaterial({ color: 0x3344cc, roughness: 0.6, metalness: 0.2 })
+  );
+  planet1.position.set(25, 5, -60);
+  g.add(planet1);
+
+  // Planet rings
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(10, 15, 64),
+    new THREE.MeshBasicMaterial({ color: 0x8866ff, side: THREE.DoubleSide, transparent: true, opacity: 0.4 })
+  );
+  ring.rotation.x = Math.PI / 3;
+  ring.position.set(25, 5, -60);
+  g.add(ring);
+
+  const planet2 = new THREE.Mesh(
+    new THREE.SphereGeometry(4, 20, 20),
+    new THREE.MeshStandardMaterial({ color: 0xff4422, roughness: 0.7 })
+  );
+  planet2.position.set(-30, -3, -45);
+  g.add(planet2);
+
+  const sunStar = new THREE.PointLight(0x8844ff, 2, 300);
+  sunStar.position.set(0, 0, -30);
+  g.add(sunStar);
+
+  g.userData.tick = (t) => {
+    planet1.rotation.y = t * 0.2;
+    planet2.rotation.y = t * 0.4;
+    ring.rotation.z    = t * 0.1;
+    sunStar.intensity  = 1.8 + Math.sin(t * 0.5) * 0.4;
+    g.children.forEach(c => { if (c.isPoints) c.rotation.y = t * 0.01; c.rotation.x && (c.rotation.x = t * 0.005); });
+  };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SCENE 3 — NEON FOREST
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildNeonForest(g) {
+  setAtmosphere(0x001500, 15, 80, 0x003300, 0.5);
+  g.add(floor(0x001a00));
+
+  const treeColors = [0x00ff44, 0x44ff00, 0x00ffaa, 0x88ff00];
+  for (let i = 0; i < 50; i++) {
+    const c    = treeColors[Math.floor(Math.random() * treeColors.length)];
+    const h    = 6 + Math.random() * 16;
+    const r    = 0.8 + Math.random() * 1.2;
+    const tx   = (Math.random() - 0.5) * 80;
+    const tz   = -5 - Math.random() * 60;
+    // trunk
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(r * 0.15, r * 0.2, h, 6),
+      new THREE.MeshStandardMaterial({ color: 0x2a1a00, roughness: 1 })
+    );
+    trunk.position.set(tx, h / 2, tz);
+    g.add(trunk);
+    // canopy
+    const canopy = new THREE.Mesh(
+      new THREE.ConeGeometry(r * 2, h * 0.7, 6),
+      new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.3, transparent: true, opacity: 0.85, roughness: 0.7 })
+    );
+    canopy.position.set(tx, h + h * 0.2, tz);
+    g.add(canopy);
+    // glow
+    if (Math.random() > 0.6) {
+      const pt = new THREE.PointLight(c, 0.6, 10);
+      pt.position.set(tx, h + 1, tz);
+      g.add(pt);
+    }
+  }
+
+  // fireflies
+  g.add(particles(300, 60, 0x88ffaa, 0.08));
+
+  // Moon
+  const moon = new THREE.Mesh(
+    new THREE.SphereGeometry(5, 20, 20),
+    new THREE.MeshStandardMaterial({ color: 0xccddff, emissive: 0x334466, emissiveIntensity: 0.5 })
+  );
+  moon.position.set(-20, 30, -80);
+  g.add(moon);
+  const moonLight = new THREE.DirectionalLight(0x8899ff, 0.8);
+  moonLight.position.set(-20, 30, -80);
+  g.add(moonLight);
+
+  g.userData.tick = (t) => {
+    g.children.forEach(c => {
+      if (c.isPoints) { c.rotation.y = t * 0.05; c.position.y = Math.sin(t * 0.3) * 0.5; }
+    });
+  };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SCENE 4 — SAASSIN HQ
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildSaassinHQ(g) {
+  setAtmosphere(0x0a0a0f, 30, 120, 0x111111, 0.3);
+  g.add(floor(0x080808));
+
+  // Main tower — TheSaaSsin HQ
+  const tower = box(8, 40, 8, 0x111111, 0, 20, -20, 0);
+  tower.material.metalness = 0.9;
+  tower.material.roughness = 0.1;
+  g.add(tower);
+
+  // Red stripe
+  const stripe = box(8.1, 1.5, 8.1, 0xff2a2a, 0, 28, -20, 0.8);
+  g.add(stripe);
+
+  // Logo face (glowing panel)
+  const logoPanel = box(5, 3, 0.1, 0xff2a2a, 0, 22, -15.9, 1.5);
+  g.add(logoPanel);
+
+  // Surrounding buildings
+  const secondary = [
+    [-14, 15, -15], [14, 12, -15], [-10, 8, -30], [10, 10, -30], [-18, 6, -10], [18, 6, -10]
+  ];
+  secondary.forEach(([x, h, z]) => {
+    g.add(box(5, h, 5, 0x0d0d0d, x, h / 2, z, 0));
+    const wl = new THREE.PointLight(0xff2a2a, 0.5, 15);
+    wl.position.set(x, h + 1, z);
+    g.add(wl);
+  });
+
+  // Ground grid (neon red)
+  const gridMat = new THREE.LineBasicMaterial({ color: 0xff2a2a, transparent: true, opacity: 0.2 });
+  for (let i = -40; i <= 40; i += 4) {
+    g.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(i, 0.02, -80), new THREE.Vector3(i, 0.02, 10)]),
+      gridMat
+    ));
+    g.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-80, 0.02, i), new THREE.Vector3(10, 0.02, i)]),
+      gridMat
+    ));
+  }
+
+  // Data particles
+  g.add(particles(1500, 100, 0xff2a2a, 0.03));
+
+  // Key lights
+  const keyLight = new THREE.DirectionalLight(0xff2a2a, 1.5);
+  keyLight.position.set(10, 20, 10);
+  g.add(keyLight);
+
+  const rimLight = new THREE.DirectionalLight(0x3333ff, 0.5);
+  rimLight.position.set(-10, 15, -5);
+  g.add(rimLight);
+
+  g.userData.tick = (t) => {
+    stripe.material.emissiveIntensity = 0.6 + Math.sin(t * 2) * 0.3;
+    logoPanel.material.emissiveIntensity = 1.0 + Math.sin(t * 1.5) * 0.4;
+    g.children.forEach(c => { if (c.isPoints) { c.rotation.y = -t * 0.03; } });
+  };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SCENE 5 — OCEAN DEPTH
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildOcean(g) {
+  setAtmosphere(0x000820, 5, 60, 0x003366, 0.4);
+  scene.fog = new THREE.FogExp2(0x000820, 0.02);
+
+  // Sea floor
+  const seaFloor = new THREE.Mesh(
+    new THREE.PlaneGeometry(200, 200, 32, 32),
+    new THREE.MeshStandardMaterial({ color: 0x001122, roughness: 1, metalness: 0 })
+  );
+  seaFloor.rotation.x = -Math.PI / 2;
+  seaFloor.position.y = -10;
+  g.add(seaFloor);
+
+  // Coral structures
+  const coralColors = [0xff6688, 0xff8844, 0xffaa00, 0x44ffcc];
+  for (let i = 0; i < 30; i++) {
+    const c  = coralColors[Math.floor(Math.random() * coralColors.length)];
+    const cx = (Math.random() - 0.5) * 60;
+    const cz = -5 - Math.random() * 50;
+    const ch = 1 + Math.random() * 4;
+    for (let j = 0; j < 3 + Math.floor(Math.random() * 4); j++) {
+      const branch = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.15, ch, 5),
+        new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.4 })
+      );
+      branch.position.set(cx + (Math.random() - 0.5) * 1.5, -10 + ch / 2, cz + (Math.random() - 0.5) * 1.5);
+      branch.rotation.z = (Math.random() - 0.5) * 0.6;
+      g.add(branch);
+    }
+  }
+
+  // Bioluminescent particles
+  g.add(particles(800, 80, 0x0088ff, 0.06));
+  g.add(particles(400, 50, 0x00ffaa, 0.08));
+
+  // Light shafts simulation (cone)
+  for (let i = 0; i < 5; i++) {
+    const cone = new THREE.Mesh(
+      new THREE.ConeGeometry(2 + Math.random() * 2, 20, 8),
+      new THREE.MeshBasicMaterial({ color: 0x0044ff, transparent: true, opacity: 0.05, side: THREE.DoubleSide })
+    );
+    cone.position.set((Math.random() - 0.5) * 20, 0, -10 - Math.random() * 20);
+    g.add(cone);
+  }
+
+  const oceanLight = new THREE.PointLight(0x0066ff, 2, 40);
+  oceanLight.position.set(0, 0, 0);
+  g.add(oceanLight);
+
+  g.userData.tick = (t) => {
+    oceanLight.intensity = 1.8 + Math.sin(t * 0.8) * 0.4;
+    g.children.forEach((c, i) => {
+      if (c.isPoints) {
+        c.position.y = Math.sin(t * 0.3 + i) * 0.5;
+        c.rotation.y = t * 0.02;
+      }
+    });
+  };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SCENE SWITCHING
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function switchScene(idx) {
+  idx = ((idx % SCENES.length) + SCENES.length) % SCENES.length;
+  currentScene = idx;
+
+  // Dispose old scene group
+  while (sceneGroup.children.length) {
+    const c = sceneGroup.children[0];
+    sceneGroup.remove(c);
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) c.material.dispose();
+  }
+  sceneGroup.userData = {};
+
+  // Build new
+  SCENES[idx].build(sceneGroup);
+
+  // Update UI
+  document.getElementById('scene-label').textContent = SCENES[idx].emoji + ' ' + SCENES[idx].name;
+  document.querySelectorAll('.scene-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+
+  showChip('← → arrows or dots to switch scene');
+}
+
+function nextScene() { switchScene(currentScene + 1); }
+function prevScene() { switchScene(currentScene - 1); }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  FACE TRACKING (MediaPipe FaceMesh)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let faceMeshInst = null;
+let faceCamInst  = null;
+let faceActive   = false;
+let faceCalib    = { x: 0.5, y: 0.5, z: 0 };
+
+async function toggleFaceTrack() {
+  if (faceActive) {
+    stopFaceTrack();
+  } else {
+    await startFaceTrack();
+  }
+}
+
+async function startFaceTrack() {
+  const dot = document.getElementById('face-dot');
+  const lbl = document.getElementById('face-label');
+  lbl.textContent = 'Requesting camera…';
+
+  try {
+    // Init FaceMesh
+    if (!faceMeshInst && typeof FaceMesh !== 'undefined') {
+      faceMeshInst = new FaceMesh({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${f}` });
+      faceMeshInst.setOptions({ maxNumFaces: 1, refineLandmarks: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+      faceMeshInst.onResults(onFaceResults);
+      await faceMeshInst.initialize();
+    }
+
+    const video = document.getElementById('webcam');
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 320, height: 240 } });
+    video.srcObject = stream;
+    await new Promise(r => video.onloadedmetadata = r);
+
+    if (typeof Camera !== 'undefined') {
+      faceCamInst = new Camera(video, {
+        onFrame: async () => { if (faceMeshInst) await faceMeshInst.send({ image: video }); },
+        width: 320, height: 240
+      });
+      await faceCamInst.start();
+    }
+
+    faceActive = true;
+    dot.classList.add('active');
+    document.getElementById('btn-face').classList.add('active');
+    document.getElementById('cam-wrap').classList.add('visible');
+    lbl.textContent = 'Face tracking active';
+
+    // Calibrate center on first good read
+    setTimeout(() => { faceCalib = { ...faceOffset }; }, 1500);
+
+  } catch (e) {
+    lbl.textContent = 'Camera denied — check permissions';
+    console.warn('FaceMesh:', e);
+  }
+}
+
+function stopFaceTrack() {
+  if (faceCamInst) { faceCamInst.stop(); faceCamInst = null; }
+  const video = document.getElementById('webcam');
+  if (video.srcObject) { video.srcObject.getTracks().forEach(t => t.stop()); video.srcObject = null; }
+
+  faceActive = false;
+  faceOffset = { x: 0, y: 0, z: 0 };
+  document.getElementById('face-dot').classList.remove('active');
+  document.getElementById('btn-face').classList.remove('active');
+  document.getElementById('cam-wrap').classList.remove('visible');
+  document.getElementById('face-label').textContent = 'Face tracking off';
+}
+
+function onFaceResults(results) {
+  if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) return;
+  const lm = results.multiFaceLandmarks[0];
+
+  // Nose tip = landmark 1
+  const nose = lm[1];
+  // Eye landmarks for depth estimate
+  const leftEye  = lm[33];
+  const rightEye = lm[263];
+  const eyeDist  = Math.hypot(rightEye.x - leftEye.x, rightEye.y - leftEye.y);
+
+  // Normalised offset from centre [-1, 1]
+  faceOffset.x = -(nose.x - 0.5) * 2;  // flip X (mirror)
+  faceOffset.y = -(nose.y - 0.4) * 2;  // offset Y baseline a bit
+  faceOffset.z = (0.12 - eyeDist) * 20; // closer face → positive Z (lean in)
+
+  // Draw face dot on cam overlay
+  const cv  = document.getElementById('cam-canvas');
+  const ctx = cv.getContext('2d');
+  cv.width  = document.getElementById('webcam').videoWidth  || 320;
+  cv.height = document.getElementById('webcam').videoHeight || 240;
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  // draw nose dot
+  ctx.beginPath();
+  ctx.arc((1 - nose.x) * cv.width, nose.y * cv.height, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#ff2a2a';
+  ctx.fill();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  ORBIT CONTROLS (manual mouse drag)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let orbitState = { dragging: false, button: -1, lastX: 0, lastY: 0 };
+let orbitTheta = 0, orbitPhi = Math.PI / 8, orbitRadius = 12, orbitPanX = 0, orbitPanY = 2;
+
+canvas.addEventListener('mousedown', e => {
+  orbitState.dragging = true;
+  orbitState.button   = e.button;
+  orbitState.lastX    = e.clientX;
+  orbitState.lastY    = e.clientY;
+});
+window.addEventListener('mouseup',   () => { orbitState.dragging = false; });
+window.addEventListener('mousemove', e => {
+  if (!orbitState.dragging) return;
+  const dx = e.clientX - orbitState.lastX;
+  const dy = e.clientY - orbitState.lastY;
+  orbitState.lastX = e.clientX;
+  orbitState.lastY = e.clientY;
+  if (orbitState.button === 0) { // left — rotate
+    orbitTheta -= dx * 0.006;
+    orbitPhi    = Math.max(0.05, Math.min(Math.PI / 2.2, orbitPhi + dy * 0.006));
+  } else if (orbitState.button === 2) { // right — pan
+    orbitPanX -= dx * 0.02;
+    orbitPanY += dy * 0.02;
+  }
+});
+canvas.addEventListener('wheel', e => {
+  orbitRadius = Math.max(3, Math.min(80, orbitRadius + e.deltaY * 0.02));
+}, { passive: true });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  KEYBOARD NAV
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+window.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') nextScene();
+  if (e.key === 'ArrowLeft')  prevScene();
+  if (e.key === 'f' || e.key === 'F') toggleFaceTrack();
+  if (e.key === 'c' || e.key === 'C') captureScene();
+  if (e.key === ' ') { orbitTheta = 0; orbitPhi = Math.PI / 8; orbitRadius = 12; orbitPanX = 0; orbitPanY = 2; }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  CAPTURE + PORTFOLIO
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function captureScene() {
+  renderer.render(scene, camera);
+  const url = renderer.domElement.toDataURL('image/png');
+  captures.push({ url, name: SCENES[currentScene].name, ts: Date.now() });
+  showChip('📸 Captured! View in Portfolio →');
+  renderPortfolioGrid();
+}
+
+function renderPortfolioGrid() {
+  const grid = document.getElementById('portfolio-grid');
+  if (!grid) return;
+  grid.innerHTML = captures.map((c, i) => `
+    <div class="portfolio-card">
+      <img src="${c.url}" alt="${c.name}">
+      <div class="portfolio-card-info">
+        <h4>${c.name}</h4>
+        <p>${new Date(c.ts).toLocaleTimeString()}</p>
+      </div>
+    </div>
+  `).reverse().join('');
+  if (!captures.length) grid.innerHTML = '<p style="color:#555;font-size:.78rem;grid-column:1/-1;text-align:center">No captures yet. Press C or 📸 to capture a scene.</p>';
+}
+
+function togglePortfolio() {
+  const p = document.getElementById('portfolio-panel');
+  p.classList.toggle('visible');
+  if (p.classList.contains('visible')) renderPortfolioGrid();
+}
+
+function toggleCam() {
+  document.getElementById('cam-wrap').classList.toggle('visible');
+  document.getElementById('btn-cam').classList.toggle('active');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  RENDER LOOP
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let clock = new THREE.Clock();
+let autoIdle = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  // Smooth face offset
+  smoothOffset.x += (faceOffset.x - smoothOffset.x) * SMOOTH;
+  smoothOffset.y += (faceOffset.y - smoothOffset.y) * SMOOTH;
+  smoothOffset.z += (faceOffset.z - smoothOffset.z) * SMOOTH;
+
+  // Camera orbit position
+  const cx = Math.sin(orbitTheta) * orbitRadius;
+  const cy = Math.sin(orbitPhi)   * orbitRadius;
+  const cz = Math.cos(orbitTheta) * orbitRadius;
+
+  // Apply off-axis offset (face parallax)
+  camera.position.set(
+    cx + orbitPanX + smoothOffset.x * PARALLAX,
+    cy + orbitPanY + smoothOffset.y * PARALLAX,
+    cz             + smoothOffset.z * 0.5
+  );
+  camera.lookAt(orbitPanX, orbitPanY, camTarget.z);
+
+  // Auto-rotate when idle
+  autoIdle++;
+  if (autoIdle > 300 && !orbitState.dragging && !faceActive) {
+    orbitTheta += 0.003;
+  }
+
+  // Tick scene animations
+  if (sceneGroup.userData.tick) sceneGroup.userData.tick(t);
+
+  renderer.render(scene, camera);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  RESIZE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  CHIP HELPER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let chipTimer;
+function showChip(msg) {
+  const chip = document.getElementById('info-chip');
+  chip.textContent = msg;
+  chip.style.opacity = '1';
+  clearTimeout(chipTimer);
+  chipTimer = setTimeout(() => { chip.style.opacity = '0'; }, 3000);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  INIT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function setLoaderProgress(pct, msg) {
+  document.getElementById('loader-fill').style.width = pct + '%';
+  document.getElementById('loader-msg').textContent  = msg;
+}
+
+async function init() {
+  setLoaderProgress(20, 'Building environments…');
+  await new Promise(r => setTimeout(r, 50));
+
+  setLoaderProgress(50, 'Loading scene 1 / 6…');
+  switchScene(0);
+
+  setLoaderProgress(80, 'Starting renderer…');
+  await new Promise(r => setTimeout(r, 50));
+
+  animate();
+
+  setLoaderProgress(100, 'Ready');
+  await new Promise(r => setTimeout(r, 200));
+  document.getElementById('loader').style.opacity = '0';
+  setTimeout(() => { document.getElementById('loader').style.display = 'none'; }, 500);
+  document.getElementById('loader').style.transition = 'opacity .4s';
+
+  showChip('← → to switch scenes · F for face tracking · C to capture');
+}
+
+init();
+</script>
+</body>
+</html>

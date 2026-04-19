@@ -33,9 +33,10 @@ function readCfgKey(key) {
     const data = JSON.parse(fs.readFileSync(p, 'utf8'));
     // Map env key names → config.json field names
     const MAP  = {
-      ANTHROPIC_API_KEY: 'anthropicApiKey',
-      GROQ_API_KEY:      'groqApiKey',
-      OLLAMA_URL:        'ollamaUrl',
+      ANTHROPIC_API_KEY:  'anthropicApiKey',
+      GROQ_API_KEY:       'groqApiKey',
+      OPENROUTER_API_KEY: 'openrouterApiKey',
+      OLLAMA_URL:         'ollamaUrl',
     };
     return data[MAP[key]] || null;
   } catch (_) { return null; }
@@ -46,9 +47,10 @@ function ollamaBase() {
 }
 
 function isConfigured(provider) {
-  if (provider === 'anthropic') return !!(readCfgKey('ANTHROPIC_API_KEY') && Anthropic);
-  if (provider === 'groq')      return !!readCfgKey('GROQ_API_KEY');
-  if (provider === 'ollama')    return true; // checked live via ping
+  if (provider === 'anthropic')  return !!(readCfgKey('ANTHROPIC_API_KEY') && Anthropic);
+  if (provider === 'groq')       return !!readCfgKey('GROQ_API_KEY');
+  if (provider === 'openrouter') return !!readCfgKey('OPENROUTER_API_KEY');
+  if (provider === 'ollama')     return true; // checked live via ping
   return false;
 }
 
@@ -85,6 +87,32 @@ async function callGroq({ modelId, system, messages, maxTokens }) {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || 'groq error');
+  return data.choices?.[0]?.message?.content || '';
+}
+
+async function callOpenRouter({ modelId, system, messages, maxTokens }) {
+  const key = readCfgKey('OPENROUTER_API_KEY');
+  if (!key) throw new Error('no openrouter key');
+  const body = {
+    model:      modelId || 'meta-llama/llama-3.3-70b-instruct:free',
+    max_tokens: maxTokens || 600,
+    messages: [
+      ...(system ? [{ role: 'system', content: system }] : []),
+      ...messages.slice(-16),
+    ],
+  };
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method:  'POST',
+    headers: {
+      'Authorization': `Bearer ${key}`,
+      'Content-Type':  'application/json',
+      'HTTP-Referer':  'https://thesaassin.com',
+      'X-Title':       'TheSaaSsin B.O.S.S',
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || 'openrouter error');
   return data.choices?.[0]?.message?.content || '';
 }
 
@@ -134,10 +162,12 @@ function classifyMessage(msg = '') {
 }
 
 // Build provider chain based on tier
+// FREE-FIRST: Groq (free tier) → Ollama (local free) → Anthropic (paid, backup only)
 function buildChain(tier) {
-  if (tier === 'local')  return ['ollama', 'groq', 'anthropic'];
-  if (tier === 'groq')   return ['groq', 'anthropic', 'ollama'];
-  return                        ['anthropic', 'groq', 'ollama'];
+  if (tier === 'local')  return ['ollama', 'groq', 'openrouter', 'anthropic'];
+  if (tier === 'groq')   return ['groq', 'openrouter', 'ollama', 'anthropic'];
+  // cloud tier: still try free first, Claude only as heavy-lifting backup
+  return                        ['groq', 'openrouter', 'ollama', 'anthropic'];
 }
 
 function modelFor(provider, taskKind) {
@@ -148,11 +178,18 @@ function modelFor(provider, taskKind) {
     return cfg.ollama.models.balanced;
   }
   if (provider === 'groq') {
-    return taskKind === 'fast'
-      ? 'llama-3.1-8b-instant'
-      : 'llama-3.3-70b-versatile';
+    // llama-3.3-70b is FREE on Groq — use it for everything
+    if (taskKind === 'quickReply' || taskKind === 'summarise')
+      return 'llama-3.1-8b-instant'; // faster for simple stuff
+    return 'llama-3.3-70b-versatile'; // best free model for everything else
   }
-  // anthropic
+  if (provider === 'openrouter') {
+    // Free models on OpenRouter (no credits needed)
+    if (taskKind === 'code') return 'qwen/qwen-2.5-coder-32b-instruct:free';
+    if (taskKind === 'quickReply') return 'meta-llama/llama-3.1-8b-instruct:free';
+    return 'meta-llama/llama-3.3-70b-instruct:free';
+  }
+  // anthropic — heavy lifting only
   if (taskKind === 'build' || taskKind === 'code') return 'claude-sonnet-4-5';
   return 'claude-haiku-4-5-20251001';
 }
@@ -175,9 +212,10 @@ async function route({
     const modelId = modelFor(provider, kind);
     try {
       let text;
-      if (provider === 'anthropic') text = await callAnthropic({ modelId, system, messages, maxTokens });
-      else if (provider === 'groq') text = await callGroq({ modelId, system, messages, maxTokens });
-      else                          text = await callOllama({ modelId, system, messages, maxTokens });
+      if (provider === 'anthropic')       text = await callAnthropic({ modelId, system, messages, maxTokens });
+      else if (provider === 'groq')       text = await callGroq({ modelId, system, messages, maxTokens });
+      else if (provider === 'openrouter') text = await callOpenRouter({ modelId, system, messages, maxTokens });
+      else                                text = await callOllama({ modelId, system, messages, maxTokens });
       return { ok: true, provider, modelId, tier, taskKind: kind, text };
     } catch (e) {
       // try next in chain
@@ -188,10 +226,11 @@ async function route({
 
 // --- status check (used by /api/local/status) ---
 async function routerStatus() {
-  const status = { anthropic: false, groq: false, ollama: { running: false, models: [] } };
+  const status = { anthropic: false, groq: false, openrouter: false, ollama: { running: false, models: [] } };
 
-  status.anthropic = isConfigured('anthropic');
-  status.groq      = isConfigured('groq');
+  status.anthropic  = isConfigured('anthropic');
+  status.groq       = isConfigured('groq');
+  status.openrouter = isConfigured('openrouter');
 
   try {
     const res  = await fetch(`${ollamaBase()}/api/tags`, { signal: AbortSignal.timeout(2000) });

@@ -406,9 +406,10 @@
   // Show which AI tier handled a reply in the chat
   function tierBadge(provider, tier) {
     const map = {
-      ollama: { label: 'LOCAL',  color: '#2cb67d' },
-      groq:      { label: 'GROQ',   color: '#00aaff' },
-      anthropic: { label: 'CLAUDE', color: '#aa44ff' },
+      ollama:      { label: 'LOCAL',  color: '#2cb67d' },
+      groq:        { label: 'GROQ',   color: '#00aaff' },
+      openrouter:  { label: 'FREE',   color: '#ff9500' },
+      anthropic:   { label: 'CLAUDE', color: '#aa44ff' },
     };
     const b = map[provider] || { label: provider?.toUpperCase() || 'AI', color: '#888' };
     return `<span style="font-size:.6rem;background:${b.color}22;color:${b.color};padding:1px 6px;border-radius:100px;font-weight:700;margin-left:6px;vertical-align:middle">${b.label}</span>`;
@@ -527,11 +528,24 @@
         HISTORY.push({ role: 'assistant', content: r.reply });
         if (VOICE_ON) bossSpeak(r.reply);
       } else {
-        addMsg('bot', '⚠️ ' + (r.error || 'B.O.S.S offline — check API Keys & Settings.'));
+        const errMsg = r.error || '';
+        if (errMsg.includes('All providers') || errMsg.includes('failed') || errMsg.includes('credit balance') || errMsg.includes('unconfigured')) {
+          addMsgRich('bot', '<strong style="color:#ff2a2a">No AI provider active.</strong><br><br>' +
+            '<b>Option 1 — Groq (free, fastest):</b><br>' +
+            'Get key at <a href="https://console.groq.com/keys" target="_blank" style="color:#00aaff">console.groq.com/keys</a><br>' +
+            'Paste in <b>Local Models</b> panel &#8594; Save<br><br>' +
+            '<b>Option 2 — OpenRouter (free models, no card):</b><br>' +
+            'Get key at <a href="https://openrouter.ai/keys" target="_blank" style="color:#ff9500">openrouter.ai/keys</a><br>' +
+            'Paste in <b>Local Models</b> panel &#8594; Save<br><br>' +
+            '<b>Option 3 — Claude (best quality):</b><br>' +
+            'Top up at <a href="https://console.anthropic.com/billing" target="_blank" style="color:#aa44ff">console.anthropic.com/billing</a>');
+        } else {
+          addMsg('bot', '\u26a0\ufe0f ' + (errMsg || 'B.O.S.S offline — check API Keys & Settings.'));
+        }
       }
     } catch (err) {
       removeTyping();
-      addMsg('bot', '⚠️ Server not reachable.');
+      addMsg('bot', '\u26a0\ufe0f Server not reachable — is the Node server running on port 4000?');
     }
   };
 
@@ -582,10 +596,25 @@
       listEl.innerHTML = '<div style="color:#555;font-size:.78rem">Ollama not running.</div>';
     }
 
-    // Load groq key
+    // Load saved keys
     const cfg = await fetch(API + '/config').then(r => r.json()).catch(() => ({}));
     const groqInp = document.getElementById('cfg-groq-key');
     if (groqInp && cfg.groqApiKey) groqInp.value = cfg.groqApiKey;
+    const orInp = document.getElementById('cfg-openrouter-key');
+    if (orInp && cfg.openrouterApiKey) orInp.value = cfg.openrouterApiKey;
+    // Load router status badges
+    try {
+      const st = await fetch(API + '/boss/router').then(r => r.json());
+      const msg = document.getElementById('models-msg');
+      if (msg) {
+        const badges = [];
+        if (st.groq)       badges.push('<span style="color:#00aaff;font-weight:700">GROQ ✓</span>');
+        if (st.openrouter) badges.push('<span style="color:#ff9500;font-weight:700">OPENROUTER ✓</span>');
+        if (st.anthropic)  badges.push('<span style="color:#aa44ff;font-weight:700">CLAUDE ✓</span>');
+        if (st.ollama?.running) badges.push('<span style="color:#2cb67d;font-weight:700">OLLAMA ✓</span>');
+        msg.innerHTML = badges.length ? 'Active: ' + badges.join(' · ') : '<span style="color:#f55">No providers active — add a key above.</span>';
+      }
+    } catch(_) {}
   };
 
   window.bossPullModel = async function(model) {
@@ -607,14 +636,27 @@
   window.bossGroqSave = async function() {
     const key = (document.getElementById('cfg-groq-key')?.value || '').trim();
     const msg = document.getElementById('models-msg');
-    if (!key) { if (msg) { msg.textContent = 'Paste your Groq key first.'; msg.style.color = '#f55'; } return; }
+    if (!key) { if (msg) { msg.innerHTML = '<span style="color:#f55">Paste your Groq key first.</span>'; } return; }
     await fetch(API + '/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ groqApiKey: key }),
     });
-    if (msg) { msg.textContent = '✓ Groq key saved — analysis tasks now free and fast.'; msg.style.color = '#00aaff'; }
-    setTimeout(bossLoadModels, 500);
+    if (msg) { msg.innerHTML = '<span style="color:#00aaff">✓ Groq key saved — B.O.S.S is now FREE via Llama 3.3 70B</span>'; }
+    setTimeout(bossLoadModels, 600);
+  };
+
+  window.bossOpenrouterSave = async function() {
+    const key = (document.getElementById('cfg-openrouter-key')?.value || '').trim();
+    const msg = document.getElementById('models-msg');
+    if (!key) { if (msg) { msg.innerHTML = '<span style="color:#f55">Paste your OpenRouter key first.</span>'; } return; }
+    await fetch(API + '/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ openrouterApiKey: key }),
+    });
+    if (msg) { msg.innerHTML = '<span style="color:#ff9500">✓ OpenRouter saved — free models active as backup</span>'; }
+    setTimeout(bossLoadModels, 600);
   };
 
   // ── CREATIVE STUDIO PANEL ────────────────────────────────────────────────
