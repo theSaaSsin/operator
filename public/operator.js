@@ -106,20 +106,25 @@ function tkConfigure(id, envKey) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
- * OPERATOR CHAT — floating assistant (Haiku 4.5)
+ * B.O.S.S CHAT — floating Jarvis-tier operator (multi-model routed)
  * ═════════════════════════════════════════════════════════════════ */
 const OPCHAT = {
   history: [],
   open: false,
   greeted: false,
+  endpoint: '/boss/chat',  // upgraded from /chat → BOSS
   commands: [
-    { cmd: '/scan',   desc: 'Scan Reddit for leads', hint: '/scan need clients' },
-    { cmd: '/brand',  desc: 'Open Brand Studio', hint: '/brand BlueTap Plumbing' },
-    { cmd: '/pitch',  desc: 'Generate pitch doc', hint: '/pitch <client>' },
-    { cmd: '/run',    desc: 'Run a Tool Kit tool', hint: '/run scrapling reddit' },
-    { cmd: '/tools',  desc: 'Show Tool Kit status', hint: '/tools' },
-    { cmd: '/deploy', desc: 'Deploy to Cloudflare', hint: '/deploy' },
-    { cmd: '/help',   desc: 'Show all commands', hint: '/help' },
+    { cmd: '/plan',    desc: 'Planner Agent breaks a goal into tasks', hint: '/plan ship landing page' },
+    { cmd: '/build',   desc: 'Builder Agent writes code',              hint: '/build add /api/leads route' },
+    { cmd: '/analyse', desc: 'Analyst Agent reviews an artefact',      hint: '/analyse paste output' },
+    { cmd: '/grow',    desc: 'Growth Agent suggests next moves',       hint: '/grow' },
+    { cmd: '/surface', desc: 'Surface GitHub repos worth integrating', hint: '/surface remotion templates' },
+    { cmd: '/scan',    desc: 'Scrape leads / sources',                  hint: '/scan need clients' },
+    { cmd: '/brand',   desc: 'Open Brand Studio',                       hint: '/brand BlueTap Plumbing' },
+    { cmd: '/pitch',   desc: 'Generate pitch doc',                      hint: '/pitch <client>' },
+    { cmd: '/tools',   desc: 'Show Tool Kit status',                    hint: '/tools' },
+    { cmd: '/deploy',  desc: 'Deploy to Cloudflare/Pages',              hint: '/deploy' },
+    { cmd: '/help',    desc: 'Show all commands',                       hint: '/help' },
   ],
 };
 function opchatToggle() {
@@ -132,10 +137,17 @@ function opchatToggle() {
 function opchatGreet() {
   OPCHAT.greeted = true;
   const hour = new Date().getHours();
-  const t = hour < 5 ? 'Burning the midnight oil' : hour < 12 ? 'Morning' : hour < 18 ? 'Afternoon' : 'Evening';
+  const t = hour < 5 ? 'Still up' : hour < 12 ? 'Morning' : hour < 17 ? 'Afternoon' : hour < 22 ? 'Evening' : 'Late one';
   const persona = (window._operatorPersona || {});
-  const nm = persona.name || 'boss';
-  opchatAdd('bot', `${t}, ${nm}. What are we shipping? Type <code>/help</code> or just ask.`);
+  const nm = persona.name || 'Josh';
+  // BOSS greeting: read state, surface the most useful next move.
+  opchatAdd('bot', `${t}, ${nm}. <b>B.O.S.S</b> online — memory loaded, agents armed.<br>Try <code>/plan</code> a goal, <code>/surface</code> repos, or just tell me what's blocking you.`);
+  // Background: pull state so suggestions panel stays fresh.
+  fetch((window.OP_CONFIG?.API || '/api') + '/boss/state').then(r => r.json()).then(d => {
+    if (d.ok && d.state?.next_steps?.length) {
+      opchatAdd('bot', `<b>Next move (from memory):</b> ${escapeHtml(d.state.next_steps[0])}`);
+    }
+  }).catch(() => {});
 }
 function opchatAdd(role, text) {
   const wrap = document.getElementById('opchat-msgs');
@@ -180,12 +192,14 @@ async function opchatSend(e) {
 
   opchatTyping(true);
   try {
-    const r = await fetch((window.OP_CONFIG?.API || '/api') + '/chat', {
+    const r = await fetch((window.OP_CONFIG?.API || '/api') + OPCHAT.endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messages: OPCHAT.history,
-        persona: window._operatorPersona || {},
+        userName: (window._operatorPersona || {}).name || 'Josh',
+        // taskKind hint lets BOSS router pick the cheapest model that fits.
+        taskKind: text.length < 80 ? 'fast' : 'default',
       }),
     });
     const d = await r.json();
@@ -228,6 +242,84 @@ async function opchatHandleSlash(text) {
       return `<code>${escapeHtml(arg)}</code> queued. (Wiring Phase — execution lands with Content Studio.)`;
     case '/deploy':
       return 'Cloudflare Pages deploy is Phase 6. Coming after Content Studio renders.';
+
+    // ── B.O.S.S agent commands ─────────────────────────────────
+    case '/plan': {
+      if (!arg) return 'Usage: <code>/plan &lt;goal&gt;</code> — e.g. <code>/plan ship landing page tonight</code>';
+      opchatTyping(true);
+      const r = await fetch((window.OP_CONFIG?.API || '/api') + '/boss/plan', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal: arg }),
+      }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+      opchatTyping(false);
+      if (!r.ok) return `<span style="color:#ff5d73">Planner failed: ${escapeHtml(r.error || '')}</span>`;
+      const list = (r.tasks || []).map((t, i) => `${i+1}. <b>${escapeHtml(t.title)}</b> <small>(${t.effort||'m'})</small>`).join('<br>');
+      return `<b>Plan for:</b> ${escapeHtml(arg)}<br>${escapeHtml(r.rationale||'')}<br><br>${list}<br><br><b>NEXT MOVE:</b> tackle task 1.`;
+    }
+    case '/build': {
+      if (!arg) return 'Usage: <code>/build &lt;task description&gt;</code>';
+      opchatTyping(true);
+      const r = await fetch((window.OP_CONFIG?.API || '/api') + '/boss/build', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task: arg }),
+      }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+      opchatTyping(false);
+      if (!r.ok) return `<span style="color:#ff5d73">${escapeHtml(r.error||'build failed')}</span>`;
+      return escapeHtml(r.output).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\n/g, '<br>');
+    }
+    case '/analyse': {
+      if (!arg) return 'Usage: <code>/analyse &lt;paste artefact&gt;</code>';
+      opchatTyping(true);
+      const r = await fetch((window.OP_CONFIG?.API || '/api') + '/boss/analyse', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ artefact: arg }),
+      }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+      opchatTyping(false);
+      if (!r.ok) return `<span style="color:#ff5d73">${escapeHtml(r.error||'analyse failed')}</span>`;
+      return `<b>Verdict:</b> ${r.verdict} (${r.score}/10)<br><b>Risks:</b> ${(r.risks||[]).join('; ')}<br><b>Fixes:</b> ${(r.fixes||[]).join('; ')}`;
+    }
+    case '/grow': {
+      opchatTyping(true);
+      const r = await fetch((window.OP_CONFIG?.API || '/api') + '/boss/grow', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ snapshot: arg || '' }),
+      }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+      opchatTyping(false);
+      if (!r.ok) return `<span style="color:#ff5d73">${escapeHtml(r.error||'grow failed')}</span>`;
+      return '<b>Growth moves:</b><br>' + (r.moves||[]).map(m =>
+        `• <b>${escapeHtml(m.title)}</b> — ${escapeHtml(m.why)} <small>[${m.tool}, effort:${m.effort}, impact:${m.impact}]</small>`
+      ).join('<br>');
+    }
+    case '/surface': {
+      opchatTyping(true);
+      const r = await fetch((window.OP_CONFIG?.API || '/api') + '/boss/surface', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: arg || '' }),
+      }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+      opchatTyping(false);
+      if (!r.ok) return `<span style="color:#ff5d73">${escapeHtml(r.error||'surface failed')}</span>`;
+      return `<b>Repos worth integrating</b> for <i>${escapeHtml(r.topic)}</i>:<br>` + (r.repos||[]).map(x =>
+        `• <a href="${x.html_url}" target="_blank">${escapeHtml(x.full_name)}</a> ★${x.stars} <small>${escapeHtml(x.description||'')}</small>`
+      ).join('<br>') + '<br><br><b>NEXT MOVE:</b> reply with <code>/import owner/repo</code> to clone + serve it under /imports/.';
+    }
+    case '/import': {
+      const m = arg.match(/^([^\/]+)\/(.+)$/);
+      if (!m) return 'Usage: <code>/import owner/repo</code>';
+      opchatTyping(true);
+      const r = await fetch((window.OP_CONFIG?.API || '/api') + '/boss/github/import-static', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner: m[1], repo: m[2] }),
+      }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+      opchatTyping(false);
+      if (!r.ok) return `<span style="color:#ff5d73">${escapeHtml(r.error||'import failed')}</span>`;
+      return `Imported. Live at <a href="${r.servedAt}" target="_blank">${r.servedAt}</a>.`;
+    }
+    case '/teach': {
+      if (!arg) return 'Usage: <code>/teach &lt;topic&gt;</code> — B.O.S.S becomes your vibe-coding mentor.';
+      OPCHAT.history.push({ role: 'user', content: `Teach me ${arg} like a vibe-coding mentor: 3 micro-lessons, each with a runnable snippet I can paste, end with a tiny challenge.` });
+      return null; // fall through to chat with the loaded prompt
+    }
+
     default:
       return null; // unknown slash → fall through to AI
   }

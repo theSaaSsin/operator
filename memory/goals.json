@@ -1,0 +1,18 @@
+{
+  "goals": [
+    {
+      "id": "goal-boss-v1",
+      "title": "Ship B.O.S.S v1 — personal AI operator running the business",
+      "status": "active",
+      "createdAt": "2026-04-19",
+      "why": "Single cockpit to run TheSaaSsin: lead-gen, content, deploys, and self-improvement in one place.",
+      "subgoals": [
+        "Foundation: memory + agents + router wired through existing server",
+        "Jarvis-tier chat always one step ahead, proactive next-move suggestions",
+        "Content Studio producing fully rendered videos via Remotion + Framer + ModelsLab",
+        "Self-improvement engine surfacing tools/repos every 24h",
+        "GitHub Pages deploy live for public landing"
+      ]
+    }
+  ]
+}

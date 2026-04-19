@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-04-19T00:00:00.000Z",
+  "current_goal": "Transform Operator into B.O.S.S — multi-agent, multi-model personal AI operator running the business end-to-end.",
+  "last_stable_commit": "d2d3865",
+  "active_tasks": [
+    { "id": "boss-foundation", "title": "Scaffold memory + agents + router + persona", "status": "in_progress" }
+  ],
+  "completed_tasks": [
+    { "id": "operator-chat-drawer", "title": "Chat drawer + /api/chat (Haiku 4.5)", "commit": "d2d3865" },
+    { "id": "content-studio-pipeline", "title": "Content Studio 4-stage pipeline panel", "commit": "d2d3865" },
+    { "id": "lovable-landing-import", "title": "Lovable pixel-dream-studio-67 imported with relative paths", "commit": "578fe0e" },
+    { "id": "tool-kit-panel", "title": "Tool Kit + Scrapling Pinokio sidecar + privacy gate", "commit": "e2c391e" }
+  ],
+  "known_issues": [
+    "GitHub Pages deploy to thesaassin/thesaassin not yet live at the expected URL.",
+    "Content Studio ccGenAsset is a stub — not yet wired to /api/tools/modelslab/run with real payloads.",
+    "Tool Kit quick-scan still shows alert() instead of real scan.",
+    "No OOBABOOGA_URL wired for local models yet."
+  ],
+  "architecture_notes": [
+    "Node vanilla HTTP server (ROUTES map in server.js). No framework.",
+    "Front-end is zero-dep vanilla JS (public/operator.js).",
+    "BOSS foundation adds /ai (agents + router + persona) and /memory (state + logs).",
+    "config/boss.config.js is the single source of truth for env keys, paths, model policy.",
+    "project-state.json is the shared handoff file across Claude / Bolt / local models."
+  ],
+  "next_steps": [
+    "Wire Operator chat drawer to /api/boss/chat (BOSS persona).",
+    "Add Planner Agent flow: goal in → task list out → write into active_tasks.",
+    "Add Self-Improvement surface route (/api/boss/surface) to recommend tools/repos.",
+    "Ship GitHub Pages deploy for studio.html.",
+    "Replace ccGenAsset stub with real ModelsLab calls."
+  ],
+  "agents_available": ["planner", "builder", "analyst", "growth", "designer", "content"],
+  "memory_palace": {
+    "rooms": {
+      "goals":     "memory/goals.json",
+      "decisions": "memory/decisions.log",
+      "outputs":   "memory/outputs/",
+      "state":     "memory/project-state.json"
+    },
+    "convention": "Every agent reads project-state.json before acting and appends a line to decisions.log after acting."
+  }
+}

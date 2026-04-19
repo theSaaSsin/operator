@@ -12,6 +12,14 @@ const makeStorage   = require('./storage');
 const { generateBrand } = require('./brand');
 const toolRegistry  = require('./tools/registry');
 
+// ── B.O.S.S core ──────────────────────────────────────────────
+const bossCfg     = require('./config/boss.config');
+const bossMemory  = require('./ai/memory');
+const bossAgents  = require('./ai/agents');
+const bossGithub  = require('./ai/github');
+const bossRouter  = require('./ai/router');
+const bossPersona = require('./ai/persona');
+
 const PORT   = process.env.PORT || 4000;
 const PUBLIC = path.join(__dirname, 'public');
 
@@ -171,6 +179,89 @@ CONTEXT:
       json(res, { ok: false, error: e.message }, 502);
     }
   },
+
+  // ═══════════════════════════════════════════════════════════
+  // B.O.S.S — Business Operating System & Strategist
+  // Routes: /api/boss/{chat,plan,analyse,grow,state,surface,github/*}
+  // All routes share the Memory Palace at memory/project-state.json.
+  // ═══════════════════════════════════════════════════════════
+
+  // Memory palace — read/patch the shared state file
+  'GET /api/boss/state': (_req, res) => json(res, { ok: true, state: bossMemory.readState(), goals: bossMemory.readGoals() }),
+  'POST /api/boss/state': async (req, res) => {
+    const patch = await body(req);
+    const next = bossMemory.writeState(patch || {});
+    bossMemory.logDecision('api', `state patched via /api/boss/state keys=${Object.keys(patch||{}).join(',')}`);
+    json(res, { ok: true, state: next });
+  },
+
+  // BOSS chat — Jarvis-tier operator voice, context-aware, multi-model routed
+  'POST /api/boss/chat': async (req, res) => {
+    const data = await body(req);
+    const messages = Array.isArray(data.messages) ? data.messages : [];
+    const userName = data.userName || bossCfg.persona.greetingName;
+    const state = bossMemory.readState();
+    const system = bossPersona.buildSystemPrompt({ userName, contextState: state });
+    // Token-efficient: cap at 520 tokens, keep only last 10 messages.
+    const r = await bossRouter.route({
+      taskKind: data.taskKind || 'default',
+      system,
+      messages: messages.slice(-10),
+      maxTokens: Math.min(Number(data.maxTokens) || 520, 1200),
+      actor: 'boss-chat',
+    });
+    if (!r.ok) return json(res, { ok: false, error: r.error }, 500);
+    json(res, { ok: true, reply: r.text, provider: r.provider, model: r.modelId });
+  },
+
+  // Planner / Builder / Analyst / Growth agents
+  'POST /api/boss/plan':    async (req, res) => { const d = await body(req); json(res, await bossAgents.run('planner', d)); },
+  'POST /api/boss/build':   async (req, res) => { const d = await body(req); json(res, await bossAgents.run('builder', d)); },
+  'POST /api/boss/analyse': async (req, res) => { const d = await body(req); json(res, await bossAgents.run('analyst', d)); },
+  'POST /api/boss/grow':    async (req, res) => { const d = await body(req); json(res, await bossAgents.run('growth',  d)); },
+
+  // Self-improvement surface — "what should I integrate next?"
+  'POST /api/boss/surface': async (req, res) => {
+    const data = await body(req);
+    const topic = data.topic || bossMemory.readState().current_goal || 'ai agents nodejs';
+    try {
+      const repos = await bossGithub.suggest(topic);
+      bossMemory.writeState({ last_surface: { topic, at: new Date().toISOString(), count: repos.length } });
+      json(res, { ok: true, topic, repos });
+    } catch (e) { json(res, { ok: false, error: e.message }, 500); }
+  },
+
+  // GitHub integration — search, inspect, clone, import static site
+  'GET /api/boss/github/search': async (req, res) => {
+    const qs = new URLSearchParams(req.url.split('?')[1] || '');
+    try {
+      const items = await bossGithub.search(qs.get('q') || 'ai', {
+        language: qs.get('language') || undefined,
+        per_page: Math.min(Number(qs.get('per_page') || 8), 30),
+      });
+      json(res, { ok: true, items });
+    } catch (e) { json(res, { ok: false, error: e.message }, 500); }
+  },
+  'GET /api/boss/github/inspect': async (req, res) => {
+    const qs = new URLSearchParams(req.url.split('?')[1] || '');
+    const owner = qs.get('owner'), repo = qs.get('repo');
+    if (!owner || !repo) return json(res, { ok: false, error: 'owner+repo required' }, 400);
+    try { json(res, { ok: true, repo: await bossGithub.inspect(owner, repo) }); }
+    catch (e) { json(res, { ok: false, error: e.message }, 500); }
+  },
+  'POST /api/boss/github/clone': async (req, res) => {
+    const d = await body(req);
+    if (!d.owner || !d.repo) return json(res, { ok: false, error: 'owner+repo required' }, 400);
+    json(res, bossGithub.clone(d.owner, d.repo, { depth: d.depth || 1 }));
+  },
+  'POST /api/boss/github/import-static': async (req, res) => {
+    const d = await body(req);
+    if (!d.owner || !d.repo) return json(res, { ok: false, error: 'owner+repo required' }, 400);
+    json(res, bossGithub.importStatic(d.owner, d.repo, { subdir: d.subdir, destSubdir: d.destSubdir }));
+  },
+
+  // Agents listing (for UI)
+  'GET /api/boss/agents': (_req, res) => json(res, { ok: true, agents: bossCfg.agents, available: bossAgents.list() }),
 
   // ── Brand Engine ─────────────────────────────────────────
   'POST /api/generate-brand': async (req, res) => {
