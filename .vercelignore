@@ -1,0 +1,32 @@
+# Vercel deploys ONLY the public landing (studio.html + assets).
+# Everything else is the private Operator app — keep it off the CDN.
+node_modules
+.env
+.env.*
+ai/
+config/
+memory/
+launch/
+tools/
+automation/
+creative/
+variants/
+data/
+.lovable-import/
+server.js
+storage.js
+brand.js
+package.json
+package-lock.json
+railway.json
+railway.toml
+TheSaaSsin-launch.vbs
+LEADS-TONIGHT.md
+
+# inside /public: keep ONLY the marketing surface
+public/operator.html
+public/operator.js
+public/operator.css
+public/demo.html
+public/demo-success.html
+public/config.js
