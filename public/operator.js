@@ -105,6 +105,264 @@ function tkConfigure(id, envKey) {
   }, 300);
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+ * OPERATOR CHAT — floating assistant (Haiku 4.5)
+ * ═════════════════════════════════════════════════════════════════ */
+const OPCHAT = {
+  history: [],
+  open: false,
+  greeted: false,
+  commands: [
+    { cmd: '/scan',   desc: 'Scan Reddit for leads', hint: '/scan need clients' },
+    { cmd: '/brand',  desc: 'Open Brand Studio', hint: '/brand BlueTap Plumbing' },
+    { cmd: '/pitch',  desc: 'Generate pitch doc', hint: '/pitch <client>' },
+    { cmd: '/run',    desc: 'Run a Tool Kit tool', hint: '/run scrapling reddit' },
+    { cmd: '/tools',  desc: 'Show Tool Kit status', hint: '/tools' },
+    { cmd: '/deploy', desc: 'Deploy to Cloudflare', hint: '/deploy' },
+    { cmd: '/help',   desc: 'Show all commands', hint: '/help' },
+  ],
+};
+function opchatToggle() {
+  const d = document.getElementById('opchat-drawer');
+  OPCHAT.open = !OPCHAT.open;
+  d.classList.toggle('open', OPCHAT.open);
+  if (OPCHAT.open && !OPCHAT.greeted) opchatGreet();
+  if (OPCHAT.open) setTimeout(() => document.getElementById('opchat-input').focus(), 300);
+}
+function opchatGreet() {
+  OPCHAT.greeted = true;
+  const hour = new Date().getHours();
+  const t = hour < 5 ? 'Burning the midnight oil' : hour < 12 ? 'Morning' : hour < 18 ? 'Afternoon' : 'Evening';
+  const persona = (window._operatorPersona || {});
+  const nm = persona.name || 'boss';
+  opchatAdd('bot', `${t}, ${nm}. What are we shipping? Type <code>/help</code> or just ask.`);
+}
+function opchatAdd(role, text) {
+  const wrap = document.getElementById('opchat-msgs');
+  const el = document.createElement('div');
+  el.className = 'opchat-msg ' + role;
+  el.innerHTML = text;
+  wrap.appendChild(el);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+function opchatTyping(on) {
+  const wrap = document.getElementById('opchat-msgs');
+  let t = document.getElementById('opchat-typing-el');
+  if (on && !t) {
+    t = document.createElement('div');
+    t.id = 'opchat-typing-el';
+    t.className = 'opchat-msg bot opchat-typing';
+    t.innerHTML = '<span></span><span></span><span></span>';
+    wrap.appendChild(t);
+    wrap.scrollTop = wrap.scrollHeight;
+  } else if (!on && t) {
+    t.remove();
+  }
+}
+async function opchatSend(e) {
+  if (e) e.preventDefault();
+  const input = document.getElementById('opchat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  opchatAdd('user', escapeHtml(text));
+  OPCHAT.history.push({ role: 'user', content: text });
+
+  // slash command handling
+  if (text.startsWith('/')) {
+    const reply = await opchatHandleSlash(text);
+    if (reply) {
+      opchatAdd('bot', reply);
+      OPCHAT.history.push({ role: 'assistant', content: reply });
+      return;
+    }
+  }
+
+  opchatTyping(true);
+  try {
+    const r = await fetch((window.OP_CONFIG?.API || '/api') + '/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: OPCHAT.history,
+        persona: window._operatorPersona || {},
+      }),
+    });
+    const d = await r.json();
+    opchatTyping(false);
+    if (d.ok) {
+      const html = escapeHtml(d.reply).replace(/`([^`]+)`/g, '<code>$1</code>');
+      opchatAdd('bot', html);
+      OPCHAT.history.push({ role: 'assistant', content: d.reply });
+    } else {
+      opchatAdd('bot', `<span style="color:#ff5d73">Error: ${d.error || 'chat failed'}</span>`);
+    }
+  } catch (err) {
+    opchatTyping(false);
+    opchatAdd('bot', `<span style="color:#ff5d73">Network error. Is server running?</span>`);
+  }
+}
+async function opchatHandleSlash(text) {
+  const [cmd, ...rest] = text.split(' ');
+  const arg = rest.join(' ').trim();
+  switch (cmd) {
+    case '/help':
+      return 'Commands:<br>' + OPCHAT.commands.map(c =>
+        `<code>${c.cmd}</code> — ${c.desc}`
+      ).join('<br>');
+    case '/scan':
+      if (!arg) return 'Usage: <code>/scan &lt;keyword&gt;</code>';
+      setTimeout(() => { goPanel('feed'); if (typeof goScan === 'function') goScan(arg); }, 200);
+      return `Scanning Reddit for "${escapeHtml(arg)}" — check Lead Feed.`;
+    case '/brand':
+      setTimeout(() => goPanel('client'), 200);
+      return `Brand Studio opened${arg ? ` for <b>${escapeHtml(arg)}</b>` : ''}. Fill in the form to generate.`;
+    case '/pitch':
+      setTimeout(() => goPanel('outputs'), 200);
+      return 'Opening Outputs → Pitch Doc tab.';
+    case '/tools':
+      setTimeout(() => goPanel('toolkit'), 200);
+      return 'Opening Tool Kit. Scrapling + ModelsLab + Groq + Claude + more.';
+    case '/run':
+      if (!arg) return 'Usage: <code>/run &lt;tool&gt; &lt;args&gt;</code> — e.g. <code>/run scrapling reddit need-clients</code>';
+      return `<code>${escapeHtml(arg)}</code> queued. (Wiring Phase — execution lands with Content Studio.)`;
+    case '/deploy':
+      return 'Cloudflare Pages deploy is Phase 6. Coming after Content Studio renders.';
+    default:
+      return null; // unknown slash → fall through to AI
+  }
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+// ⌘K / Ctrl+K toggle
+window.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); opchatToggle(); }
+});
+// Slash chip rendering
+(function () {
+  const wrap = document.getElementById('opchat-slash');
+  if (!wrap) return;
+  wrap.innerHTML = OPCHAT.commands.map(c =>
+    `<span class="opchat-cmd" onclick="opchatInsertCmd('${c.cmd}')">${c.cmd}</span>`
+  ).join('');
+  const input = document.getElementById('opchat-input');
+  if (input) input.addEventListener('input', () => {
+    wrap.style.display = input.value.startsWith('/') ? 'flex' : 'none';
+  });
+})();
+function opchatInsertCmd(c) {
+  const i = document.getElementById('opchat-input');
+  i.value = c + ' '; i.focus();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * CONTENT STUDIO — 4-stage production pipeline
+ * ═════════════════════════════════════════════════════════════════ */
+const CC = {
+  stage: 1,
+  brief: null,
+  script: null,
+  shots: [],
+  assets: [],
+};
+function ccInit() {
+  ccGoStage(CC.stage);
+}
+function ccGoStage(n) {
+  CC.stage = n;
+  document.querySelectorAll('.cc-stage').forEach(el => {
+    el.classList.toggle('active', Number(el.dataset.stage) === n);
+  });
+  document.querySelectorAll('.cc-content').forEach(el => {
+    el.classList.toggle('active', el.id === 'cc-s' + n);
+  });
+  if (n === 3) ccRenderAssets();
+}
+function ccNewProject() {
+  if (!confirm('Start a new content project? Current brief/script will be lost.')) return;
+  CC.brief = null; CC.script = null; CC.shots = []; CC.assets = [];
+  ['cc-subject','cc-msg','cc-cta','cc-script'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ccGoStage(1);
+}
+function ccCollectBrief() {
+  CC.brief = {
+    goal:    document.getElementById('cc-goal').value,
+    channel: document.getElementById('cc-channel').value,
+    tone:    document.getElementById('cc-tone').value,
+    subject: document.getElementById('cc-subject').value,
+    message: document.getElementById('cc-msg').value,
+    cta:     document.getElementById('cc-cta').value,
+  };
+  return CC.brief;
+}
+async function ccGenerateScript() {
+  ccCollectBrief();
+  if (!CC.brief.subject) { alert('Subject required.'); return; }
+  const scriptBox = document.getElementById('cc-script');
+  scriptBox.value = 'Generating script…';
+  try {
+    const prompt = `Write a ${CC.brief.channel} script for: ${CC.brief.subject}\nGoal: ${CC.brief.goal}\nTone: ${CC.brief.tone}\nKey message: ${CC.brief.message}\nCTA: ${CC.brief.cta}\n\nFormat: [HOOK (3s)] ... [BEAT 1] ... [BEAT 2] ... [CTA]\nKeep it punchy.`;
+    const r = await fetch((window.OP_CONFIG?.API || '/api') + '/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'user', content: prompt }], persona: {} }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      scriptBox.value = d.reply;
+      CC.script = d.reply;
+      ccExtractShots(d.reply);
+    } else {
+      scriptBox.value = '// Generation failed: ' + (d.error || 'unknown');
+    }
+  } catch (e) { scriptBox.value = '// Network error — is ANTHROPIC_API_KEY set?'; }
+}
+function ccRegenScript() { ccGenerateScript(); }
+function ccExtractShots(script) {
+  const lines = script.split('\n').filter(l => /\[/.test(l));
+  CC.shots = lines.map((l, i) => ({ n: i + 1, text: l.trim() }));
+  const wrap = document.getElementById('cc-shots');
+  if (!wrap) return;
+  wrap.innerHTML = CC.shots.length === 0
+    ? '<div class="cc-empty">No shot markers found — use [HOOK] [BEAT] [CTA] tags.</div>'
+    : CC.shots.map(s => `<div class="cc-shot"><span class="cc-shot-num">SHOT ${String(s.n).padStart(2,'0')}</span><br>${escapeHtml(s.text)}</div>`).join('');
+}
+function ccRenderAssets() {
+  const kinds = [
+    { kind: 'Hero image',   tool: 'ModelsLab · SDXL',       icon: '🖼',  id: 'hero-img' },
+    { kind: 'Video bg',     tool: 'ModelsLab · text2video', icon: '🎬',  id: 'video-bg' },
+    { kind: 'Voiceover',    tool: 'ModelsLab · TTS',        icon: '🎙',  id: 'voiceover' },
+    { kind: 'Captions',     tool: 'Auto from script',       icon: '💬',  id: 'captions' },
+    { kind: 'Music bed',    tool: 'Suno / library',         icon: '🎵',  id: 'music' },
+    { kind: 'Motion graphics', tool: 'Framer Motion → Remotion', icon: '✨', id: 'motion' },
+    { kind: 'Thumbnail',    tool: 'Fal.ai · Flux',          icon: '🎨',  id: 'thumb' },
+    { kind: 'Overlays',     tool: 'Recraft logos',          icon: '🏷',  id: 'overlay' },
+  ];
+  const grid = document.getElementById('cc-asset-grid');
+  if (!grid) return;
+  grid.innerHTML = kinds.map(k => `
+    <div class="cc-asset" id="cc-asset-${k.id}">
+      <div class="cc-asset-kind">${k.kind}</div>
+      <div class="cc-asset-preview">${k.icon}</div>
+      <div class="cc-asset-tool">${k.tool}</div>
+      <button class="cc-asset-btn" onclick="ccGenAsset('${k.id}','${k.kind}')">Generate</button>
+    </div>
+  `).join('');
+}
+function ccGenAsset(id, kind) {
+  const el = document.querySelector(`#cc-asset-${id} .cc-asset-btn`);
+  if (!el) return;
+  el.textContent = 'Generating…';
+  el.disabled = true;
+  setTimeout(() => {
+    el.textContent = 'Regenerate';
+    el.disabled = false;
+    const prev = document.querySelector(`#cc-asset-${id} .cc-asset-preview`);
+    if (prev) prev.innerHTML = '<span style="font-size:.75rem;color:#c8ff00">✓ GENERATED</span>';
+  }, 1200);
+  // TODO: Phase 4 — real /api/tools/modelslab/run calls
+}
+
 navItems.forEach(item => {
   item.addEventListener('click', () => {
     const target = item.dataset.panel;
@@ -122,6 +380,7 @@ navItems.forEach(item => {
     if (target === 'revenue') initRevenuePanel();
     if (target === 'outputs') initOutputsPanel();
     if (target === 'toolkit') loadToolKit();
+    if (target === 'content') ccInit();
   });
 });
 

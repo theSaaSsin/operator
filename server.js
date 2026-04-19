@@ -66,6 +66,46 @@ const ROUTES = {
   // Health check for Railway
   'GET /api/health': (_, res) => json(res, { ok: true, ts: Date.now() }),
 
+  // ── Operator Chat — talk to Operator in-app (Claude Haiku 4.5) ──
+  'POST /api/chat': async (req, res) => {
+    const data = await body(req);
+    if (!anthropic) return json(res, { ok: false, error: 'ANTHROPIC_API_KEY not set' }, 400);
+    const msgs = Array.isArray(data.messages) ? data.messages : [];
+    const persona = data.persona || {};
+    const tone = (persona.tone || 'friendly expert').toLowerCase();
+    const name = persona.name || 'operator';
+    const sys = `You are Operator — TheSaaSsin's in-app AI cockpit assistant.
+
+PERSONALITY:
+- Tone: ${tone}. Concise, confident, operator-brain, British spelling.
+- You greet the user as ${name} when they open the chat.
+- You NEVER pad answers with disclaimers or "I'm an AI". You talk like a skilled co-founder.
+- Keep replies under 4 short lines unless user asks for detail.
+
+CAPABILITIES YOU CAN SUGGEST:
+- /scan <keyword>           → trigger Lead Feed scan
+- /brand <business name>    → open Brand Studio prefilled
+- /pitch <lead>             → generate pitch doc
+- /run <tool> <args>        → invoke Tool Kit (scrapling, modelslab, etc)
+- /deploy                   → Cloudflare Pages deploy
+- /help                     → list commands
+
+CONTEXT:
+- Panels: Brand Studio · Lead Feed · Outreach Queue · CRM · Follow-ups · Revenue · Tool Kit · Settings
+- User is building an AI lead-gen SaaS. Never explain basics they already know.`;
+    try {
+      const msg = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 420,
+        system: sys,
+        messages: msgs.slice(-12),
+      });
+      json(res, { ok: true, reply: msg.content[0].text, model: 'haiku-4.5' });
+    } catch (e) {
+      json(res, { ok: false, error: e.message }, 500);
+    }
+  },
+
   // ── Tool Kit registry ────────────────────────────────────
   'GET /api/tools': (_req, res) => json(res, { ok: true, tools: toolRegistry.publicList() }),
 
