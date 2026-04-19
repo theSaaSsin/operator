@@ -67,9 +67,26 @@
   }
 
   async function bossGreet() {
-    const cfg = await fetch(API + '/config').then(r => r.json()).catch(() => ({}));
-    const name = cfg.personaName || 'Boss';
-    addMsg('bot', `B.O.S.S online. What are we working on today, ${name}?\n\nTry /scan, /pitch, /channels, or just talk — I've got full context on your pipeline.`);
+    const cfg   = await fetch(API + '/config').then(r => r.json()).catch(() => ({}));
+    const leads = await fetch(API + '/leads').then(r => r.json()).catch(() => ({ leads: [] }));
+    const name  = cfg.personaName || 'Boss';
+    const hasKey = !!cfg.anthropicApiKey;
+    const leadCount = (leads.leads || []).length;
+
+    const onboard = `B.O.S.S online${name !== 'Boss' ? ', ' + name : ''}. Here's your system status and what to do next:\n\n` +
+      `🧠 AI: ${hasKey ? '✓ Anthropic key active' : '⚠ No Anthropic key — go Settings → API Keys to add one. Unlocks everything.'}\n` +
+      `📊 CRM: ${leadCount} lead${leadCount !== 1 ? 's' : ''} in pipeline\n\n` +
+      `━━━ WHAT TO DO RIGHT NOW ━━━\n\n` +
+      `1️⃣  /scan <keyword>  — sweep Reddit live for prospects\n` +
+      `     Try: /scan need more clients\n\n` +
+      `2️⃣  When a lead appears → click it → I'll write the pitch\n\n` +
+      `3️⃣  /channels — see Telegram, X, LinkedIn, Discord status\n\n` +
+      `4️⃣  Just talk to me — tell me your goal and I'll build the plan\n\n` +
+      `━━━ VOICE MODE ━━━\n` +
+      `🎤 Hit the mic button above. Speak. I'll respond.\n\n` +
+      `What are we building today?`;
+
+    addMsg('bot', onboard);
   }
 
   // Slash command suggestions
