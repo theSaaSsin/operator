@@ -9,6 +9,7 @@
     "preview": "npx remotion studio --port 3001"
   },
   "dependencies": {
+    "@remotion/cli": "^4.0.230",
     "@remotion/three": "^4.0.230",
     "@react-three/fiber": "^8.15.0",
     "@react-three/drei": "^9.92.0",
