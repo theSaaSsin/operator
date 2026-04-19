@@ -28,6 +28,8 @@ const bossCron    = require('./automation/cron');
 const bossMcp     = require('./automation/mcp');
 const bossAuth    = require('./automation/auth');
 const bossVoice   = require('./ai/voice');
+const channels    = require('./channels/registry');
+const swarm       = require('./channels/agents');
 
 const PORT   = process.env.PORT || 4000;
 const PUBLIC = path.join(__dirname, 'public');
@@ -330,6 +332,13 @@ CONTEXT:
     json(res, await bossVoice.tts({ text: d.text, voice: d.voice }));
   },
   'GET /api/boss/voice/stt-hint': (_req, res) => json(res, { ok: true, ...bossVoice.sttHint() }),
+
+  // ── Channels — multi-platform social/messaging surface ───
+  // List all channels + configured status
+  'GET /api/channels': (_req, res) => json(res, { ok: true, channels: channels.publicList() }),
+
+  // Per-channel agent swarm listing
+  'GET /api/channels/agents': (_req, res) => json(res, { ok: true, agents: swarm.list() }),
 
   // ── Conversation persistence (always-on Jarvis loop) ─────
   'GET /api/boss/conversations': (_req, res) => {
@@ -1253,6 +1262,64 @@ http.createServer(async (req, res) => {
     return json(res, { ok: true, recordedAt: file });
   }
 
+  // ── Channels prefix routes: /api/channels/<id>/send|spawn|webhook ──
+  if (req.url.startsWith('/api/channels/')) {
+    const parts  = req.url.split('?')[0].split('/');  // ['','api','channels','<id>','<action>']
+    const chanId = parts[3];
+    const action = parts[4];
+    const ch     = channels.get(chanId);
+
+    // POST /api/channels/<id>/send  — outbound message
+    if (req.method === 'POST' && action === 'send') {
+      if (!ch) return json(res, { ok: false, error: `unknown channel: ${chanId}` }, 404);
+      const d = await body(req);
+      if (!ch.configured()) return json(res, { ok: false, error: `${chanId} not configured — set env keys` }, 400);
+      return json(res, await ch.send(d));
+    }
+
+    // POST /api/channels/<id>/spawn  — spawn/update persona for channel agent
+    if (req.method === 'POST' && action === 'spawn') {
+      const d = await body(req);
+      return json(res, { ok: true, agent: swarm.spawn(chanId, d) });
+    }
+
+    // POST /api/channels/<id>/webhook  — inbound from external platform
+    if (req.method === 'POST' && action === 'webhook') {
+      const payload = await body(req);
+      // Telegram webhook verification challenge
+      if (chanId === 'telegram' && payload.ok === false) return json(res, { ok: true });
+      const norm = ch ? ch.ingest(payload) : null;
+      if (!norm) return json(res, { ok: true }); // ack but nothing to process
+      // Push into swarm memory
+      swarm.pushMessage(chanId, norm.chatId, 'user', norm.text);
+      // Build persona-aware system prompt
+      const persona = swarm.getPersona(chanId);
+      const state   = bossMemory.readState();
+      const system  = bossPersona.buildSystemPrompt({
+        userName: persona.greetingName || 'Boss',
+        contextState: state,
+        extraContext: `You are operating ${persona.name || 'B.O.S.S'} on ${chanId}. Tone: ${persona.tone || 'sharp and helpful'}. Reply concisely.`,
+      });
+      const r = await bossRouter.route({
+        taskKind: 'default',
+        system,
+        messages: [
+          ...swarm.recentMessages(chanId, norm.chatId, 8),
+          { role: 'user', content: norm.text },
+        ],
+        maxTokens: 400,
+        actor: `channel-${chanId}`,
+      });
+      const reply = r.ok ? r.text : '⚠️ B.O.S.S is thinking...';
+      swarm.pushMessage(chanId, norm.chatId, 'assistant', reply);
+      // Send reply back via the same channel
+      if (ch.configured()) {
+        ch.send({ to: norm.chatId, text: reply, reply_to_message_id: norm.raw?.message?.message_id }).catch(() => {});
+      }
+      return json(res, { ok: true });
+    }
+  }
+
   // Static files — root now serves studio.html (public marketing), /operator.html is gated
   let filePath = req.url === '/' ? '/studio.html' : req.url;
   filePath = path.join(PUBLIC, filePath.split('?')[0]);
@@ -1270,4 +1337,35 @@ http.createServer(async (req, res) => {
   // Bootstrap auth (idempotent) and start in-process cron jobs.
   try { bossAuth.bootstrap(); } catch (e) { console.warn('auth bootstrap:', e.message); }
   try { bossCron.start();     } catch (e) { console.warn('cron start:', e.message); }
+
+  // Auto-start Telegram long-poll if TELEGRAM_POLLING=1 and bot is configured.
+  const tg = channels.get('telegram');
+  if (tg && tg.configured() && process.env.TELEGRAM_POLLING === '1') {
+    console.log('  📲 Telegram long-poll → active');
+    tg.startPolling(async (norm) => {
+      swarm.pushMessage('telegram', norm.chatId, 'user', norm.text);
+      const persona = swarm.getPersona('telegram');
+      const state   = bossMemory.readState();
+      const system  = bossPersona.buildSystemPrompt({
+        userName: persona.greetingName || 'Boss',
+        contextState: state,
+        extraContext: `You are B.O.S.S on Telegram. Tone: ${persona.tone}. Brief. Emoji sparingly.`,
+      });
+      const r = await bossRouter.route({
+        taskKind: 'default',
+        system,
+        messages: [
+          ...swarm.recentMessages('telegram', norm.chatId, 8),
+          { role: 'user', content: norm.text },
+        ],
+        maxTokens: 400,
+        actor: 'telegram-poll',
+      });
+      const reply = r.ok ? r.text : '⚠️ B.O.S.S offline';
+      swarm.pushMessage('telegram', norm.chatId, 'assistant', reply);
+      await tg.send({ to: norm.chatId, text: reply, reply_to_message_id: norm.raw?.message?.message_id }).catch(() => {});
+    }).catch(e => console.warn('  ⚠️  Telegram polling error:', e.message));
+  } else if (tg && tg.configured()) {
+    console.log('  📲 Telegram configured (webhook mode) — set TELEGRAM_POLLING=1 to switch to long-poll');
+  }
 });

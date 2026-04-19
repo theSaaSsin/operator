@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/x-icon" href="favicon.ico">
-<title>TheSaaSsin — Operator Panel</title>
+<title>B.O.S.S — Business Optimization System Service</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="operator.css">
 </head>
@@ -14,8 +14,8 @@
   <!-- SIDEBAR -->
   <div id="sidebar">
     <div class="sidebar-logo">
-      <div class="s-logo">The<span>SaaS</span>sin</div>
-      <div class="s-tag">Operator Panel</div>
+      <div class="s-logo" style="font-size:22px;letter-spacing:.08em"><span style="color:#c8ff00">B.O.S.S</span></div>
+      <div class="s-tag">Business Operating System</div>
     </div>
     <nav>
       <div class="nav-section">Build</div>
@@ -56,13 +56,20 @@
       <div class="nav-item" data-panel="toolkit">
         <i class="fas fa-toolbox"></i> Tool Kit
       </div>
+      <div class="nav-section" style="color:#c8ff00;opacity:.8">B.O.S.S Core</div>
+      <div class="nav-item" data-panel="channels">
+        <i class="fas fa-satellite-dish"></i> Channels
+      </div>
+      <div class="nav-item" data-panel="agents">
+        <i class="fas fa-robot"></i> Agents
+      </div>
       <div class="nav-section">Account</div>
       <div class="nav-item" data-panel="settings">
         <i class="fas fa-sliders"></i> Persona &amp; Keys
       </div>
     </nav>
     <div class="sidebar-footer">
-      <span class="status-dot"></span>System Online
+      <span class="status-dot" style="background:#c8ff00;box-shadow:0 0 8px rgba(200,255,0,.5)"></span>B.O.S.S Online
     </div>
   </div>
 
@@ -86,7 +93,7 @@
         </button>
         <div id="api-status-bar" style="display:flex;gap:8px;align-items:center;"></div>
         <span style="margin:0 8px;opacity:.3">|</span>
-        TheSaaSsin &nbsp;·&nbsp; <span id="clock"></span>
+        <span style="color:#c8ff00;font-weight:700;letter-spacing:.06em">B.O.S.S</span> &nbsp;·&nbsp; <span id="clock"></span>
       </div>
     </div>
 
@@ -1016,6 +1023,79 @@
         </div>
       </div>
 
+      <!-- ══════════════════════════════════════════════
+           B.O.S.S PANEL: CHANNELS
+           ══════════════════════════════════════════════ -->
+      <div class="panel" id="panel-channels">
+        <div style="padding:30px;max-width:1100px;margin:0 auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:14px">
+            <div>
+              <h2 style="font-size:1.3rem;font-weight:800;margin:0 0 4px">Channels</h2>
+              <p style="font-size:.78rem;color:var(--muted);margin:0">B.O.S.S on every platform — Telegram, X, LinkedIn, Instagram, Discord, Slack</p>
+            </div>
+            <button onclick="bossLoadChannels()" style="background:#1f1f1f;border:1px solid #2a2a2a;color:#c8ff00;padding:8px 18px;border-radius:100px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px">
+              <i class="fas fa-rotate"></i> Refresh
+            </button>
+          </div>
+          <div id="boss-channels-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">
+            <div style="color:var(--muted);font-size:.8rem">Loading channels…</div>
+          </div>
+          <div style="margin-top:32px;background:#0d0d0d;border:1px solid #1a1a1a;border-radius:14px;padding:22px">
+            <div style="font-weight:700;font-size:.8rem;margin-bottom:12px;color:#c8ff00"><i class="fas fa-paper-plane"></i> &nbsp;Quick Send</div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+              <select id="ch-send-id" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:9px 14px;border-radius:8px;font-size:.8rem;flex:0 0 160px">
+                <option value="telegram">Telegram</option>
+                <option value="discord">Discord</option>
+                <option value="slack">Slack</option>
+                <option value="x">X (Twitter)</option>
+                <option value="linkedin">LinkedIn</option>
+              </select>
+              <input id="ch-send-to" placeholder="Chat ID / @username (Telegram only)" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:9px 14px;border-radius:8px;font-size:.8rem;flex:1;min-width:180px">
+              <textarea id="ch-send-text" placeholder="Message…" rows="2" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:9px 14px;border-radius:8px;font-size:.8rem;flex:2;min-width:220px;resize:vertical"></textarea>
+              <button onclick="bossChannelSend()" style="background:#c8ff00;color:#0a0a0a;border:none;padding:9px 20px;border-radius:8px;font-weight:700;font-size:.8rem;cursor:pointer;white-space:nowrap">Send</button>
+            </div>
+            <div id="ch-send-result" style="font-size:.73rem;color:var(--muted);margin-top:8px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════
+           B.O.S.S PANEL: AGENTS
+           ══════════════════════════════════════════════ -->
+      <div class="panel" id="panel-agents">
+        <div style="padding:30px;max-width:1100px;margin:0 auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:14px">
+            <div>
+              <h2 style="font-size:1.3rem;font-weight:800;margin:0 0 4px">Channel Agents</h2>
+              <p style="font-size:.78rem;color:var(--muted);margin:0">Per-platform personas — each channel gets its own tone, memory, and task queue</p>
+            </div>
+            <button onclick="bossLoadAgents()" style="background:#1f1f1f;border:1px solid #2a2a2a;color:#c8ff00;padding:8px 18px;border-radius:100px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px">
+              <i class="fas fa-rotate"></i> Refresh
+            </button>
+          </div>
+          <div id="boss-agents-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:28px">
+            <div style="color:var(--muted);font-size:.8rem">Loading agents…</div>
+          </div>
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:14px;padding:22px">
+            <div style="font-weight:700;font-size:.8rem;margin-bottom:12px;color:#c8ff00"><i class="fas fa-robot"></i> &nbsp;Spawn / Override Agent Persona</div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+              <select id="ag-spawn-id" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:9px 14px;border-radius:8px;font-size:.8rem;flex:0 0 160px">
+                <option value="telegram">Telegram</option>
+                <option value="discord">Discord</option>
+                <option value="slack">Slack</option>
+                <option value="x">X (Twitter)</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="instagram">Instagram</option>
+              </select>
+              <input id="ag-spawn-name" placeholder="Agent name (e.g. B.O.S.S)" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:9px 14px;border-radius:8px;font-size:.8rem;flex:1;min-width:160px">
+              <input id="ag-spawn-tone" placeholder="Tone override (leave blank for default)" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:9px 14px;border-radius:8px;font-size:.8rem;flex:2;min-width:220px">
+              <button onclick="bossSpawnAgent()" style="background:#c8ff00;color:#0a0a0a;border:none;padding:9px 20px;border-radius:8px;font-weight:700;font-size:.8rem;cursor:pointer;white-space:nowrap">Spawn</button>
+            </div>
+            <div id="ag-spawn-result" style="font-size:.73rem;color:var(--muted);margin-top:8px"></div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /content -->
   </div><!-- /main -->
 </div><!-- /app -->
@@ -1144,7 +1224,7 @@
 <!-- ── FIRST RUN SCREEN ── -->
 <div id="first-run" style="display:none;position:fixed;inset:0;background:#07070e;z-index:20000;align-items:center;justify-content:center;">
   <div style="width:420px;max-width:92vw;display:flex;flex-direction:column;gap:0;text-align:center;">
-    <div style="font-size:1.1rem;font-weight:800;letter-spacing:-.02em;margin-bottom:32px">The<span style="color:#ff2a2a">SaaS</span>sin <span style="font-weight:400;opacity:.4;font-size:.8rem">Operator</span></div>
+    <div style="font-size:1.1rem;font-weight:800;letter-spacing:.08em;margin-bottom:32px"><span style="color:#c8ff00">B.O.S.S</span> <span style="font-weight:400;opacity:.4;font-size:.8rem">Business Operating System</span></div>
     <div style="font-size:1.5rem;font-weight:800;margin-bottom:8px;line-height:1.25">Set up in 30 seconds.<br>Find leads in 60.</div>
     <div style="font-size:.82rem;color:#6b6b80;margin-bottom:32px">Two fields. Then the system scans Reddit for live prospects in your niche.</div>
     <div style="display:flex;flex-direction:column;gap:12px;text-align:left;margin-bottom:20px">
@@ -1160,8 +1240,8 @@
       </div>
     </div>
     <button id="fr-btn" onclick="firstRunComplete()"
-      style="background:#ff2a2a;color:#fff;border:none;border-radius:8px;padding:14px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;width:100%">
-      <i class="fas fa-satellite-dish"></i> Start scanning for leads
+      style="background:#c8ff00;color:#0a0a0a;border:none;border-radius:8px;padding:14px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;width:100%">
+      <i class="fas fa-satellite-dish"></i> Activate B.O.S.S
     </button>
     <div style="font-size:.68rem;color:#6b6b80;margin-top:14px">No account needed &nbsp;·&nbsp; Reddit scanning is free &nbsp;·&nbsp; Add API keys anytime in Settings</div>
   </div>
@@ -1170,8 +1250,8 @@
 <div id="toast"></div>
 
 <!-- ═══ OPERATOR CHAT DRAWER (floating assistant) ═══ -->
-<button id="opchat-fab" onclick="opchatToggle()" title="Chat with Operator (⌘K)">
-  <i class="fas fa-comment-dots"></i>
+<button id="opchat-fab" onclick="opchatToggle()" title="Chat with B.O.S.S (⌘K)" style="font-size:.7rem;font-weight:900;letter-spacing:.06em">
+  B.O.S.S
 </button>
 <div id="opchat-drawer">
   <div id="opchat-head">
@@ -1199,8 +1279,8 @@
 </div>
 
 <style>
-  #opchat-fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#e9b44c,#c88f1f);border:none;color:#0a0a0a;font-size:1.2rem;cursor:pointer;z-index:9998;box-shadow:0 10px 30px rgba(0,0,0,.4);transition:transform .3s,box-shadow .3s}
-  #opchat-fab:hover{transform:scale(1.08) translateY(-2px);box-shadow:0 14px 40px rgba(233,180,76,.3)}
+  #opchat-fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:#c8ff00;border:none;color:#0a0a0a;font-size:1.1rem;font-weight:900;cursor:pointer;z-index:9998;box-shadow:0 0 24px rgba(200,255,0,.35),0 10px 30px rgba(0,0,0,.4);transition:transform .3s,box-shadow .3s;letter-spacing:.04em}
+  #opchat-fab:hover{transform:scale(1.08) translateY(-2px);box-shadow:0 0 36px rgba(200,255,0,.5),0 14px 40px rgba(0,0,0,.4)}
   #opchat-drawer{position:fixed;right:20px;bottom:90px;width:380px;max-width:calc(100vw - 40px);height:560px;max-height:80vh;background:#121212;border:1px solid #1f1f1f;border-radius:18px;box-shadow:0 30px 90px rgba(0,0,0,.7);display:none;flex-direction:column;z-index:9999;overflow:hidden;font-family:Inter,sans-serif}
   #opchat-drawer.open{display:flex;animation:opchatIn .35s cubic-bezier(.22,1,.36,1)}
   @keyframes opchatIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}

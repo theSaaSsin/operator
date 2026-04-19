@@ -1,4 +1,4 @@
-/* ── TheSaaSsin Operator Panel — operator.js ── */
+/* ── B.O.S.S — Business Optimization System Service — operator.js ── */
 'use strict';
 
 const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -920,11 +920,11 @@ document.getElementById('btn-generate').addEventListener('click', () => {
 
   /* 3. CRM structure → logged */
   const crm = buildCRMStructure({ name, niche, offer, goal, profile });
-  console.log('[TheSaaSsin] CRM Structure for', name, JSON.stringify(crm, null, 2));
+  console.log('[B.O.S.S] CRM Structure for', name, JSON.stringify(crm, null, 2));
 
   /* 4. Offer definition → logged */
   const offerDef = buildOfferDefinition({ name, niche, offer, goal, loc, profile });
-  console.log('[TheSaaSsin] Offer Definition:', JSON.stringify(offerDef, null, 2));
+  console.log('[B.O.S.S] Offer Definition:', JSON.stringify(offerDef, null, 2));
 
   /* 5. Package summary → show in right panel */
   showPackageSummary(buildPackageSummary({ name, profile, style }));
@@ -1468,7 +1468,7 @@ I build client acquisition systems for ${niche} businesses — and the most comm
 
 ${scene ? 'Sound familiar?\n\n"' + scene + '"\n\n' : ''}${opener_close}
 
-— TheSaaSsin`
+— B.O.S.S`
     },
     {
       label: '2 — Value',
@@ -1487,7 +1487,7 @@ ${tone === 'friendly' ? 'Want me to show you what it looks like for your setup? 
 
 → https://calendly.com/thesaassin/build-your-system
 
-— TheSaaSsin`
+— B.O.S.S`
     },
     {
       label: '3 — System Preview',
@@ -1508,7 +1508,7 @@ ${tone === 'friendly' ? 'If you like it, we can talk next steps. If not, you kee
 
 → https://calendly.com/thesaassin/build-your-system
 
-— TheSaaSsin`
+— B.O.S.S`
     },
     {
       label: '4 — Follow-Up',
@@ -1521,7 +1521,7 @@ ${tone === 'aggressive' ? 'I\'m not here to waste your time — but if this is a
 
 ${followup_close}
 
-— TheSaaSsin`
+— B.O.S.S`
     },
     {
       label: '5 — Final Nudge',
@@ -1536,7 +1536,7 @@ If it's not the right time — no problem at all. I'll leave you to it.
 
 ${tone === 'friendly' ? 'Either way, best of luck with it.' : 'Either way:'} https://calendly.com/thesaassin/build-your-system
 
-— TheSaaSsin`
+— B.O.S.S`
     }
   ];
 }
@@ -4729,4 +4729,100 @@ checkApiStatus();
   fetch(API + '/boss/voice/stt-hint').then(r => r.json()).then(d => {
     if (d && d.recommended === 'whisper') VOICE.premiumTTS = true;
   }).catch(() => {});
+
+  // ─────────────────────────────────────────────────────────
+  // CHANNELS PANEL — render channel cards + send/spawn UI
+  // ─────────────────────────────────────────────────────────
+  const CHANNEL_ICONS = {
+    telegram:'fab fa-telegram', x:'fab fa-x-twitter', linkedin:'fab fa-linkedin',
+    instagram:'fab fa-instagram', discord:'fab fa-discord', slack:'fab fa-slack',
+  };
+  async function bossLoadChannels() {
+    const grid = document.getElementById('boss-channels-grid');
+    if (!grid) return;
+    grid.innerHTML = '<div style="color:var(--muted);font-size:.8rem">Loading…</div>';
+    const r = await fetch(API + '/channels').then(r => r.json()).catch(() => null);
+    if (!r || !r.channels) { grid.innerHTML = '<div style="color:#ff5d73;font-size:.8rem">Failed to load channels</div>'; return; }
+    grid.innerHTML = r.channels.map(ch => `
+      <div style="background:#0d0d0d;border:1px solid ${ch.configured ? '#2a3a1a' : '#1a1a1a'};border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:40px;height:40px;border-radius:10px;background:${ch.configured ? 'rgba(200,255,0,.12)' : '#1a1a1a'};display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:${ch.configured ? '#c8ff00' : '#555'}">
+            <i class="${CHANNEL_ICONS[ch.id] || 'fas fa-satellite-dish'}"></i>
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:.88rem">${ch.label}</div>
+            <div style="font-size:.7rem;color:${ch.configured ? '#c8ff00' : '#ff5d73'}">${ch.configured ? '✓ Configured' : '⚠ Needs env key'}</div>
+          </div>
+        </div>
+        <div style="font-size:.7rem;color:var(--muted);line-height:1.4">${ch.configured ? (ch.capabilities || []).join(' · ') : ch.setupNote}</div>
+        ${ch.kind === 'messaging' ? `<button onclick="(document.getElementById('ch-send-id').value='${ch.id}')" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#c8ff00;padding:6px 14px;border-radius:8px;font-size:.72rem;cursor:pointer;align-self:flex-start">Select to send →</button>` : ''}
+      </div>
+    `).join('');
+  }
+  window.bossLoadChannels = bossLoadChannels;
+
+  async function bossChannelSend() {
+    const id   = document.getElementById('ch-send-id')?.value;
+    const to   = document.getElementById('ch-send-to')?.value;
+    const text = document.getElementById('ch-send-text')?.value;
+    const el   = document.getElementById('ch-send-result');
+    if (!text) { if (el) el.textContent = '⚠ Enter a message'; return; }
+    if (el) el.textContent = 'Sending…';
+    const payload = { text };
+    if (to) payload.to = to;
+    const r = await fetch(API + `/channels/${id}/send`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r => r.json()).catch(e => ({ ok:false, error:e.message }));
+    if (el) el.textContent = r.ok ? '✓ Sent' : ('✗ ' + (r.error || 'error'));
+  }
+  window.bossChannelSend = bossChannelSend;
+
+  // ─────────────────────────────────────────────────────────
+  // AGENTS PANEL — render per-channel agent cards + spawn
+  // ─────────────────────────────────────────────────────────
+  async function bossLoadAgents() {
+    const grid = document.getElementById('boss-agents-grid');
+    if (!grid) return;
+    grid.innerHTML = '<div style="color:var(--muted);font-size:.8rem">Loading…</div>';
+    const r = await fetch(API + '/channels/agents').then(r => r.json()).catch(() => null);
+    if (!r || !r.agents) { grid.innerHTML = '<div style="color:#ff5d73;font-size:.8rem">No agents spawned yet — use Spawn below</div>'; return; }
+    if (!r.agents.length) { grid.innerHTML = '<div style="color:var(--muted);font-size:.8rem">No agents spawned yet — use Spawn below to activate a channel agent</div>'; return; }
+    grid.innerHTML = r.agents.map(ag => `
+      <div style="background:#0d0d0d;border:1px solid #2a3a1a;border-radius:14px;padding:20px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <i class="${CHANNEL_ICONS[ag.channelId] || 'fas fa-robot'}" style="color:#c8ff00;font-size:1.1rem"></i>
+          <div style="font-weight:700;font-size:.88rem">${ag.persona?.name || ag.channelId}</div>
+          <div style="margin-left:auto;font-size:.68rem;color:var(--muted)">${ag.queueDepth || 0} queued</div>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted);line-height:1.5">
+          <div>Tone: ${ag.persona?.tone || '—'}</div>
+          <div>Chats: ${ag.chatCount || 0} &nbsp;·&nbsp; Sent: ${ag.stats?.sent || 0} &nbsp;·&nbsp; Recv: ${ag.stats?.received || 0}</div>
+          ${ag.spawnedAt ? `<div>Active since: ${new Date(ag.spawnedAt).toLocaleDateString()}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+  window.bossLoadAgents = bossLoadAgents;
+
+  async function bossSpawnAgent() {
+    const id   = document.getElementById('ag-spawn-id')?.value;
+    const name = document.getElementById('ag-spawn-name')?.value;
+    const tone = document.getElementById('ag-spawn-tone')?.value;
+    const el   = document.getElementById('ag-spawn-result');
+    if (el) el.textContent = 'Spawning…';
+    const persona = {};
+    if (name) persona.name = name;
+    if (tone) persona.tone = tone;
+    const r = await fetch(API + `/channels/${id}/spawn`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ persona }) }).then(r => r.json()).catch(e => ({ ok:false, error:e.message }));
+    if (el) el.textContent = r.ok ? `✓ Agent spawned for ${id}` : ('✗ ' + (r.error || 'error'));
+    if (r.ok) setTimeout(bossLoadAgents, 500);
+  }
+  window.bossSpawnAgent = bossSpawnAgent;
+
+  // Auto-load channels/agents when panel is shown
+  document.querySelectorAll('.nav-item[data-panel]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = btn.dataset.panel;
+      if (p === 'channels') setTimeout(bossLoadChannels, 200);
+      if (p === 'agents')   setTimeout(bossLoadAgents, 200);
+    });
+  });
 })();
