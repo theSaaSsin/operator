@@ -323,6 +323,9 @@
     addMsgRich('bot', msg);
   };
 
+  // Call on page load so toggle always reflects current state
+  document.addEventListener('DOMContentLoaded', () => setTimeout(applyAIToggleUI, 300));
+
   window.bossLoadConfig = async function () {
     applyAIToggleUI();
     try {
@@ -684,6 +687,151 @@
       setTimeout(bossLoadModels, 15000);
     } catch (_) {
       if (msg) { msg.textContent = 'Failed — is Ollama installed and running?'; msg.style.color = '#f55'; }
+    }
+  };
+
+  // ── FREE GPU PANEL ───────────────────────────────────────────────────────
+
+  const GPU_SNIPPETS = {
+    'colab-drive': `# ── Cell 1: Mount Drive + set save dir ────────────────────
+from google.colab import drive
+drive.mount('/content/drive')
+
+import os
+SAVE_DIR = '/content/drive/MyDrive/boss-models/'
+os.makedirs(SAVE_DIR, exist_ok=True)
+print(f"Saving to: {SAVE_DIR}")`,
+
+    'colab-4bit': `# ── 4-bit quantised load (bitsandbytes) ───────────────────
+!pip install -q transformers bitsandbytes accelerate
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
+MODEL = "Qwen/Qwen2.5-7B-Instruct"   # swap for any model
+
+bnb_cfg = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.float16,
+    bnb_4bit_use_double_quant=True,
+)
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL)
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL, quantization_config=bnb_cfg, device_map="auto"
+)
+print(f"Loaded {MODEL} in 4-bit — VRAM: {torch.cuda.memory_allocated()/1e9:.1f}GB")`,
+
+    'kaggle-setup': `# ── Kaggle setup cell ─────────────────────────────────────
+import os
+WORK_DIR = "/kaggle/working/boss-outputs"
+os.makedirs(WORK_DIR, exist_ok=True)
+os.system("pip install -q transformers bitsandbytes accelerate peft")
+os.system("nvidia-smi --query-gpu=name,memory.total --format=csv,noheader")
+print("Ready")`,
+
+    'lora': `# ── LoRA fine-tune on custom data ─────────────────────────
+!pip install -q transformers peft bitsandbytes accelerate datasets trl
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from peft import LoraConfig, get_peft_model, TaskType
+from trl import SFTTrainer
+from transformers import TrainingArguments
+from datasets import Dataset
+import torch, os
+
+SAVE_DIR = '/content/drive/MyDrive/boss-lora/'
+os.makedirs(SAVE_DIR, exist_ok=True)
+
+MODEL = "Qwen/Qwen2.5-7B-Instruct"
+bnb   = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16)
+model = AutoModelForCausalLM.from_pretrained(MODEL, quantization_config=bnb, device_map="auto")
+tokenizer = AutoTokenizer.from_pretrained(MODEL)
+
+lora_cfg = LoraConfig(r=16, lora_alpha=32, target_modules=["q_proj","v_proj"],
+                      lora_dropout=0.05, task_type=TaskType.CAUSAL_LM)
+model = get_peft_model(model, lora_cfg)
+model.print_trainable_parameters()
+
+train_data = [{"text": "### Human: What is TheSaaSsin?\\n### Assistant: AI client acquisition operator."}]
+dataset = Dataset.from_list(train_data)
+
+args = TrainingArguments(output_dir=SAVE_DIR, num_train_epochs=3,
+                         per_device_train_batch_size=2, save_steps=50, fp16=True)
+trainer = SFTTrainer(model=model, tokenizer=tokenizer, train_dataset=dataset,
+                     dataset_text_field="text", args=args, max_seq_length=512)
+trainer.train()
+model.save_pretrained(SAVE_DIR)
+print(f"Saved to {SAVE_DIR}")`,
+
+    'sd-colab': `# ── SDXL on free T4 ──────────────────────────────────────
+!pip install -q diffusers transformers accelerate
+from diffusers import StableDiffusionXLPipeline, DPMSolverMultistepScheduler
+import torch
+
+pipe = StableDiffusionXLPipeline.from_pretrained(
+    "stabilityai/stable-diffusion-xl-base-1.0",
+    torch_dtype=torch.float16, use_safetensors=True, variant="fp16"
+).to("cuda")
+pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
+pipe.enable_xformers_memory_efficient_attention()
+
+prompt = "TheSaaSsin operator dashboard, dark neon UI, cinematic, 8k"
+image  = pipe(prompt=prompt, num_inference_steps=25, guidance_scale=7.5).images[0]
+image.save("/content/drive/MyDrive/boss-models/render.png")
+image`,
+
+    'hf-zerogpu': `# app.py — HF Space with ZeroGPU
+import gradio as gr
+import spaces
+import torch
+from transformers import pipeline
+
+pipe = pipeline("text-generation", model="Qwen/Qwen2.5-7B-Instruct",
+                torch_dtype=torch.float16)
+
+@spaces.GPU
+def generate(prompt, max_tokens=256):
+    result = pipe(prompt, max_new_tokens=max_tokens, do_sample=True, temperature=0.7)
+    return result[0]["generated_text"]
+
+gr.Interface(fn=generate,
+             inputs=gr.Textbox(label="Prompt"),
+             outputs=gr.Textbox(label="Output"),
+             title="B.O.S.S Inference").launch()`,
+  };
+
+  window.gpuCopy = function(key) {
+    const text = GPU_SNIPPETS[key];
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      addMsgRich('bot', `📋 Copied <b>${key}</b> template — paste into your notebook.`);
+    }).catch(() => {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      addMsgRich('bot', `📋 Copied <b>${key}</b> template.`);
+    });
+  };
+
+  window.bossLoadGPU = function() {
+    // Off-peak clock
+    const now = new Date();
+    const ukHour = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/London' })).getHours();
+    const offPeak = ukHour >= 3 && ukHour < 8;
+    const timeEl = document.getElementById('gpu-time-label');
+    const peakEl = document.getElementById('gpu-peak-label');
+    if (timeEl) timeEl.textContent = ukHour.toString().padStart(2,'0') + ':00 UK';
+    if (peakEl) {
+      peakEl.textContent = offPeak ? '🟢 OFF-PEAK — best time now!' : '🟡 Peak hours — queues longer';
+      peakEl.style.color = offPeak ? '#2cb67d' : '#ff9500';
+    }
+    const detailEl = document.getElementById('gpu-offpeak-detail');
+    if (detailEl) {
+      detailEl.innerHTML = offPeak
+        ? '<span style="color:#2cb67d;font-weight:700">✓ Off-peak right now (3am–8am UK)</span> — US and EU asleep, GPU allocation is fastest. Good time to kick off a training run.'
+        : '<b>Off-peak window:</b> 3am–8am UK time — that\'s when Colab, Kaggle and HF GPU queues are shortest. US West Coast is midnight, EU is 4–9am. If you have a long run, schedule it to start around 3am UK and it\'ll finish by morning.';
     }
   };
 

@@ -18,110 +18,42 @@
       <div class="s-tag">Business Operating System</div>
     </div>
     <nav>
-      <div class="nav-item active" data-panel="dashboard">
-        <i class="fas fa-th-large"></i> Dashboard
-      </div>
-      <div class="nav-item" data-panel="execute">
-        <i class="fas fa-bolt"></i> Execute
-      </div>
 
-      <div class="nav-section" data-cat="core">Core Layer <span class="nav-cat-count" id="cat-count-core"></span></div>
-      <div class="nav-item" data-panel="client">
-        <i class="fas fa-user-plus"></i> Client Creator
-      </div>
-      <div class="nav-item" data-panel="feed">
-        <i class="fas fa-satellite-dish"></i> Lead Feed
-      </div>
-      <div class="nav-item" data-panel="crm">
-        <i class="fas fa-chart-line"></i> CRM Pipeline
-      </div>
-      <div class="nav-item" data-panel="outreach">
-        <i class="fas fa-paper-plane"></i> Outreach Queue
-      </div>
-      <div class="nav-item" data-panel="analytics" onclick="loadAnalytics()">
-        <i class="fas fa-chart-bar"></i> Analytics
-      </div>
+      <!-- ── CORE ─────────────────────────── -->
+      <div class="nav-item active" data-panel="dashboard"><i class="fas fa-th-large"></i> Dashboard</div>
+      <div class="nav-item" data-panel="execute"><i class="fas fa-bolt"></i> Execute</div>
 
-      <div class="nav-section" data-cat="acquisition">Acquisition <span class="nav-cat-count" id="cat-count-acquisition"></span></div>
-      <div class="nav-item" data-panel="mod-keyword-detect"><i class="fas fa-crosshairs"></i> Keyword Detection</div>
-      <div class="nav-item" data-panel="mod-intent"><i class="fas fa-brain"></i> Intent Analyzer</div>
-      <div class="nav-item" data-panel="mod-outreach-send"><i class="fas fa-share-nodes"></i> Outreach Sender</div>
-      <div class="nav-item" data-panel="mod-followup"><i class="fas fa-clock-rotate-left"></i> Follow-Up Auto</div>
-      <div class="nav-item" data-panel="mod-reply-detect"><i class="fas fa-reply"></i> Reply Detection</div>
-      <div class="nav-item" data-panel="mod-booking"><i class="fas fa-calendar-check"></i> Booking</div>
-      <div class="nav-item" data-panel="mod-competitor-hijack"><i class="fas fa-user-secret"></i> Competitor Hijack</div>
-      <div class="nav-item" data-panel="mod-local-finder"><i class="fas fa-map-pin"></i> Local Lead Finder</div>
-      <div class="nav-item" data-panel="mod-cold-outreach"><i class="fas fa-comment-dots"></i> Cold Outreach Gen</div>
+      <!-- ── OPERATOR ───────────────────────── -->
+      <div class="nav-section">OPERATE</div>
+      <div class="nav-item" data-panel="feed"><i class="fas fa-satellite-dish"></i> Lead Feed</div>
+      <div class="nav-item" data-panel="crm"><i class="fas fa-chart-line"></i> CRM Pipeline</div>
+      <div class="nav-item" data-panel="outreach"><i class="fas fa-paper-plane"></i> Outreach Queue</div>
+      <div class="nav-item" data-panel="client"><i class="fas fa-user-plus"></i> New Client</div>
+      <div class="nav-item" data-panel="analytics" onclick="loadAnalytics()"><i class="fas fa-chart-bar"></i> Analytics</div>
 
-      <div class="nav-section" data-cat="sales">Sales / Conversion <span class="nav-cat-count" id="cat-count-sales"></span></div>
-      <div class="nav-item" data-panel="mod-funnel"><i class="fas fa-filter"></i> Funnel Builder</div>
-      <div class="nav-item" data-panel="mod-offer"><i class="fas fa-gift"></i> Offer Generator</div>
-      <div class="nav-item" data-panel="mod-proposal"><i class="fas fa-file-invoice"></i> Proposal Builder</div>
-      <div class="nav-item" data-panel="mod-demo-viz"><i class="fas fa-eye"></i> Demo Visualizer</div>
-      <div class="nav-item" data-panel="mod-close-track"><i class="fas fa-handshake"></i> Close Tracking</div>
-      <div class="nav-item" data-panel="mod-landing-page"><i class="fas fa-globe"></i> Landing Page Gen</div>
-      <div class="nav-item" data-panel="mod-testimonials"><i class="fas fa-star"></i> Testimonials / Proof</div>
-      <div class="nav-item" data-panel="mod-call-script"><i class="fas fa-phone"></i> Call Script Gen</div>
-      <div class="nav-item" data-panel="mod-pricing"><i class="fas fa-tags"></i> Pricing Builder</div>
-      <div class="nav-item" data-panel="mod-objections"><i class="fas fa-shield-halved"></i> Objection Scripts</div>
-
-      <div class="nav-section" data-cat="content">Content / Brand <span class="nav-cat-count" id="cat-count-content"></span></div>
-      <div class="nav-item" data-panel="mod-content-ideas"><i class="fas fa-lightbulb"></i> Content Ideas</div>
-      <div class="nav-item" data-panel="mod-social-posts"><i class="fas fa-thumbs-up"></i> Social Posts</div>
-      <div class="nav-item" data-panel="mod-scheduler"><i class="fas fa-calendar-days"></i> Scheduler</div>
-      <div class="nav-item" data-panel="mod-brand"><i class="fas fa-palette"></i> Brand Builder</div>
-      <div class="nav-item" data-panel="mod-content-perf"><i class="fas fa-chart-simple"></i> Content Stats</div>
-      <div class="nav-item" data-panel="mod-short-form"><i class="fas fa-video"></i> Short-Form Content</div>
-      <div class="nav-item" data-panel="mod-long-form"><i class="fas fa-newspaper"></i> Long-Form Content</div>
-      <div class="nav-item" data-panel="mod-visual-assets"><i class="fas fa-image"></i> Visual Assets</div>
-      <div class="nav-item" data-panel="mod-profile-optimizer"><i class="fas fa-user-circle"></i> Profile Optimizer</div>
-      <div class="nav-item" data-panel="mod-engagement"><i class="fas fa-comments"></i> Engagement Booster</div>
-
-      <div class="nav-section" data-cat="automation">Automation <span class="nav-cat-count" id="cat-count-automation"></span></div>
-      <div class="nav-item" data-panel="mod-workflows"><i class="fas fa-diagram-project"></i> Workflows</div>
-      <div class="nav-item" data-panel="mod-onboarding"><i class="fas fa-user-check"></i> Client Onboarding</div>
-      <div class="nav-item" data-panel="mod-data-sync"><i class="fas fa-database"></i> Data Sync</div>
-      <div class="nav-item" data-panel="mod-file-assets"><i class="fas fa-folder-open"></i> File Assets</div>
-      <div class="nav-item" data-panel="mod-templates"><i class="fas fa-book"></i> Template Library</div>
-      <div class="nav-item" data-panel="mod-clone"><i class="fas fa-clone"></i> System Cloning</div>
-      <div class="nav-item" data-panel="mod-crm-auto"><i class="fas fa-robot"></i> CRM Auto</div>
-      <div class="nav-item" data-panel="mod-email-auto"><i class="fas fa-envelope-open-text"></i> Email Auto</div>
-      <div class="nav-item" data-panel="mod-notifications"><i class="fas fa-bell"></i> Notifications</div>
-      <div class="nav-item" data-panel="mod-tasks"><i class="fas fa-list-check"></i> Task Manager</div>
-
-      <div class="nav-section" data-cat="delivery">Client Delivery <span class="nav-cat-count" id="cat-count-delivery"></span></div>
-      <div class="nav-item" data-panel="mod-client-dash"><i class="fas fa-gauge-high"></i> Client Dashboard</div>
-      <div class="nav-item" data-panel="mod-system-viz"><i class="fas fa-sitemap"></i> System Visual</div>
-      <div class="nav-item" data-panel="mod-progress"><i class="fas fa-bars-progress"></i> Progress</div>
-      <div class="nav-item" data-panel="mod-support"><i class="fas fa-headset"></i> Support</div>
-      <div class="nav-item" data-panel="mod-training"><i class="fas fa-graduation-cap"></i> Training / Tutorials</div>
-      <div class="nav-item" data-panel="mod-performance"><i class="fas fa-chart-line"></i> Performance Dashboard</div>
-      <div class="nav-item" data-panel="mod-change-requests"><i class="fas fa-pen-to-square"></i> Change Requests</div>
-      <div class="nav-item" data-panel="mod-access-control"><i class="fas fa-lock"></i> Access Control</div>
-      <div class="nav-item" data-panel="mod-export"><i class="fas fa-file-export"></i> System Export</div>
-      <div class="nav-item" data-panel="mod-whitelabel"><i class="fas fa-tag"></i> White-Label</div>
-
-      <div class="nav-section" data-cat="expansion">Expansion <span class="nav-cat-count" id="cat-count-expansion"></span></div>
-      <div class="nav-item" data-panel="mod-api-layer"><i class="fas fa-plug"></i> API Layer</div>
-      <div class="nav-item" data-panel="mod-billing"><i class="fas fa-credit-card"></i> Billing</div>
-      <div class="nav-item" data-panel="mod-teams"><i class="fas fa-users"></i> Teams</div>
-      <div class="nav-item" data-panel="mod-global-analytics"><i class="fas fa-earth-americas"></i> Global Analytics</div>
-      <div class="nav-item" data-panel="mod-partners"><i class="fas fa-handshake"></i> Partner Management</div>
-      <div class="nav-item" data-panel="mod-resellers"><i class="fas fa-store"></i> Reseller Dashboard</div>
-      <div class="nav-item" data-panel="mod-marketplace"><i class="fas fa-plug"></i> Marketplace</div>
-      <div class="nav-item" data-panel="mod-plugins"><i class="fas fa-puzzle-piece"></i> Plugins</div>
-      <div class="nav-item" data-panel="mod-revenue"><i class="fas fa-receipt"></i> Revenue Tracking</div>
-      <div class="nav-item" data-panel="mod-affiliates"><i class="fas fa-people-arrows"></i> Affiliate System</div>
-      <div class="nav-item" data-panel="mod-system-matcher"><i class="fas fa-puzzle-piece"></i> System Matcher</div>
-      <div class="nav-section" data-cat="boss" style="color:#ff2a2a;opacity:.9">B.O.S.S Core</div>
-      <div class="nav-item" data-panel="boss-config" onclick="bossLoadConfig()" style="color:#ff2a2a"><i class="fas fa-key"></i> API Keys &amp; Settings</div>
-      <div class="nav-item" data-panel="panel-ai-tools" onclick="bossLoadAITools()" style="color:#ff2a2a"><i class="fas fa-robot"></i> AI Tools &amp; Models</div>
-      <div class="nav-item" data-panel="boss-creative" onclick="bossLoadCreative()" style="color:#ff2a2a"><i class="fas fa-film"></i> Creative Studio</div>
-      <div class="nav-item" onclick="window.open('/offaxis.html','_blank')" style="color:#ff2a2a"><i class="fas fa-cube"></i> Off-Axis 3D Viewer</div>
-      <div class="nav-item" data-panel="panel-graph" onclick="switchPanel('panel-graph')" style="color:#ff2a2a"><i class="fas fa-project-diagram"></i> Knowledge Graph</div>
+      <!-- ── BUILD ──────────────────────────── -->
+      <div class="nav-section">BUILD</div>
+      <div class="nav-item" data-panel="boss-creative" onclick="bossLoadCreative()"><i class="fas fa-film"></i> Creative Studio</div>
+      <div class="nav-item" onclick="window.open('/offaxis.html','_blank')"><i class="fas fa-cube"></i> 3D Viewer</div>
+      <div class="nav-item" data-panel="panel-graph" onclick="switchPanel('panel-graph')"><i class="fas fa-project-diagram"></i> Knowledge Graph</div>
       <div class="nav-item" data-panel="panel-design" onclick="switchPanel('panel-design')"><i class="fas fa-palette"></i> Brand Assets</div>
-      <div class="nav-item" data-panel="boss-channels"><i class="fas fa-satellite-dish"></i> Channels</div>
-      <div class="nav-item" data-panel="boss-agents"><i class="fas fa-robot"></i> Agents</div>
+
+      <!-- ── ACQUIRE ────────────────────────── -->
+      <div class="nav-section">ACQUIRE</div>
+      <div class="nav-item" data-panel="mod-intent"><i class="fas fa-brain"></i> Intent Analyzer</div>
+      <div class="nav-item" data-panel="mod-cold-outreach"><i class="fas fa-comment-dots"></i> Cold Outreach</div>
+      <div class="nav-item" data-panel="mod-followup"><i class="fas fa-clock-rotate-left"></i> Follow-Up</div>
+      <div class="nav-item" data-panel="mod-proposal"><i class="fas fa-file-invoice"></i> Proposals</div>
+      <div class="nav-item" data-panel="mod-content-ideas"><i class="fas fa-lightbulb"></i> Content Ideas</div>
+
+      <!-- ── B.O.S.S BRAIN ─────────────────── -->
+      <div class="nav-section" style="color:#ff2a2a">B.O.S.S BRAIN</div>
+      <div class="nav-item" data-panel="boss-config" onclick="bossLoadConfig()" style="color:#ff2a2a"><i class="fas fa-key"></i> API Keys</div>
+      <div class="nav-item" data-panel="panel-ai-tools" onclick="bossLoadAITools()" style="color:#ff2a2a"><i class="fas fa-robot"></i> AI Models</div>
+      <div class="nav-item" data-panel="panel-gpu" onclick="bossLoadGPU()" style="color:#ff2a2a"><i class="fas fa-microchip"></i> Free GPU</div>
+      <div class="nav-item" data-panel="boss-channels" style="color:#ff2a2a"><i class="fas fa-satellite-dish"></i> Channels</div>
+      <div class="nav-item" data-panel="boss-agents" style="color:#ff2a2a"><i class="fas fa-robot"></i> Agents</div>
+
     </nav>
     <div class="sidebar-footer">
       <span class="status-dot" style="background:#2cb67d;box-shadow:0 0 8px rgba(44,182,125,.5)"></span>B.O.S.S Online
@@ -835,6 +767,320 @@
         </div>
       </div>
 
+      <!-- ══ FREE GPU COMPUTE ══ -->
+      <div class="panel" id="panel-gpu">
+        <div style="padding:32px;max-width:860px;margin:0 auto">
+
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:6px">
+            <div>
+              <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 4px">Free GPU Compute</h2>
+              <p style="font-size:.73rem;color:#555;margin:0">Run models, fine-tune, generate images — free VRAM across 4 platforms. Google Drive auto-saves so you never lose work.</p>
+            </div>
+            <div id="gpu-offpeak-badge" style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:10px 16px;text-align:center;white-space:nowrap">
+              <div style="font-size:.6rem;color:#555;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">Right now (UK)</div>
+              <div id="gpu-time-label" style="font-size:.85rem;font-weight:800;color:#aaa">—</div>
+              <div id="gpu-peak-label" style="font-size:.65rem;margin-top:2px">—</div>
+            </div>
+          </div>
+
+          <!-- ── PLATFORM CARDS ── -->
+          <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#444;margin:24px 0 12px">Platforms</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:12px;margin-bottom:32px">
+
+            <!-- Colab -->
+            <div class="ait-card">
+              <div class="ait-head">
+                <span class="ait-name" style="color:#ff9500">GOOGLE COLAB</span>
+                <span class="ait-badge free">T4 15GB free</span>
+                <span class="ait-badge" style="background:#aa44ff18;color:#aa44ff">A100 40GB (Pro)</span>
+              </div>
+              <div class="ait-model">2–4h sessions · resets on disconnect · Drive persists</div>
+              <div class="ait-desc">Best starting point. T4 runs 7B models easily. Always mount Drive first or your work is gone when session ends.</div>
+              <div class="ait-steps">
+                <b>Off-peak:</b> 3am–8am UK (US + EU asleep) → faster GPU allocation<br>
+                <b>Tips:</b> Runtime → Change runtime type → T4 GPU · Use 4-bit models to fit in 15GB<br>
+                <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                  <a href="https://colab.research.google.com/#create=true" target="_blank" style="background:#ff9500;color:#000;padding:5px 12px;border-radius:6px;font-size:.68rem;font-weight:700;text-decoration:none">Open Colab →</a>
+                  <button onclick="gpuCopy('colab-drive')" style="background:#1a1a1a;border:1px solid #333;color:#aaa;padding:5px 12px;border-radius:6px;font-size:.68rem;cursor:pointer">📋 Copy Drive mount</button>
+                  <button onclick="gpuCopy('colab-4bit')" style="background:#1a1a1a;border:1px solid #333;color:#aaa;padding:5px 12px;border-radius:6px;font-size:.68rem;cursor:pointer">📋 Copy 4-bit loader</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Kaggle -->
+            <div class="ait-card">
+              <div class="ait-head">
+                <span class="ait-name" style="color:#20beff">KAGGLE KERNELS</span>
+                <span class="ait-badge free">P100 16GB free</span>
+              </div>
+              <div class="ait-model">30h/week · 9h/session · persistent storage</div>
+              <div class="ait-desc">More weekly hours than Colab. P100 16GB fits most 7B models. Kaggle datasets mount instantly — good for training data.</div>
+              <div class="ait-steps">
+                <b>Off-peak:</b> Same 3am–8am UK<br>
+                <b>Tips:</b> Settings → Accelerator → GPU P100 · Always tick "Save version" before leaving<br>
+                <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                  <a href="https://www.kaggle.com/code" target="_blank" style="background:#20beff;color:#000;padding:5px 12px;border-radius:6px;font-size:.68rem;font-weight:700;text-decoration:none">Open Kaggle →</a>
+                  <button onclick="gpuCopy('kaggle-setup')" style="background:#1a1a1a;border:1px solid #333;color:#aaa;padding:5px 12px;border-radius:6px;font-size:.68rem;cursor:pointer">📋 Copy setup cell</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lightning AI -->
+            <div class="ait-card">
+              <div class="ait-head">
+                <span class="ait-name" style="color:#ff6b35">LIGHTNING AI</span>
+                <span class="ait-badge free">A10G 24GB · 22h/mo</span>
+              </div>
+              <div class="ait-model">22 free GPU hours/month · persistent studio · VS Code interface</div>
+              <div class="ait-desc">Best persistent storage. Files survive between sessions unlike Colab. A10G 24GB runs 13B models in 4-bit. Feels like a real cloud machine.</div>
+              <div class="ait-steps">
+                <b>Off-peak:</b> Evening UK = US morning — still queue so book early<br>
+                <b>Tips:</b> Use for longer training runs — 22h/mo ≈ 3×7h sessions<br>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <a href="https://lightning.ai" target="_blank" style="background:#ff6b35;color:#000;padding:5px 12px;border-radius:6px;font-size:.68rem;font-weight:700;text-decoration:none">Open Lightning →</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- HuggingFace Spaces -->
+            <div class="ait-card">
+              <div class="ait-head">
+                <span class="ait-name" style="color:#ff9500">HUGGING FACE SPACES</span>
+                <span class="ait-badge free">ZeroGPU · T4 shared</span>
+              </div>
+              <div class="ait-model">Shared T4 via ZeroGPU · queued · good for inference</div>
+              <div class="ait-desc">Best for deploying an inference endpoint others can use. Not ideal for training but great for running a model via Gradio/Streamlit for free.</div>
+              <div class="ait-steps">
+                <b>Tips:</b> Use <code>@spaces.GPU</code> decorator · ZeroGPU allocates on-demand<br>
+                <b>Off-peak:</b> midnight–7am UK<br>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <a href="https://huggingface.co/new-space" target="_blank" style="background:#ff9500;color:#000;padding:5px 12px;border-radius:6px;font-size:.68rem;font-weight:700;text-decoration:none">New Space →</a>
+                  <button onclick="gpuCopy('hf-zerogpu')" style="background:#1a1a1a;border:1px solid #333;color:#aaa;padding:5px 12px;border-radius:6px;font-size:.68rem;cursor:pointer">📋 Copy ZeroGPU template</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── NOTEBOOK TEMPLATES ── -->
+          <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:12px">Notebook Templates — Copy &amp; Paste</div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px">
+
+            <!-- Drive Mount -->
+            <div class="gpu-snippet" id="tpl-colab-drive">
+              <div class="gpu-snip-head">
+                <span style="color:#ff9500;font-weight:700">Colab — Mount Google Drive (always first cell)</span>
+                <button onclick="gpuCopy('colab-drive')" class="gpu-copy-btn">Copy</button>
+              </div>
+              <pre class="gpu-code"># ── Cell 1: Mount Drive + set save dir ────────────────────
+from google.colab import drive
+drive.mount('/content/drive')
+
+import os
+SAVE_DIR = '/content/drive/MyDrive/boss-models/'
+os.makedirs(SAVE_DIR, exist_ok=True)
+print(f"Saving to: {SAVE_DIR}")</pre>
+            </div>
+
+            <!-- 4-bit loader -->
+            <div class="gpu-snippet" id="tpl-colab-4bit">
+              <div class="gpu-snip-head">
+                <span style="color:#aa44ff;font-weight:700">4-bit Model Loader — fits any 7B in T4 15GB</span>
+                <button onclick="gpuCopy('colab-4bit')" class="gpu-copy-btn">Copy</button>
+              </div>
+              <pre class="gpu-code"># ── 4-bit quantised load (bitsandbytes) ───────────────────
+!pip install -q transformers bitsandbytes accelerate
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
+MODEL = "Qwen/Qwen2.5-7B-Instruct"   # swap for any model
+
+bnb_cfg = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.float16,
+    bnb_4bit_use_double_quant=True,
+)
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL)
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL, quantization_config=bnb_cfg, device_map="auto"
+)
+print(f"Loaded {MODEL} in 4-bit — VRAM: {torch.cuda.memory_allocated()/1e9:.1f}GB")</pre>
+            </div>
+
+            <!-- Kaggle setup -->
+            <div class="gpu-snippet" id="tpl-kaggle-setup">
+              <div class="gpu-snip-head">
+                <span style="color:#20beff;font-weight:700">Kaggle — Setup cell (secrets + persistent dir)</span>
+                <button onclick="gpuCopy('kaggle-setup')" class="gpu-copy-btn">Copy</button>
+              </div>
+              <pre class="gpu-code"># ── Kaggle setup cell ─────────────────────────────────────
+import os
+
+# Kaggle /kaggle/working persists within session, /kaggle/input is read-only
+WORK_DIR = "/kaggle/working/boss-outputs"
+os.makedirs(WORK_DIR, exist_ok=True)
+
+# Install essentials
+os.system("pip install -q transformers bitsandbytes accelerate peft")
+
+# Check GPU
+os.system("nvidia-smi --query-gpu=name,memory.total --format=csv,noheader")
+print("Ready")</pre>
+            </div>
+
+            <!-- Fine-tune with LoRA -->
+            <div class="gpu-snippet" id="tpl-lora">
+              <div class="gpu-snip-head">
+                <span style="color:#2cb67d;font-weight:700">LoRA Fine-tune — train on your data, saves to Drive</span>
+                <button onclick="gpuCopy('lora')" class="gpu-copy-btn">Copy</button>
+              </div>
+              <pre class="gpu-code"># ── LoRA fine-tune on custom data ─────────────────────────
+!pip install -q transformers peft bitsandbytes accelerate datasets trl
+
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from peft import LoraConfig, get_peft_model, TaskType
+from trl import SFTTrainer
+from transformers import TrainingArguments
+from datasets import Dataset
+import torch, json, os
+
+SAVE_DIR = '/content/drive/MyDrive/boss-lora/'   # or /kaggle/working/
+os.makedirs(SAVE_DIR, exist_ok=True)
+
+MODEL = "Qwen/Qwen2.5-7B-Instruct"
+bnb   = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16)
+
+model     = AutoModelForCausalLM.from_pretrained(MODEL, quantization_config=bnb, device_map="auto")
+tokenizer = AutoTokenizer.from_pretrained(MODEL)
+
+lora_cfg = LoraConfig(r=16, lora_alpha=32, target_modules=["q_proj","v_proj"],
+                      lora_dropout=0.05, task_type=TaskType.CAUSAL_LM)
+model = get_peft_model(model, lora_cfg)
+model.print_trainable_parameters()
+
+# ── Your training data ────────────────────────────────────
+# Format: list of {"text": "### Human: ...\n### Assistant: ..."}
+train_data = [
+    {"text": "### Human: What is TheSaaSsin?\n### Assistant: AI client acquisition operator for SaaS founders."},
+    # Add more examples here
+]
+dataset = Dataset.from_list(train_data)
+
+args = TrainingArguments(output_dir=SAVE_DIR, num_train_epochs=3,
+                         per_device_train_batch_size=2, save_steps=50,
+                         logging_steps=10, fp16=True)
+
+trainer = SFTTrainer(model=model, tokenizer=tokenizer, train_dataset=dataset,
+                     dataset_text_field="text", args=args, max_seq_length=512)
+trainer.train()
+model.save_pretrained(SAVE_DIR)
+print(f"Saved LoRA adapter to {SAVE_DIR}")</pre>
+            </div>
+
+            <!-- Stable Diffusion on Colab -->
+            <div class="gpu-snippet" id="tpl-sd-colab">
+              <div class="gpu-snip-head">
+                <span style="color:#ff8844;font-weight:700">Stable Diffusion / Flux on Colab T4</span>
+                <button onclick="gpuCopy('sd-colab')" class="gpu-copy-btn">Copy</button>
+              </div>
+              <pre class="gpu-code"># ── SD / Flux inference on free T4 ───────────────────────
+!pip install -q diffusers transformers accelerate
+
+from diffusers import StableDiffusionXLPipeline, DPMSolverMultistepScheduler
+import torch
+
+pipe = StableDiffusionXLPipeline.from_pretrained(
+    "stabilityai/stable-diffusion-xl-base-1.0",
+    torch_dtype=torch.float16, use_safetensors=True, variant="fp16"
+).to("cuda")
+pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
+pipe.enable_xformers_memory_efficient_attention()
+
+prompt = "TheSaaSsin operator dashboard, dark neon UI, cinematic, 8k"
+image  = pipe(prompt=prompt, num_inference_steps=25, guidance_scale=7.5).images[0]
+image.save("/content/drive/MyDrive/boss-models/render.png")
+image  # display in notebook</pre>
+            </div>
+
+            <!-- HF ZeroGPU -->
+            <div class="gpu-snippet" id="tpl-hf-zerogpu">
+              <div class="gpu-snip-head">
+                <span style="color:#ff9500;font-weight:700">HuggingFace Spaces — ZeroGPU Gradio app</span>
+                <button onclick="gpuCopy('hf-zerogpu')" class="gpu-copy-btn">Copy</button>
+              </div>
+              <pre class="gpu-code"># app.py — paste into your HF Space
+import gradio as gr
+import spaces  # ZeroGPU magic
+import torch
+from transformers import pipeline
+
+# Load once (CPU)
+pipe = pipeline("text-generation", model="Qwen/Qwen2.5-7B-Instruct",
+                torch_dtype=torch.float16)
+
+@spaces.GPU  # GPU allocated only during this function call
+def generate(prompt, max_tokens=256):
+    result = pipe(prompt, max_new_tokens=max_tokens, do_sample=True, temperature=0.7)
+    return result[0]["generated_text"]
+
+gr.Interface(fn=generate,
+             inputs=gr.Textbox(label="Prompt"),
+             outputs=gr.Textbox(label="Output"),
+             title="B.O.S.S Inference").launch()</pre>
+            </div>
+
+          </div>
+
+          <!-- ── VRAM CHEAT SHEET ── -->
+          <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:12px">VRAM Cheat Sheet</div>
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:24px;overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:.72rem">
+              <tr style="color:#555;font-size:.62rem;text-transform:uppercase;letter-spacing:.06em">
+                <td style="padding:4px 12px 8px 0">Model</td>
+                <td style="padding:4px 12px 8px">FP16</td>
+                <td style="padding:4px 12px 8px">8-bit</td>
+                <td style="padding:4px 12px 8px">4-bit</td>
+                <td style="padding:4px 0 8px">Fits on</td>
+              </tr>
+              <tr style="border-top:1px solid #1a1a1a;color:#aaa">
+                <td style="padding:6px 12px 6px 0;font-weight:700">7B</td>
+                <td style="padding:6px 12px">14GB</td><td style="padding:6px 12px">7GB</td>
+                <td style="padding:6px 12px;color:#2cb67d;font-weight:700">4GB</td>
+                <td style="padding:6px 0;color:#2cb67d">All free tiers ✓</td>
+              </tr>
+              <tr style="border-top:1px solid #1a1a1a;color:#aaa">
+                <td style="padding:6px 12px 6px 0;font-weight:700">13B</td>
+                <td style="padding:6px 12px">26GB</td><td style="padding:6px 12px">13GB</td>
+                <td style="padding:6px 12px;color:#2cb67d;font-weight:700">7GB</td>
+                <td style="padding:6px 0;color:#2cb67d">T4/P100/A10G ✓</td>
+              </tr>
+              <tr style="border-top:1px solid #1a1a1a;color:#aaa">
+                <td style="padding:6px 12px 6px 0;font-weight:700">30B</td>
+                <td style="padding:6px 12px">60GB</td><td style="padding:6px 12px">30GB</td>
+                <td style="padding:6px 12px;color:#ff9500;font-weight:700">15GB</td>
+                <td style="padding:6px 0;color:#ff9500">A10G (Lightning) only</td>
+              </tr>
+              <tr style="border-top:1px solid #1a1a1a;color:#aaa">
+                <td style="padding:6px 12px 6px 0;font-weight:700">70B</td>
+                <td style="padding:6px 12px">140GB</td><td style="padding:6px 12px">70GB</td>
+                <td style="padding:6px 12px;color:#f55;font-weight:700">35GB</td>
+                <td style="padding:6px 0;color:#f55">Need 2×GPU or pay tier</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- off peak live clock is rendered by JS -->
+          <div id="gpu-offpeak-detail" style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px;font-size:.72rem;color:#666;line-height:1.8">
+            Loading off-peak info…
+          </div>
+
+        </div>
+      </div>
+
       <!-- ══ B.O.S.S: API KEYS & SETTINGS ══ -->
       <div class="panel" id="panel-boss-config">
         <div style="padding:32px;max-width:680px;margin:0 auto">
@@ -1216,6 +1462,12 @@
         .ait-steps a{color:#ff2a2a;text-decoration:none}
         .ait-steps a:hover{text-decoration:underline}
         .ait-steps code{color:#aaa;background:#111;padding:1px 5px;border-radius:4px;font-size:.68rem}
+        /* GPU panel */
+        .gpu-snippet{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;overflow:hidden}
+        .gpu-snip-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #1a1a1a;gap:12px}
+        .gpu-copy-btn{background:#1a1a1a;border:1px solid #333;color:#ff2a2a;padding:4px 12px;border-radius:6px;font-size:.68rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+        .gpu-copy-btn:hover{background:#ff2a2a18;border-color:#ff2a2a}
+        .gpu-code{margin:0;padding:14px 16px;font-size:.7rem;color:#aaa;font-family:'Fira Code',monospace;line-height:1.6;overflow-x:auto;white-space:pre}
       </style>
 
 
