@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheSaaSsin — UI Component Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  background: #0a0a0f;
+  color: #f0f0f5;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.board {
+  width: 1600px;
+  min-height: 1060px;
+  margin: 0 auto;
+  padding: 64px;
+}
+
+/* Header */
+.board-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-bottom: 40px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  margin-bottom: 52px;
+}
+.wordmark { font-size: 48px; font-weight: 900; letter-spacing: -0.04em; line-height: 1; }
+.wordmark .saas { color: #ff2a2a; }
+.board-meta { text-align: right; }
+.board-label { font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #6b6b80; margin-bottom: 6px; }
+.board-title { font-size: 22px; font-weight: 700; }
+.board-version { font-size: 11px; color: #6b6b80; margin-top: 4px; font-family: 'Space Mono', monospace; }
+
+.section-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.2em;
+  text-transform: uppercase; color: #ff2a2a; margin-bottom: 18px;
+}
+
+/* Layout */
+.row { margin-bottom: 48px; }
+.col-wrap { display: grid; gap: 32px; }
+
+/* ── BUTTONS ── */
+.btn-showcase {
+  background: #121218;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 28px 32px;
+}
+.btn-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.btn-row:last-child { margin-bottom: 0; }
+.btn-row-label { font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #6b6b80; width: 90px; flex-shrink: 0; }
+
+/* All button variants */
+.b { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 600; letter-spacing: 0.02em; transition: all 0.18s; border-radius: 7px; }
+.b-lg { padding: 12px 24px; font-size: 14px; }
+.b-md { padding: 9px 18px; font-size: 13px; }
+.b-sm { padding: 6px 13px; font-size: 11.5px; }
+.b-xs { padding: 4px 10px; font-size: 11px; border-radius: 5px; }
+
+.b-primary { background: #ff2a2a; color: #fff; }
+.b-primary:hover { background: #ff4444; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,42,42,0.35); }
+
+.b-secondary { background: rgba(255,255,255,0.06); color: #f0f0f5; border: 1px solid rgba(255,255,255,0.1); }
+.b-secondary:hover { background: rgba(255,255,255,0.1); }
+
+.b-danger { background: rgba(255,42,42,0.12); color: #ff4444; border: 1px solid rgba(255,42,42,0.28); }
+.b-danger:hover { background: rgba(255,42,42,0.22); }
+
+.b-success { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.28); }
+.b-success:hover { background: rgba(34,197,94,0.22); }
+
+.b-ghost { background: transparent; color: #ff2a2a; border: 1px solid rgba(255,42,42,0.35); }
+.b-ghost:hover { background: rgba(255,42,42,0.1); }
+
+.b-dark { background: #0a0a0f; color: #f0f0f5; border: 1px solid rgba(255,255,255,0.1); }
+.b-dark:hover { border-color: rgba(255,42,42,0.5); color: #ff4444; }
+
+.b-pill { border-radius: 100px; }
+.b-icon { width: 36px; height: 36px; padding: 0; border-radius: 8px; font-size: 14px; }
+
+/* ── BADGES ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 100px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+}
+.badge-red    { background: rgba(255,42,42,0.14); color: #ff4444; border: 1px solid rgba(255,42,42,0.25); }
+.badge-green  { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.25); }
+.badge-amber  { background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.25); }
+.badge-grey   { background: rgba(107,107,128,0.15); color: #9090a8; border: 1px solid rgba(107,107,128,0.2); }
+.badge-white  { background: rgba(255,255,255,0.08); color: #e0e0ef; border: 1px solid rgba(255,255,255,0.1); }
+.badge-live   { position: relative; padding-left: 22px; }
+.badge-live::before {
+  content: ''; position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+  width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+  animation: pulse 1.8s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
+  50% { opacity: 0.5; transform: translateY(-50%) scale(0.8); }
+}
+
+/* ── INPUT FIELDS ── */
+.field-showcase {
+  background: #121218;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.f-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #6b6b80; margin-bottom: 5px; display: block; }
+.f-input {
+  width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 7px; padding: 9px 14px; color: #f0f0f5; font-size: 13px;
+  font-family: 'Inter', sans-serif; outline: none;
+}
+.f-input.focus { border-color: rgba(255,42,42,0.4); box-shadow: 0 0 0 3px rgba(255,42,42,0.08); }
+.f-input.error { border-color: rgba(255,42,42,0.6); }
+.f-input.success { border-color: rgba(34,197,94,0.5); }
+.f-error-msg { font-size: 11px; color: #ff6666; margin-top: 4px; }
+.f-success-msg { font-size: 11px; color: #22c55e; margin-top: 4px; }
+
+/* ── CARDS ── */
+.lead-card {
+  background: #121218;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 16px 20px;
+  transition: all 0.18s;
+}
+.lead-card:hover { border-color: rgba(255,42,42,0.3); }
+.lead-card.selected { border-color: rgba(255,42,42,0.5); background: rgba(255,42,42,0.06); }
+.lead-card-head { display: flex; align-items: flex-start; gap: 12px; }
+.lead-avatar {
+  width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+  background: rgba(255,42,42,0.12); display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; color: #ff2a2a;
+}
+.lead-name { font-size: 13.5px; font-weight: 700; color: #f0f0f5; }
+.lead-co { font-size: 11.5px; color: #6b6b80; margin-top: 2px; }
+.lead-score {
+  margin-left: auto; font-family: 'Space Mono', monospace;
+  font-size: 20px; font-weight: 700; color: #ff2a2a; line-height: 1;
+}
+.lead-score-label { font-size: 9px; color: #6b6b80; text-align: right; text-transform: uppercase; letter-spacing: 0.1em; }
+.score-bar { height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 12px; }
+.score-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #cc1818, #ff2a2a); }
+.lead-tags { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.lead-tag { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); color: #6b6b80; border: 1px solid rgba(255,255,255,0.06); }
+
+/* ── NAV ITEMS ── */
+.nav-showcase {
+  background: #0f0f17;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 12px 0;
+  width: 200px;
+}
+.nav-item-ex {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; font-size: 12.5px; font-weight: 500;
+  border-left: 2px solid transparent; color: #6b6b80;
+  cursor: pointer;
+}
+.nav-item-ex.active { color: #ff2a2a; border-left-color: #ff2a2a; background: rgba(255,42,42,0.1); }
+.nav-item-ex.hover  { color: #f0f0f5; background: rgba(255,255,255,0.03); }
+.nav-item-ex .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.nav-section-ex { padding: 12px 16px 5px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.14em; color: #6b6b80; opacity: 0.6; }
+
+/* ── SCORE DISPLAY ── */
+.score-display {
+  background: #121218;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 22px 28px;
+}
+.score-big { font-family: 'Space Mono', monospace; font-size: 56px; font-weight: 700; color: #ff2a2a; line-height: 1; }
+.score-big .denom { font-size: 24px; color: #6b6b80; }
+.score-bar-lg { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; margin: 12px 0 8px; }
+.score-fill-lg { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #cc1818 0%, #ff2a2a 60%, #ff4444 100%); }
+.score-meta { font-size: 11px; color: #6b6b80; display: flex; justify-content: space-between; }
+
+/* ── TOAST ── */
+.toast {
+  background: #1a1a24;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-left: 3px solid #ff2a2a;
+  border-radius: 8px;
+  padding: 11px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  width: fit-content;
+}
+.toast.success { border-left-color: #22c55e; }
+.toast.warn    { border-left-color: #f59e0b; }
+.toast-icon { font-size: 14px; }
+.toast-text { color: #f0f0f5; }
+.toast-sub  { color: #6b6b80; font-size: 11px; }
+
+/* ── STAT CARD ── */
+.stat-card {
+  background: #121218;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 20px 22px;
+}
+.stat-icon { width: 36px; height: 36px; border-radius: 8px; background: rgba(255,42,42,0.12); display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 14px; }
+.stat-num { font-size: 28px; font-weight: 800; color: #f0f0f5; letter-spacing: -0.02em; line-height: 1; }
+.stat-num span { color: #ff2a2a; }
+.stat-label { font-size: 11px; color: #6b6b80; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+.stat-delta { font-size: 11px; color: #22c55e; margin-top: 6px; font-weight: 600; }
+
+/* Footer */
+.board-footer {
+  margin-top: 48px; padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.footer-mark { font-family: 'Space Mono', monospace; font-size: 10px; color: #6b6b80; opacity: 0.5; }
+.footer-dot { width: 6px; height: 6px; border-radius: 50%; background: #ff2a2a; box-shadow: 0 0 8px rgba(255,42,42,0.6); }
+</style>
+</head>
+<body>
+<div class="board">
+
+  <!-- HEADER -->
+  <div class="board-header">
+    <div>
+      <div class="wordmark">The<span class="saas">SaaS</span>sin</div>
+      <div style="font-size:13px;color:#6b6b80;margin-top:8px;font-weight:500;letter-spacing:0.04em;">Business Operating System & Strategist</div>
+    </div>
+    <div class="board-meta">
+      <div class="board-label">UI Design System</div>
+      <div class="board-title">Component Library</div>
+      <div class="board-version">Board 02 / v1.0 / 2026</div>
+    </div>
+  </div>
+
+  <!-- ── ROW 1: BUTTONS + INPUTS ── -->
+  <div class="row" style="display:grid;grid-template-columns:1.2fr 1fr;gap:32px;">
+
+    <!-- BUTTONS -->
+    <div>
+      <div class="section-label">01 — Button System</div>
+      <div class="btn-showcase">
+
+        <div class="btn-row">
+          <div class="btn-row-label">Primary</div>
+          <button class="b b-primary b-lg">Generate Pitch</button>
+          <button class="b b-primary b-md">Generate Pitch</button>
+          <button class="b b-primary b-sm">Generate</button>
+          <button class="b b-primary b-xs">Go</button>
+          <button class="b b-primary b-md b-pill">Launch →</button>
+        </div>
+
+        <div class="btn-row">
+          <div class="btn-row-label">Secondary</div>
+          <button class="b b-secondary b-lg">View Pipeline</button>
+          <button class="b b-secondary b-md">View Pipeline</button>
+          <button class="b b-secondary b-sm">View</button>
+          <button class="b b-secondary b-xs">More</button>
+          <button class="b b-secondary b-md b-pill">Filter ↓</button>
+        </div>
+
+        <div class="btn-row">
+          <div class="btn-row-label">Danger</div>
+          <button class="b b-danger b-md">Delete Lead</button>
+          <button class="b b-danger b-sm">Remove</button>
+          <button class="b b-danger b-xs">Delete</button>
+          <span style="font-size:11px;color:#6b6b80;margin-left:8px;">Used for destructive actions</span>
+        </div>
+
+        <div class="btn-row">
+          <div class="btn-row-label">Success</div>
+          <button class="b b-success b-md">✓ Lead Qualified</button>
+          <button class="b b-success b-sm">✓ Sent</button>
+          <button class="b b-success b-xs">✓ Done</button>
+        </div>
+
+        <div class="btn-row">
+          <div class="btn-row-label">Ghost</div>
+          <button class="b b-ghost b-md">+ Add to Queue</button>
+          <button class="b b-ghost b-sm">Export</button>
+          <button class="b b-dark b-md">◎ Settings</button>
+          <button class="b b-secondary b-icon">⚡</button>
+          <button class="b b-danger b-icon">✕</button>
+          <button class="b b-success b-icon">✓</button>
+        </div>
+
+        <!-- Disabled state -->
+        <div class="btn-row" style="opacity:0.5;">
+          <div class="btn-row-label">Disabled</div>
+          <button class="b b-primary b-md" disabled style="cursor:not-allowed;opacity:0.5;">Generate</button>
+          <button class="b b-secondary b-md" disabled style="cursor:not-allowed;opacity:0.5;">View</button>
+          <span style="font-size:11px;color:#6b6b80;opacity:0.8;margin-left:8px;">pointer-events: none · opacity: 0.5</span>
+        </div>
+
+        <!-- Loading state -->
+        <div class="btn-row">
+          <div class="btn-row-label">States</div>
+          <button class="b b-primary b-md" style="position:relative;">
+            <span style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;"></span>
+            Generating…
+          </button>
+          <button class="b b-success b-md">✓ Pitch Sent!</button>
+          <button class="b b-secondary b-md" style="border-color:rgba(255,42,42,0.5);color:#ff4444;">⚠ API Error</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- INPUTS -->
+    <div>
+      <div class="section-label">02 — Form Elements</div>
+      <div class="field-showcase">
+
+        <div>
+          <label class="f-label">Default Input</label>
+          <input class="f-input" type="text" value="SaaS founders, UK" placeholder="Search leads...">
+        </div>
+
+        <div>
+          <label class="f-label">Focused State</label>
+          <input class="f-input focus" type="text" value="Type your goal here...">
+        </div>
+
+        <div>
+          <label class="f-label">Error State</label>
+          <input class="f-input error" type="text" value="invalid@">
+          <div class="f-error-msg">⚠ Enter a valid email address</div>
+        </div>
+
+        <div>
+          <label class="f-label">Success State</label>
+          <input class="f-input success" type="text" value="sk-ant-api03-***">
+          <div class="f-success-msg">✓ Key valid — 256 chars</div>
+        </div>
+
+        <div>
+          <label class="f-label">Select Dropdown</label>
+          <select class="f-input" style="background:#0f0f1a;cursor:pointer;">
+            <option>High Intent (Score 80+)</option>
+            <option>Medium Intent (50–79)</option>
+            <option>All Leads</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="f-label">Textarea</label>
+          <textarea class="f-input" style="min-height:60px;resize:none;">You're building SaaS but your pipeline is dry...</textarea>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── ROW 2: CARDS + BADGES + NAV ── -->
+  <div class="row" style="display:grid;grid-template-columns:1fr 1fr 0.7fr;gap:32px;">
+
+    <!-- LEAD CARDS -->
+    <div>
+      <div class="section-label">03 — Lead & Content Cards</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+
+        <!-- High score card -->
+        <div class="lead-card selected">
+          <div class="lead-card-head">
+            <div class="lead-avatar">MC</div>
+            <div style="flex:1;">
+              <div class="lead-name">Marcus Chen</div>
+              <div class="lead-co">Founder · DataFlow SaaS · £2M ARR</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="lead-score">94</div>
+              <div class="lead-score-label">Score</div>
+            </div>
+          </div>
+          <div class="score-bar"><div class="score-fill" style="width:94%;"></div></div>
+          <div class="lead-tags">
+            <span class="lead-tag">🔥 High Intent</span>
+            <span class="lead-tag">LinkedIn</span>
+            <span class="lead-tag">SaaS</span>
+            <span class="badge badge-red" style="font-size:9.5px;padding:2px 8px;">AUTO-READY</span>
+          </div>
+        </div>
+
+        <!-- Medium card -->
+        <div class="lead-card">
+          <div class="lead-card-head">
+            <div class="lead-avatar" style="background:rgba(107,107,128,0.15);color:#6b6b80;">SJ</div>
+            <div style="flex:1;">
+              <div class="lead-name">Sarah Johnson</div>
+              <div class="lead-co">CEO · Velocity Agency · 15 staff</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="lead-score" style="font-size:16px;color:#6b6b80;">67</div>
+              <div class="lead-score-label">Score</div>
+            </div>
+          </div>
+          <div class="score-bar"><div class="score-fill" style="width:67%;background:linear-gradient(90deg,#6b6b80,#9090a8);"></div></div>
+          <div class="lead-tags">
+            <span class="lead-tag">Reddit</span>
+            <span class="lead-tag">Agency</span>
+            <span class="badge badge-amber" style="font-size:9.5px;padding:2px 8px;">REPLY-READY</span>
+          </div>
+        </div>
+
+        <!-- Stat cards -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;">
+          <div class="stat-card">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-num">47<span>/mo</span></div>
+            <div class="stat-label">Leads Scanned</div>
+            <div class="stat-delta">↑ +18 this week</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-num">£<span>4.2k</span></div>
+            <div class="stat-label">Pipeline Value</div>
+            <div class="stat-delta">↑ 3 new this month</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- BADGES + TOASTS + SCORE -->
+    <div>
+      <div class="section-label">04 — Status & Feedback</div>
+
+      <!-- Badges -->
+      <div style="background:#121218;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:22px 26px;margin-bottom:16px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#6b6b80;margin-bottom:14px;">Badges & Status Chips</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+          <span class="badge badge-red badge-live">LIVE</span>
+          <span class="badge badge-green badge-live">ONLINE</span>
+          <span class="badge badge-red">HIGH INTENT</span>
+          <span class="badge badge-green">QUALIFIED</span>
+          <span class="badge badge-amber">WARM LEAD</span>
+          <span class="badge badge-grey">COLD</span>
+          <span class="badge badge-white">PENDING</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <span class="badge badge-red" style="border-radius:6px;padding:5px 12px;font-size:12px;">AUTO-READY ⚡</span>
+          <span class="badge badge-amber" style="border-radius:6px;padding:5px 12px;font-size:12px;">REPLY-READY ✉</span>
+          <span class="badge badge-green" style="border-radius:6px;padding:5px 12px;font-size:12px;">CLOSED ✓</span>
+        </div>
+      </div>
+
+      <!-- Score display -->
+      <div class="score-display" style="margin-bottom:16px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#6b6b80;margin-bottom:12px;">Lead Score Display</div>
+        <div class="score-big">94 <span class="denom">/ 100</span></div>
+        <div class="score-bar-lg"><div class="score-fill-lg" style="width:94%;"></div></div>
+        <div class="score-meta">
+          <span>Intent: High</span>
+          <span>Fit: 91%</span>
+          <span>Confidence: 88%</span>
+        </div>
+      </div>
+
+      <!-- Toasts -->
+      <div style="background:#121218;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:22px 26px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#6b6b80;margin-bottom:14px;">Toast Notifications</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="toast">
+            <span class="toast-icon">⚡</span>
+            <div><div class="toast-text">Pitch generated for Marcus Chen</div><div class="toast-sub">Sent to outreach queue · 0.8s</div></div>
+          </div>
+          <div class="toast success">
+            <span class="toast-icon">✓</span>
+            <div><div class="toast-text">Lead qualified — Score 94/100</div><div class="toast-sub">Auto-ready threshold hit</div></div>
+          </div>
+          <div class="toast warn">
+            <span class="toast-icon">⚠</span>
+            <div><div class="toast-text">Groq rate limit — switching to Claude</div><div class="toast-sub">Tier 3 fallback active</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NAV -->
+    <div>
+      <div class="section-label">05 — Navigation</div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="nav-showcase">
+          <div class="nav-section-ex">Core Layer</div>
+          <div class="nav-item-ex active">
+            <span class="dot" style="background:#ff2a2a;"></span>
+            Dashboard
+          </div>
+          <div class="nav-item-ex hover">
+            <span class="dot" style="background:#6b6b80;"></span>
+            Lead Feed
+          </div>
+          <div class="nav-item-ex">
+            <span class="dot" style="background:#6b6b80;"></span>
+            CRM Pipeline
+          </div>
+          <div class="nav-item-ex">
+            <span class="dot" style="background:#6b6b80;"></span>
+            Outreach Queue
+          </div>
+          <div class="nav-section-ex">B.O.S.S Core</div>
+          <div class="nav-item-ex" style="color:#f0f0f5;font-weight:600;">
+            <span style="font-size:12px;">⚡</span>
+            API Keys
+          </div>
+          <div class="nav-item-ex">
+            <span style="font-size:12px;color:#6b6b80;">🤖</span>
+            <span>Local Models</span>
+          </div>
+        </div>
+
+        <!-- B.O.S.S FAB -->
+        <div style="background:#121218;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:20px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#6b6b80;margin-bottom:14px;">B.O.S.S Chat FAB</div>
+          <div style="display:flex;align-items:flex-end;gap:16px;">
+            <!-- Dark variant (current) -->
+            <div>
+              <div style="width:56px;height:56px;border-radius:50%;background:#0d0d1a;border:2px solid rgba(255,42,42,0.6);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#ff2a2a;letter-spacing:0.05em;box-shadow:0 0 18px rgba(255,42,42,0.2);">B.O.S.S</div>
+              <div style="font-size:9px;color:#6b6b80;margin-top:6px;text-align:center;">Default</div>
+            </div>
+            <!-- Hover -->
+            <div>
+              <div style="width:56px;height:56px;border-radius:50%;background:#0d0d1a;border:2px solid rgba(255,42,42,0.9);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#ff4444;letter-spacing:0.05em;box-shadow:0 0 28px rgba(255,42,42,0.4);transform:scale(1.06);">B.O.S.S</div>
+              <div style="font-size:9px;color:#6b6b80;margin-top:6px;text-align:center;">Hover</div>
+            </div>
+            <!-- Active/typing -->
+            <div>
+              <div style="width:56px;height:56px;border-radius:50%;background:#ff2a2a;border:2px solid #ff4444;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#fff;letter-spacing:0.05em;box-shadow:0 0 28px rgba(255,42,42,0.5);">⚡</div>
+              <div style="font-size:9px;color:#6b6b80;margin-top:6px;text-align:center;">Active</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat bubbles -->
+        <div style="background:#121218;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:20px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#6b6b80;margin-bottom:14px;">Chat Bubbles</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="align-self:flex-end;background:#ff2a2a;color:#fff;padding:9px 14px;border-radius:12px 12px 3px 12px;font-size:12px;font-weight:600;max-width:80%;">Scan for SaaS leads on Reddit</div>
+            <div style="align-self:flex-start;background:#1a1a24;border:1px solid rgba(255,255,255,0.07);color:#f0f0f5;padding:9px 14px;border-radius:12px 12px 12px 3px;font-size:12px;max-width:90%;line-height:1.5;">Found <strong>12 high-intent leads</strong>. Top signal: founders complaining about manual outreach. <span style="background:rgba(255,42,42,0.15);color:#ff4444;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;">GROQ · 70B</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="board-footer">
+    <div class="footer-mark">TheSaaSsin · UI Component System · Board 02 · v1.0</div>
+    <div class="footer-dot"></div>
+    <div class="footer-mark">thesaasguy101@gmail.com · Confidential</div>
+  </div>
+
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</body>
+</html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -14,7 +14,7 @@
   <!-- SIDEBAR -->
   <div id="sidebar">
     <div class="sidebar-logo">
-      <div class="s-logo" style="font-size:20px;letter-spacing:.08em"><span style="color:#1de5ff">B.O.S.S</span></div>
+      <div class="s-logo" style="font-size:20px;letter-spacing:.08em"><span style="color:#ff2a2a">B.O.S.S</span></div>
       <div class="s-tag">Business Operating System</div>
     </div>
     <nav>
@@ -113,10 +113,10 @@
       <div class="nav-item" data-panel="mod-revenue"><i class="fas fa-receipt"></i> Revenue Tracking</div>
       <div class="nav-item" data-panel="mod-affiliates"><i class="fas fa-people-arrows"></i> Affiliate System</div>
       <div class="nav-item" data-panel="mod-system-matcher"><i class="fas fa-puzzle-piece"></i> System Matcher</div>
-      <div class="nav-section" data-cat="boss" style="color:#1de5ff;opacity:.9">B.O.S.S Core</div>
-      <div class="nav-item" data-panel="boss-config" onclick="bossLoadConfig()" style="color:#1de5ff"><i class="fas fa-key"></i> API Keys &amp; Settings</div>
-      <div class="nav-item" data-panel="boss-models" onclick="bossLoadModels()" style="color:#1de5ff"><i class="fas fa-microchip"></i> Local Models</div>
-      <div class="nav-item" data-panel="boss-creative" onclick="bossLoadCreative()" style="color:#1de5ff"><i class="fas fa-film"></i> Creative Studio</div>
+      <div class="nav-section" data-cat="boss" style="color:#ff2a2a;opacity:.9">B.O.S.S Core</div>
+      <div class="nav-item" data-panel="boss-config" onclick="bossLoadConfig()" style="color:#ff2a2a"><i class="fas fa-key"></i> API Keys &amp; Settings</div>
+      <div class="nav-item" data-panel="boss-models" onclick="bossLoadModels()" style="color:#ff2a2a"><i class="fas fa-microchip"></i> Local Models</div>
+      <div class="nav-item" data-panel="boss-creative" onclick="bossLoadCreative()" style="color:#ff2a2a"><i class="fas fa-film"></i> Creative Studio</div>
       <div class="nav-item" data-panel="boss-channels"><i class="fas fa-satellite-dish"></i> Channels</div>
       <div class="nav-item" data-panel="boss-agents"><i class="fas fa-robot"></i> Agents</div>
     </nav>
@@ -130,7 +130,7 @@
   <div id="main">
     <div id="topbar">
       <div id="topbar-title">Client Creator</div>
-      <div id="topbar-meta"><span style="color:#1de5ff;font-weight:700;letter-spacing:.06em">B.O.S.S</span> &nbsp;·&nbsp; <span id="clock"></span></div>
+      <div id="topbar-meta"><span style="color:#ff2a2a;font-weight:700;letter-spacing:.06em">B.O.S.S</span> &nbsp;·&nbsp; <span id="clock"></span></div>
       <button id="btn-ai-status" onclick="showAISetup()" title="AI Assist — click to configure" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:.75rem;cursor:pointer;font-family:inherit;font-weight:600;letter-spacing:.03em;transition:all .18s;">⚡ AI Off</button>
       <button id="btn-mobile-link" onclick="showMobileLink()" title="Open on phone">
         <i class="fas fa-mobile-screen"></i>
@@ -604,20 +604,20 @@
               <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 3px">Channels</h2>
               <p style="font-size:.75rem;color:var(--muted,#666);margin:0">B.O.S.S on every platform — Telegram, X, LinkedIn, Instagram, Discord, Slack</p>
             </div>
-            <button onclick="bossLoadChannels()" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#1de5ff;padding:7px 16px;border-radius:100px;font-size:11px;cursor:pointer">↻ Refresh</button>
+            <button onclick="bossLoadChannels()" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#ff2a2a;padding:7px 16px;border-radius:100px;font-size:11px;cursor:pointer">↻ Refresh</button>
           </div>
           <div id="boss-channels-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:28px">
             <div style="color:#666;font-size:.8rem">Loading…</div>
           </div>
           <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:20px">
-            <div style="font-weight:700;font-size:.75rem;margin-bottom:10px;color:#1de5ff">⚡ Quick Send</div>
+            <div style="font-weight:700;font-size:.75rem;margin-bottom:10px;color:#ff2a2a">⚡ Quick Send</div>
             <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
               <select id="ch-send-id" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem">
                 <option value="telegram">Telegram</option><option value="discord">Discord</option><option value="slack">Slack</option>
               </select>
               <input id="ch-send-to" placeholder="Chat ID / channel" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem;flex:1;min-width:160px">
               <textarea id="ch-send-text" placeholder="Message…" rows="2" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem;flex:2;min-width:200px;resize:vertical"></textarea>
-              <button onclick="bossChannelSend()" style="background:#1de5ff;color:#0a0a0a;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:.78rem;cursor:pointer">Send</button>
+              <button onclick="bossChannelSend()" style="background:#ff2a2a;color:#0a0a0a;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:.78rem;cursor:pointer">Send</button>
             </div>
             <div id="ch-send-result" style="font-size:.7rem;color:#666;margin-top:6px"></div>
           </div>
@@ -632,20 +632,20 @@
               <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 3px">Channel Agents</h2>
               <p style="font-size:.75rem;color:var(--muted,#666);margin:0">Each channel gets its own persona, memory, and task queue</p>
             </div>
-            <button onclick="bossLoadAgents()" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#1de5ff;padding:7px 16px;border-radius:100px;font-size:11px;cursor:pointer">↻ Refresh</button>
+            <button onclick="bossLoadAgents()" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#ff2a2a;padding:7px 16px;border-radius:100px;font-size:11px;cursor:pointer">↻ Refresh</button>
           </div>
           <div id="boss-agents-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:24px">
             <div style="color:#666;font-size:.8rem">No agents yet — use Spawn below</div>
           </div>
           <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:20px">
-            <div style="font-weight:700;font-size:.75rem;margin-bottom:10px;color:#1de5ff">🤖 Spawn Agent Persona</div>
+            <div style="font-weight:700;font-size:.75rem;margin-bottom:10px;color:#ff2a2a">🤖 Spawn Agent Persona</div>
             <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
               <select id="ag-spawn-id" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem">
                 <option value="telegram">Telegram</option><option value="discord">Discord</option><option value="slack">Slack</option><option value="x">X</option><option value="linkedin">LinkedIn</option>
               </select>
               <input id="ag-spawn-name" placeholder="Name (e.g. B.O.S.S)" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem;flex:1">
               <input id="ag-spawn-tone" placeholder="Tone override" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem;flex:2">
-              <button onclick="bossSpawnAgent()" style="background:#1de5ff;color:#0a0a0a;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:.78rem;cursor:pointer">Spawn</button>
+              <button onclick="bossSpawnAgent()" style="background:#ff2a2a;color:#0a0a0a;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:.78rem;cursor:pointer">Spawn</button>
             </div>
             <div id="ag-spawn-result" style="font-size:.7rem;color:#666;margin-top:6px"></div>
           </div>
@@ -657,13 +657,13 @@
         <div style="padding:32px;max-width:700px;margin:0 auto">
 
           <!-- Onboarding banner — shown when no key is set -->
-          <div id="boss-config-banner" style="display:none;background:linear-gradient(135deg,#1a1a00,#2a2a00);border:1px solid #1de5ff33;border-radius:14px;padding:20px 24px;margin-bottom:28px">
-            <div style="font-size:1rem;font-weight:800;color:#1de5ff;margin-bottom:6px">⚡ First Move: Add Your Anthropic API Key</div>
+          <div id="boss-config-banner" style="display:none;background:linear-gradient(135deg,#1a1a00,#2a2a00);border:1px solid #ff2a2a33;border-radius:14px;padding:20px 24px;margin-bottom:28px">
+            <div style="font-size:1rem;font-weight:800;color:#ff2a2a;margin-bottom:6px">⚡ First Move: Add Your Anthropic API Key</div>
             <div style="font-size:.8rem;color:#aaa;line-height:1.7">
               B.O.S.S needs a Claude API key to think, pitch, scan leads, and coach you.<br>
               1. Go to <strong style="color:#fff">console.anthropic.com</strong> → <em>API Keys</em> → <em>Create Key</em><br>
-              2. Copy the key (starts with <code style="color:#1de5ff">sk-ant-</code>)<br>
-              3. Paste it below and hit <strong style="color:#1de5ff">Save &amp; Activate</strong><br>
+              2. Copy the key (starts with <code style="color:#ff2a2a">sk-ant-</code>)<br>
+              3. Paste it below and hit <strong style="color:#ff2a2a">Save &amp; Activate</strong><br>
               <span style="color:#f55;font-size:.72rem">⚠ Your previous key was exposed — revoke it and use a fresh one.</span>
             </div>
           </div>
@@ -673,7 +673,7 @@
 
           <!-- Anthropic -->
           <div style="margin-bottom:20px">
-            <label style="display:block;font-size:.72rem;font-weight:700;color:#1de5ff;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase">
+            <label style="display:block;font-size:.72rem;font-weight:700;color:#ff2a2a;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase">
               Anthropic (Claude) API Key <span style="color:#f55">*required</span>
             </label>
             <div style="display:flex;gap:8px">
@@ -719,11 +719,11 @@
           <!-- Actions -->
           <div style="display:flex;gap:10px;flex-wrap:wrap">
             <button id="cfg-save-btn" onclick="bossCfgSave()"
-              style="background:#1de5ff;color:#0a0a0a;border:none;padding:11px 28px;border-radius:9px;font-weight:800;font-size:.85rem;cursor:pointer;letter-spacing:.04em">
+              style="background:#ff2a2a;color:#0a0a0a;border:none;padding:11px 28px;border-radius:9px;font-weight:800;font-size:.85rem;cursor:pointer;letter-spacing:.04em">
               ✓ Save &amp; Activate
             </button>
             <button onclick="bossCfgTest()"
-              style="background:#1a1a1a;border:1px solid #2a2a2a;color:#1de5ff;padding:11px 20px;border-radius:9px;font-weight:700;font-size:.82rem;cursor:pointer">
+              style="background:#1a1a1a;border:1px solid #2a2a2a;color:#ff2a2a;padding:11px 20px;border-radius:9px;font-weight:700;font-size:.82rem;cursor:pointer">
               ⚡ Test Claude
             </button>
           </div>
@@ -841,7 +841,7 @@
     <div style="display:flex;align-items:center;gap:10px">
       <div class="boss-pulse-dot"></div>
       <div>
-        <div style="font-weight:800;font-size:.95rem;letter-spacing:.04em;color:#1de5ff">B.O.S.S</div>
+        <div style="font-weight:800;font-size:.95rem;letter-spacing:.04em;color:#ff2a2a">B.O.S.S</div>
         <div style="font-size:.68rem;color:#666;letter-spacing:.08em;text-transform:uppercase" id="boss-status">Jarvis mode · online</div>
       </div>
     </div>
@@ -854,34 +854,34 @@
   <div id="boss-slash" style="display:none;padding:6px 10px;border-top:1px solid #1a1a1a;background:#050505;display:flex;flex-wrap:wrap;gap:5px"></div>
   <form id="boss-form" onsubmit="bossSend(event)">
     <input id="boss-input" placeholder="Ask B.O.S.S anything… or type /" autocomplete="off">
-    <button type="submit" style="background:#1de5ff;color:#0a0a0a;border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;font-weight:900;font-size:.9rem">↑</button>
+    <button type="submit" style="background:#ff2a2a;color:#0a0a0a;border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;font-weight:900;font-size:.9rem">↑</button>
   </form>
 </div>
 
 <style>
-  #boss-fab{position:fixed;bottom:24px;right:24px;width:60px;height:60px;border-radius:50%;background:#0d0d1a;border:2px solid rgba(29,229,255,.7);color:#1de5ff;font-size:.62rem;font-weight:900;cursor:pointer;z-index:9998;box-shadow:0 0 20px rgba(29,229,255,.25),0 8px 25px rgba(0,0,0,.6),0 10px 30px rgba(0,0,0,.5);letter-spacing:.05em;transition:transform .3s,box-shadow .3s}
-  #boss-fab:hover{transform:scale(1.08) translateY(-2px);box-shadow:0 0 36px rgba(29,229,255,.5),0 14px 40px rgba(0,0,0,.5)}
+  #boss-fab{position:fixed;bottom:24px;right:24px;width:60px;height:60px;border-radius:50%;background:#0d0d0f;border:2px solid rgba(255,42,42,.65);color:#ff2a2a;font-size:.62rem;font-weight:900;cursor:pointer;z-index:9998;box-shadow:0 0 20px rgba(255,42,42,.2),0 8px 28px rgba(0,0,0,.7),0 10px 30px rgba(0,0,0,.5);letter-spacing:.05em;transition:transform .3s,box-shadow .3s}
+  #boss-fab:hover{transform:scale(1.08) translateY(-2px);box-shadow:0 0 36px rgba(255,42,42,.5),0 14px 40px rgba(0,0,0,.5)}
   #boss-drawer{position:fixed;right:20px;bottom:96px;width:380px;max-width:calc(100vw - 40px);height:560px;max-height:80vh;background:#0c0c0c;border:1px solid #1f1f1f;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.8);display:none;flex-direction:column;z-index:9999;overflow:hidden;font-family:Inter,-apple-system,sans-serif}
   #boss-drawer.open{display:flex;animation:bossIn .3s cubic-bezier(.22,1,.36,1)}
   @keyframes bossIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
   #boss-head{padding:14px 16px;border-bottom:1px solid #1a1a1a;display:flex;justify-content:space-between;align-items:center;background:#080808}
-  .boss-pulse-dot{width:9px;height:9px;border-radius:50%;background:#1de5ff;box-shadow:0 0 10px rgba(29,229,255,.6);animation:bossPulseAnim 2s infinite;flex-shrink:0}
+  .boss-pulse-dot{width:9px;height:9px;border-radius:50%;background:#ff2a2a;box-shadow:0 0 10px rgba(255,42,42,.6);animation:bossPulseAnim 2s infinite;flex-shrink:0}
   @keyframes bossPulseAnim{0%,100%{opacity:1}50%{opacity:.35}}
   #boss-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
   #boss-msgs::-webkit-scrollbar{width:4px}
   #boss-msgs::-webkit-scrollbar-thumb{background:#1a1a1a;border-radius:2px}
   .boss-msg{padding:10px 13px;border-radius:13px;max-width:88%;font-size:.85rem;line-height:1.5;word-wrap:break-word}
-  .boss-msg.user{background:#1de5ff;color:#0a0a0f;align-self:flex-end;font-weight:600}
+  .boss-msg.user{background:#ff2a2a;color:#fff;align-self:flex-end;font-weight:600}
   .boss-msg.bot{background:#141414;color:#f0f0f0;align-self:flex-start;border:1px solid #1f1f1f;white-space:pre-wrap}
-  .boss-msg.bot code{background:#050505;color:#1de5ff;padding:2px 5px;border-radius:4px;font-family:monospace;font-size:.8rem}
+  .boss-msg.bot code{background:#050505;color:#ff2a2a;padding:2px 5px;border-radius:4px;font-family:monospace;font-size:.8rem}
   .boss-typing{display:flex;gap:4px;padding:12px 14px;align-self:flex-start}
-  .boss-typing span{width:6px;height:6px;border-radius:50%;background:#1de5ff;animation:bossBounce 1.2s infinite}
+  .boss-typing span{width:6px;height:6px;border-radius:50%;background:#ff2a2a;animation:bossBounce 1.2s infinite}
   .boss-typing span:nth-child(2){animation-delay:.15s}.boss-typing span:nth-child(3){animation-delay:.3s}
   @keyframes bossBounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1}}
   #boss-form{display:flex;padding:10px;gap:8px;border-top:1px solid #1a1a1a;background:#080808}
   #boss-input{flex:1;background:#141414;border:1px solid #1f1f1f;border-radius:100px;color:#f0f0f0;padding:8px 14px;font-size:.85rem;outline:none}
-  #boss-input:focus{border-color:#1de5ff}
-  #boss-mic-btn.listening{background:#1de5ff !important;color:#0a0a0a !important}
+  #boss-input:focus{border-color:#ff2a2a}
+  #boss-mic-btn.listening{background:#ff2a2a !important;color:#0a0a0a !important}
 </style>
 
       <!-- ══ B.O.S.S: LOCAL MODELS ══ -->
@@ -891,8 +891,8 @@
           <p style="font-size:.75rem;color:#666;margin:0 0 6px">Run AI on your machine — free, private, instant. Powered by Ollama.</p>
 
           <!-- Ollama install banner -->
-          <div id="ollama-install-banner" style="display:none;background:#0d0d0d;border:1px solid #1de5ff33;border-radius:12px;padding:18px 22px;margin-bottom:24px">
-            <div style="font-weight:800;color:#1de5ff;margin-bottom:6px">⬇ Install Ollama first</div>
+          <div id="ollama-install-banner" style="display:none;background:#0d0d0d;border:1px solid #ff2a2a33;border-radius:12px;padding:18px 22px;margin-bottom:24px">
+            <div style="font-weight:800;color:#ff2a2a;margin-bottom:6px">⬇ Install Ollama first</div>
             <div style="font-size:.78rem;color:#aaa;line-height:1.7">
               1. Download → <strong style="color:#fff">ollama.com/download</strong> → Windows installer<br>
               2. Install it (takes 1 min, runs as a background service)<br>
@@ -909,10 +909,10 @@
           </div>
 
           <!-- Recommended models -->
-          <div style="font-size:.72rem;font-weight:700;color:#1de5ff;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Recommended Models</div>
+          <div style="font-size:.72rem;font-weight:700;color:#ff2a2a;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Recommended Models</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:28px" id="model-recs">
             ${[
-              {name:'qwen2.5:7b',   size:'4.7 GB',label:'Best all-rounder',      badge:'RECOMMENDED', col:'#1de5ff'},
+              {name:'qwen2.5:7b',   size:'4.7 GB',label:'Best all-rounder',      badge:'RECOMMENDED', col:'#ff2a2a'},
               {name:'llama3.2:3b',  size:'2.0 GB',label:'Instant fast tasks',    badge:'FASTEST',     col:'#00aaff'},
               {name:'qwen2.5-coder:7b',size:'4.7 GB',label:'Code generation',    badge:'CODE',        col:'#aa44ff'},
               {name:'llama3.1:8b',  size:'4.9 GB',label:'Strong general model',  badge:'SOLID',       col:'#ff8844'},
@@ -923,7 +923,7 @@
                 <span style="background:${m.col}22;color:${m.col};font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:100px">${m.badge}</span>
               </div>
               <div style="font-size:.72rem;color:#888">${m.label} · ${m.size}</div>
-              <button onclick="bossPullModel('${m.name}')" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#1de5ff;padding:6px;border-radius:8px;font-size:.72rem;font-weight:700;cursor:pointer;margin-top:4px">⬇ Pull Model</button>
+              <button onclick="bossPullModel('${m.name}')" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#ff2a2a;padding:6px;border-radius:8px;font-size:.72rem;font-weight:700;cursor:pointer;margin-top:4px">⬇ Pull Model</button>
             </div>`).join('')}
           </div>
 
@@ -975,14 +975,14 @@
           <!-- Actions -->
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px">
             <button onclick="bossRenderVideo()" id="cs-render-btn"
-              style="background:#1de5ff;color:#0a0a0a;border:none;padding:12px 28px;border-radius:9px;font-weight:800;font-size:.85rem;cursor:pointer">
+              style="background:#ff2a2a;color:#0a0a0a;border:none;padding:12px 28px;border-radius:9px;font-weight:800;font-size:.85rem;cursor:pointer">
               ▶ Render MP4
             </button>
             <button onclick="bossCreativeRefresh()"
               style="background:#1a1a1a;border:1px solid #2a2a2a;color:#aaa;padding:12px 18px;border-radius:9px;font-weight:700;font-size:.82rem;cursor:pointer">
               ↻ Refresh Status
             </button>
-            <a id="cs-download-btn" href="/api/creative/download" style="display:none;background:#0a1a0a;border:1px solid #2a3a1a;color:#1de5ff;padding:12px 22px;border-radius:9px;font-weight:700;font-size:.82rem;text-decoration:none">
+            <a id="cs-download-btn" href="/api/creative/download" style="display:none;background:#0a1a0a;border:1px solid #2a3a1a;color:#ff2a2a;padding:12px 22px;border-radius:9px;font-weight:700;font-size:.82rem;text-decoration:none">
               ⬇ Download MP4
             </a>
           </div>
