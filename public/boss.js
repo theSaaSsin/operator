@@ -1,4 +1,4 @@
-/* ── B.O.S.S — Business Optimization System Service — boss.js ── */
+﻿/* ── B.O.S.S — Business Optimization System Service — boss.js ── */
 'use strict';
 (function () {
   const API = '/api';
@@ -21,12 +21,17 @@
   const slashEl = document.getElementById('boss-slash');
 
   const SLASH_CMDS = [
-    { cmd: '/scan',     hint: '/scan <keyword> — sweep Reddit for leads' },
-    { cmd: '/pitch',    hint: '/pitch <lead name> — generate full pitch doc' },
-    { cmd: '/channels', hint: '/channels — show platform status' },
-    { cmd: '/coach',    hint: '/coach — proactive next-move advice' },
-    { cmd: '/status',   hint: '/status — memory palace + system state' },
-    { cmd: '/plan',     hint: '/plan <goal> — strategic breakdown' },
+    { cmd: '/scan',        hint: '/scan [keyword] - sweep Reddit for leads' },
+    { cmd: '/pitch',       hint: '/pitch [lead] - generate full pitch' },
+    { cmd: '/orchestrate', hint: '/orchestrate [goal] - deploy all agents' },
+    { cmd: '/agents',      hint: '/agents - see the full agent roster' },
+    { cmd: '/studio',      hint: '/studio - open Creative Studio' },
+    { cmd: '/channels',    hint: '/channels - platform status' },
+    { cmd: '/models',      hint: '/models - local AI models panel' },
+    { cmd: '/keys',        hint: '/keys - API keys and settings' },
+    { cmd: '/coach',       hint: '/coach - proactive next-move advice' },
+    { cmd: '/status',      hint: '/status - system state' },
+    { cmd: '/plan',        hint: '/plan [goal] - strategic breakdown' },
   ];
 
   window.bossToggle = function () {
@@ -106,7 +111,7 @@
         slashEl.style.display = matches.length ? 'flex' : 'none';
         slashEl.innerHTML = matches.map(c =>
           `<span onclick="document.getElementById('boss-input').value='${c.cmd} ';document.getElementById('boss-input').focus()"
-            style="background:rgba(200,255,0,.08);color:#c8ff00;border:1px solid rgba(200,255,0,.2);border-radius:5px;padding:3px 9px;font-size:.72rem;cursor:pointer;font-family:monospace">${c.hint}</span>`
+            style="background:rgba(29,229,255,.08);color:#1de5ff;border:1px solid rgba(29,229,255,.2);border-radius:5px;padding:3px 9px;font-size:.72rem;cursor:pointer;font-family:monospace">${c.hint}</span>`
         ).join('');
       } else {
         slashEl.style.display = 'none';
@@ -194,12 +199,12 @@
     grid.innerHTML = r.channels.map(ch => `
       <div style="background:#0d0d0d;border:1px solid ${ch.configured ? '#2a3a1a' : '#1a1a1a'};border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px">
         <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:38px;height:38px;border-radius:9px;background:${ch.configured ? 'rgba(200,255,0,.1)' : '#151515'};display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:${ch.configured ? '#c8ff00' : '#444'}">
+          <div style="width:38px;height:38px;border-radius:9px;background:${ch.configured ? 'rgba(29,229,255,.1)' : '#151515'};display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:${ch.configured ? '#1de5ff' : '#444'}">
             <i class="${CH_ICONS[ch.id] || 'fas fa-satellite-dish'}"></i>
           </div>
           <div>
             <div style="font-weight:700;font-size:.85rem">${ch.label}</div>
-            <div style="font-size:.68rem;color:${ch.configured ? '#c8ff00' : '#f55'}">${ch.configured ? '✓ Ready' : '⚠ Needs env key'}</div>
+            <div style="font-size:.68rem;color:${ch.configured ? '#1de5ff' : '#f55'}">${ch.configured ? '✓ Ready' : '⚠ Needs env key'}</div>
           </div>
         </div>
         <div style="font-size:.68rem;color:#555;line-height:1.4">${ch.configured ? (ch.capabilities||[]).join(' · ') : ch.setupNote}</div>
@@ -233,7 +238,7 @@
     grid.innerHTML = r.agents.map(ag => `
       <div style="background:#0d0d0d;border:1px solid #2a3a1a;border-radius:12px;padding:18px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-          <i class="${CH_ICONS[ag.channelId]||'fas fa-robot'}" style="color:#c8ff00"></i>
+          <i class="${CH_ICONS[ag.channelId]||'fas fa-robot'}" style="color:#1de5ff"></i>
           <span style="font-weight:700;font-size:.85rem">${ag.persona?.name||ag.channelId}</span>
           <span style="margin-left:auto;font-size:.66rem;color:#555">${ag.queueDepth||0} queued</span>
         </div>
@@ -303,7 +308,7 @@
         keyInput.value = cfg.anthropicApiKey;
         if (keyStatus) {
           keyStatus.textContent  = `✓ Key set (${cfg.anthropicApiKey.length} chars)`;
-          keyStatus.style.color  = '#c8ff00';
+          keyStatus.style.color  = '#2cb67d';
         }
         if (banner) banner.style.display = 'none';
       } else {
@@ -354,13 +359,13 @@
         body: JSON.stringify(payload),
       });
 
-      if (btn)    { btn.style.background = '#c8ff00'; btn.textContent = '✓ Saved!'; }
-      if (status) { status.textContent = `✓ Key set (${key.length} chars)`; status.style.color = '#c8ff00'; }
+      if (btn)    { btn.style.background = '#1de5ff'; btn.textContent = '✓ Saved!'; }
+      if (status) { status.textContent = `✓ Key set (${key.length} chars)`; status.style.color = '#2cb67d'; }
       if (banner) banner.style.display = 'none';
-      if (msg)    { msg.textContent = '✓ B.O.S.S activated. Open the chat (bottom right) and type anything.'; msg.style.color = '#c8ff00'; }
+      if (msg)    { msg.textContent = '✓ B.O.S.S activated. Open the chat (bottom right) and type anything.'; msg.style.color = '#1de5ff'; }
 
       setTimeout(() => {
-        if (btn) { btn.textContent = '✓ Save & Activate'; btn.style.background = '#c8ff00'; }
+        if (btn) { btn.textContent = '✓ Save & Activate'; btn.style.background = '#1de5ff'; }
       }, 2500);
     } catch (err) {
       if (msg) { msg.textContent = '✗ Save failed — is the server running?'; msg.style.color = '#f55'; }
@@ -369,7 +374,7 @@
 
   window.bossCfgTest = async function () {
     const msg = document.getElementById('cfg-save-msg');
-    if (msg) { msg.textContent = '⚡ Testing…'; msg.style.color = '#c8ff00'; }
+    if (msg) { msg.textContent = '⚡ Testing…'; msg.style.color = '#1de5ff'; }
     try {
       const r = await fetch(API + '/boss/chat', {
         method: 'POST',
@@ -377,7 +382,7 @@
         body: JSON.stringify({ message: 'Reply in one sentence: B.O.S.S is online and ready.' }),
       }).then(x => x.json());
       if (r.ok) {
-        if (msg) { msg.textContent = `✓ Claude says: "${r.reply.slice(0, 120)}"`; msg.style.color = '#c8ff00'; }
+        if (msg) { msg.textContent = `✓ Claude says: "${r.reply.slice(0, 120)}"`; msg.style.color = '#1de5ff'; }
       } else {
         if (msg) { msg.textContent = `✗ ${r.error || 'API error'}`; msg.style.color = '#f55'; }
       }
@@ -401,7 +406,7 @@
   // Show which AI tier handled a reply in the chat
   function tierBadge(provider, tier) {
     const map = {
-      ollama:    { label: 'LOCAL',  color: '#c8ff00' },
+      ollama: { label: 'LOCAL',  color: '#2cb67d' },
       groq:      { label: 'GROQ',   color: '#00aaff' },
       anthropic: { label: 'CLAUDE', color: '#aa44ff' },
     };
@@ -438,6 +443,64 @@
       addMsg('user', text);
       document.querySelector('[data-panel="boss-creative"]')?.click();
       addMsgRich('bot', '🎬 Opening <strong>Creative Studio</strong>…');
+      return;
+    }
+    
+    // --- Orchestration + Studio slash commands ---
+    if (text.startsWith('/orchestrate ') || text.startsWith('/o ')) {
+      const goal = text.replace(/^\/o(rchestrate)?\s+/, '').trim();
+      if (!goal) { addMsg('bot', 'Usage: /orchestrate [your goal]'); return; }
+      addMsg('user', text);
+      addMsgRich('bot', '<strong>Launching agent swarm</strong> for: <em>' + goal + '</em>...');
+      showTyping();
+      try {
+        const r = await fetch(API + '/boss/orchestrate', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ goal }),
+        }).then(x => x.json());
+        removeTyping();
+        if (r.ok) {
+          let html = '<div style="font-size:.8rem;opacity:.7;margin-bottom:8px">Agents ran: ' + r.agentCount + '</div>';
+          const EMOJIS = { boss:'', planner:'', builder:'', analyst:'', growth:'', creative:'', scout:'', copywriter:'', guardian:'' };
+          r.steps.filter(s => s.task !== 'Assemble').forEach(s => {
+            const em = EMOJIS[s.agent] || '';
+            const badge = tierBadge(s.provider, null);
+            html += '<div style="margin:6px 0;padding:8px 10px;background:#0d0d0d;border-left:2px solid #1de5ff;border-radius:0 8px 8px 0;font-size:.78rem">' + em + ' <strong>' + s.agent.toUpperCase() + '</strong>' + badge + '<div style="margin-top:5px;color:#aaa;white-space:pre-wrap">' + (s.output||'').slice(0,300) + (s.output&&s.output.length>300?'...':'') + '</div></div>';
+          });
+          const finalStep = r.steps.find(s => s.task === 'Assemble');
+          if (finalStep) html += '<div style="margin-top:10px;padding:10px;background:#0a0a1a;border:1px solid rgba(29,229,255,.2);border-radius:8px">' + finalStep.output.replace(/\n/g,'<br>') + '</div>';
+          addMsgRich('bot', html);
+          HISTORY.push({ role: 'assistant', content: r.result || 'Orchestration complete.' });
+        } else {
+          addMsg('bot', r.error || 'Orchestration failed');
+        }
+      } catch(err) {
+        removeTyping();
+        addMsg('bot', 'Server not reachable.');
+      }
+      return;
+    }
+    if (text === '/agents') {
+      addMsg('user', text);
+      showTyping();
+      try {
+        const r = await fetch(API + '/boss/agents').then(x => x.json());
+        removeTyping();
+        if (r.ok) {
+          let html = '<strong>Agent Roster</strong><br><br>';
+          r.agents.forEach(a => {
+            html += '<strong>' + a.id + '</strong> — ' + a.desc + ' <span style="opacity:.5;font-size:.75em">[' + a.tier + ']</span><br>';
+          });
+          html += '<br><em style="opacity:.6">Type /orchestrate [goal] to deploy them all</em>';
+          addMsgRich('bot', html);
+        }
+      } catch { removeTyping(); addMsg('bot', 'Server not reachable.'); }
+      return;
+    }
+    if (text === '/studio' || text === '/creative') {
+      addMsg('user', text);
+      window.open('/studio.html', '_blank');
+      addMsgRich('bot', 'Opening Creative Studio in new tab.');
       return;
     }
     if (text === '/keys' || text === '/settings') {
@@ -493,7 +556,7 @@
         document.getElementById('ollama-install-banner')?.setAttribute('style','display:none');
       } else {
         if (rtLV) rtLV.textContent = 'Not running — install Ollama';
-        document.getElementById('ollama-install-banner')?.setAttribute('style','display:block;background:#0d0d0d;border:1px solid #c8ff0033;border-radius:12px;padding:18px 22px;margin-bottom:24px');
+        document.getElementById('ollama-install-banner')?.setAttribute('style','display:block;background:#0d0d0d;border:1px solid #1de5ff33;border-radius:12px;padding:18px 22px;margin-bottom:24px');
       }
       if (r.groq)      { rtGroq?.classList.add('groq-on');  if (rtGV) rtGV.textContent = 'Connected'; }
       else             { if (rtGV) rtGV.textContent = 'No key — get free at groq.com'; }
@@ -527,7 +590,7 @@
 
   window.bossPullModel = async function(model) {
     const msg = document.getElementById('models-msg');
-    if (msg) { msg.textContent = `⬇ Pulling ${model} in background…`; msg.style.color = '#c8ff00'; }
+    if (msg) { msg.textContent = `⬇ Pulling ${model} in background…`; msg.style.color = '#1de5ff'; }
     try {
       await fetch(API + '/local/pull', {
         method: 'POST',
@@ -566,7 +629,7 @@
     try {
       const r = await fetch(API + '/creative/status').then(x => x.json());
       document.getElementById('cs-mp4-status').textContent  = r.mp4 ? '✓ Ready' : 'Not rendered yet';
-      document.getElementById('cs-mp4-status').style.color  = r.mp4 ? '#c8ff00' : '#666';
+      document.getElementById('cs-mp4-status').style.color  = r.mp4 ? '#1de5ff' : '#666';
       document.getElementById('cs-mp4-size').textContent    = r.mp4 ? `${r.mp4SizeMB} MB` : '—';
       document.getElementById('cs-assets').textContent      = `${r.assets?.length || 0} images`;
 
@@ -593,7 +656,7 @@
       const log = document.getElementById('cs-log');
       if (el) {
         el.textContent = r.status;
-        el.style.color = r.status === 'done' ? '#c8ff00' : r.status === 'running' ? '#ffaa00' : r.status === 'error' ? '#f55' : '#666';
+        el.style.color = r.status === 'done' ? '#1de5ff' : r.status === 'running' ? '#ffaa00' : r.status === 'error' ? '#f55' : '#666';
       }
       if (log && r.logTail) log.textContent = r.logTail;
       if (r.status === 'running' && !_renderPoll) {

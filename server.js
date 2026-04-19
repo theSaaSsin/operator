@@ -2295,6 +2295,95 @@ ROUTES['GET /api/boss/router'] = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// B.O.S.S ORCHESTRATOR - Multi-agent goal execution
+// POST /api/boss/orchestrate  { goal, context? }
+// GET  /api/boss/agents       list agents
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const AGENT_ROSTER = {
+  boss:       { taskKind: "strategy", tier: "cloud", desc: "Master director" },
+  planner:    { taskKind: "plan",     tier: "groq",  desc: "Breaks goals into tasks" },
+  builder:    { taskKind: "build",    tier: "cloud", desc: "Writes production code" },
+  analyst:    { taskKind: "analyse",  tier: "groq",  desc: "Reviews metrics" },
+  growth:     { taskKind: "pitch",    tier: "cloud", desc: "Client acquisition" },
+  creative:   { taskKind: "build",    tier: "cloud", desc: "Video and brand" },
+  scout:      { taskKind: "research", tier: "groq",  desc: "Market intelligence" },
+  copywriter: { taskKind: "pitch",    tier: "cloud", desc: "Copy that converts" },
+  guardian:   { taskKind: "classify", tier: "groq",  desc: "Sanity checks output" },
+};
+
+const AGENT_SYSTEMS = {
+  boss:       "You are B.O.S.S, Josh director for TheSaaSsin Operator. British spelling. Calm, direct, one step ahead. End every response with NEXT MOVE.",
+  planner:    "You are the Planner for B.O.S.S. Josh runs TheSaaSsin (AI client acquisition SaaS, solo, Node.js/Express stack). Break goals into numbered steps with [AGENT] prefixes. Under 200 words.",
+  builder:    "You are the Builder for B.O.S.S. Write production Node.js/Express or vanilla JS. No TypeScript, no TODOs. Error handling on every async op.",
+  analyst:    "You are the Analyst for B.O.S.S. Honest performance analysis. Numbers over words. Flag biggest risk. Highest-leverage change.",
+  growth:     "You are the Growth agent for B.O.S.S. Josh targets B2B SaaS founders (1-20 staff, UK/EU). Specific acquisition tactics, not generic advice.",
+  creative:   "You are the Creative agent for B.O.S.S. Josh uses Remotion v4 + Three.js + GLSL. Brand: #0a0a0f bg, #1de5ff cyan, #7f5af0 purple.",
+  scout:      "You are the Scout for B.O.S.S. Surface market intelligence from Reddit/LinkedIn/IH/PH. Quote exact prospect language. Under 300 words.",
+  copywriter: "You are the Copywriter for B.O.S.S. TheSaaSsin = AI client acquisition for SaaS founders. No fluff. Always 2 variants: A (bold) B (story).",
+  guardian:   "You are the Guardian for B.O.S.S. Review all output. Output: PASS or FAIL + specific issues. Brief.",
+};
+
+ROUTES["POST /api/boss/orchestrate"] = async (req, res) => {
+  const cfg = readJSON("config.json");
+  if (cfg.anthropicApiKey) process.env.ANTHROPIC_API_KEY = cfg.anthropicApiKey;
+  if (cfg.groqApiKey)      process.env.GROQ_API_KEY      = cfg.groqApiKey;
+  const { goal, context = "" } = req.body || {};
+  if (!goal) return res.end(JSON.stringify({ ok: false, error: "goal required" }));
+  const steps = [];
+  try {
+    const dirMsg = "Goal: " + goal + (context ? "\nContext: " + context : "") +
+      "\n\nBreak into 2-4 sub-tasks. For each specify:\nAGENT: [planner|builder|analyst|growth|creative|scout|copywriter]\nTASK: [specific instruction]\n\nReturn ONLY the task list.";
+    const planResult = await bossRouter.route({
+      taskKind: "strategy", system: AGENT_SYSTEMS.boss,
+      messages: [{ role: "user", content: dirMsg }], maxTokens: 400,
+    });
+    if (!planResult.ok) throw new Error("Director failed: " + (planResult.error || "unknown"));
+    steps.push({ agent: "boss", task: "Plan", output: planResult.text, provider: planResult.provider });
+    const lines = planResult.text.split("\n");
+    const agentTasks = [];
+    for (let i = 0; i < lines.length; i++) {
+      const am = lines[i].match(/^AGENT:\s*(\w+)/i);
+      if (!am) continue;
+      const agentId = am[1].toLowerCase();
+      const nextTask = lines.slice(i + 1).find(l => l.match(/^TASK:/i));
+      if (nextTask && AGENT_ROSTER[agentId]) {
+        agentTasks.push({ agentId, task: nextTask.replace(/^TASK:\s*/i, "").trim() });
+      }
+    }
+    if (agentTasks.length === 0) {
+      agentTasks.push({ agentId: "growth", task: goal });
+      agentTasks.push({ agentId: "copywriter", task: "Create copy for: " + goal });
+    }
+    let ctx = "Original goal: " + goal + "\n";
+    for (const { agentId, task } of agentTasks) {
+      const agent = AGENT_ROSTER[agentId];
+      const system = AGENT_SYSTEMS[agentId] || AGENT_SYSTEMS.boss;
+      const userMsg = ctx.length > 200 ? "Context:\n" + ctx.slice(-600) + "\n\nYour task: " + task : "Your task: " + task;
+      const result = await bossRouter.route({ taskKind: agent.taskKind, system, messages: [{ role: "user", content: userMsg }], maxTokens: 600 });
+      const output = result.ok ? result.text : "[" + agentId + " failed: " + result.error + "]";
+      ctx += "\n[" + agentId.toUpperCase() + "]:\n" + output + "\n";
+      steps.push({ agent: agentId, task, output, provider: result.provider || "unknown" });
+    }
+    const assembleResult = await bossRouter.route({
+      taskKind: "strategy", system: AGENT_SYSTEMS.boss,
+      messages: [{ role: "user", content: "Assemble agent outputs into a brief for Josh.\nGoal: " + goal + "\n\n" + ctx + "\n\nDeliver: key outputs, what is ready to use, and the NEXT MOVE." }],
+      maxTokens: 800,
+    });
+    const finalOutput = assembleResult.ok ? assembleResult.text : ctx;
+    steps.push({ agent: "boss", task: "Assemble", output: finalOutput, provider: assembleResult.provider || "unknown" });
+    res.end(JSON.stringify({ ok: true, goal, steps, result: finalOutput, agentCount: agentTasks.length }));
+  } catch (err) {
+    res.end(JSON.stringify({ ok: false, error: err.message, steps }));
+  }
+};
+
+ROUTES["GET /api/boss/agents"] = (_, res) => {
+  res.end(JSON.stringify({ ok: true, agents: Object.entries(AGENT_ROSTER).map(([id, a]) => ({ id, ...a })) }));
+};
+
 // B.O.S.S  CREATIVE STUDIO — Anime Morph renderer
 // ─────────────────────────────────────────────────────────────────────────────
 
