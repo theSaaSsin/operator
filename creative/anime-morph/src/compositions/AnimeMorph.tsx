@@ -28,7 +28,7 @@ import { AbsoluteFill, Sequence } from 'remotion';
 import { SCENE_CONFIGS, SCENE_FRAMES, TRANSITION_FRAMES } from '../config/scenes';
 import { TransitionPulse } from '../components/TransitionPulse';
 
-import { Scene01Real }         from '../scenes/Scene01Real';
+import { Scene01AOT }          from '../scenes/Scene01Real';
 import { Scene02Naruto }       from '../scenes/Scene02Naruto';
 import { Scene03OnePiece }     from '../scenes/Scene03OnePiece';
 import { Scene04DBZ }          from '../scenes/Scene04DBZ';
@@ -42,7 +42,7 @@ import { Scene10Final }        from '../scenes/Scene10Final';
 const STEP = SCENE_FRAMES + TRANSITION_FRAMES; // 75 frames per scene slot
 
 const SCENE_COMPONENTS = [
-  Scene01Real,
+  Scene01AOT,
   Scene02Naruto,
   Scene03OnePiece,
   Scene04DBZ,

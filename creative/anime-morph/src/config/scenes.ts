@@ -37,26 +37,26 @@ export interface SceneConfig {
 }
 
 export const SCENE_CONFIGS: SceneConfig[] = [
-  // ── 1. Real Joshua ──────────────────────────────────────────────────────────
+  // ── 1. Attack on Titan ──────────────────────────────────────────────────────
   {
-    id:    'real',
-    label: 'Real Joshua',
-    asset: 'assets/real.png',
-    bgFrom: '#0a0a0f',
-    bgTo:   '#1a1a2e',
+    id:    'aot',
+    label: 'Attack on Titan Style',
+    asset: 'assets/aot.png',
+    bgFrom: '#0d0a06',
+    bgTo:   '#2a1a08',
     shader: 'rim',
-    glowColor: [0.9, 0.9, 1.0],
+    glowColor: [0.8, 0.65, 0.3],
     lighting: {
-      ambientIntensity: 0.5,
-      keyColor: '#fff8f0',
-      keyIntensity: 1.2,
-      rimColor: '#4488ff',
-      rimIntensity: 1.6,
-      accentColor: '#4488ff',
-      pulseSpeed: 0.6,
+      ambientIntensity: 0.4,
+      keyColor: '#e8c87a',
+      keyIntensity: 1.3,
+      rimColor: '#c8a040',
+      rimIntensity: 2.0,
+      accentColor: '#a07820',
+      pulseSpeed: 0.8,
     },
     camera: 'breathe',
-    transitionColor: '#4488ff',
+    transitionColor: '#c8a040',
   },
   // ── 2. Naruto ───────────────────────────────────────────────────────────────
   {
