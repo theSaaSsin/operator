@@ -1167,6 +1167,7 @@ function ensureModulesDB() {
 // ── B.O.S.S modules (memory palace + multi-channel agent swarm) ──────────────
 const bossChannels = require('./channels/registry');
 const bossSwarm    = require('./channels/agents');
+const bossRouter   = require('./ai/router');
 
 // Freeform Claude call — returns raw markdown text (for B.O.S.S Jarvis chat)
 function callClaudeFreeform(apiKey, system, messages, maxTokens) {
@@ -2062,35 +2063,35 @@ Return ONLY a JSON object: { "dm": "the message", "rationale": "one sentence on 
     res.end(JSON.stringify({ ok: true, state: bossWriteState(patch || {}) }));
   },
 
-  // Jarvis chat — full persona, context-aware, multi-turn
+  // Jarvis chat — hybrid router (local → groq → claude based on task complexity)
   'POST /api/boss/chat': async (req, res) => {
     const cfg  = readJSON('config.json');
     const data = await body(req);
-    if (!cfg.anthropicApiKey) { res.end(JSON.stringify({ ok: false, error: 'Add your Anthropic key in Settings → API Keys' })); return; }
     const state    = bossReadState();
     const messages = Array.isArray(data.messages) ? data.messages.slice(-12) : [];
-    const userName = data.userName || cfg.personaName || 'Boss';
-    const system   = `You are B.O.S.S (Business Optimization System Service) — the personal Jarvis-tier AI operator for ${userName}.
+    const userName = data.userName || cfg.personaName || 'Josh';
+    const message  = data.message || (messages[messages.length - 1]?.content) || '';
+    const system   = `You are B.O.S.S — the personal AI operator for ${userName}.
+Sharp, direct, British spelling. No padding, no disclaimers. Brief by default (<4 lines).
+Goal: ${state.current_goal || 'Build momentum — find leads, close clients, scale channels.'}
+Today: ${new Date().toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}.
+Commands: /scan /pitch /channels /coach /status /render /models`;
 
-IDENTITY:
-- You run their entire business from this dashboard: lead generation, outreach, CRM, content, channels, automation.
-- You are sharp, concise, confident — like a brilliant co-founder who never wastes words.
-- You use British spelling. You DON'T say "I'm an AI" or pad with disclaimers.
-- Brief by default (<4 lines). Go deep only when asked.
+    // Inject API key from config.json into env for router to pick up
+    if (cfg.anthropicApiKey) process.env.ANTHROPIC_API_KEY = cfg.anthropicApiKey;
+    if (cfg.groqApiKey)      process.env.GROQ_API_KEY      = cfg.groqApiKey;
 
-CURRENT GOAL: ${state.current_goal || 'Build momentum — find leads, close clients, scale channels.'}
-
-CAPABILITIES YOU CAN INVOKE:
-- /scan <keyword>   → Lead Feed scan (Reddit)
-- /pitch <name>     → Write a full pitch doc for a lead
-- /channels         → Show all active channels (Telegram, X, LinkedIn, etc.)
-- /coach            → Proactive next-move advice
-- /status           → Memory palace + system state
-
-CONTEXT: Today is ${new Date().toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}.`;
-
-    const r = await callClaudeFreeform(cfg.anthropicApiKey, system, messages, Math.min(Number(data.maxTokens) || 600, 1400));
-    res.end(JSON.stringify(r));
+    const r = await bossRouter.route({
+      message,
+      system,
+      messages,
+      maxTokens: Math.min(Number(data.maxTokens) || 600, 1400),
+    });
+    if (r.ok) {
+      res.end(JSON.stringify({ ok: true, reply: r.text, provider: r.provider, tier: r.tier, taskKind: r.taskKind }));
+    } else {
+      res.end(JSON.stringify({ ok: false, error: r.error || 'All AI providers offline. Add your Anthropic key in API Keys & Settings.' }));
+    }
   },
 
   // Coach — proactive next-move
@@ -2231,6 +2232,178 @@ const server = http.createServer(async (req, res) => {
     res.end(data);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// B.O.S.S  LOCAL MODEL MANAGEMENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+ROUTES['GET /api/local/status'] = async (_, res) => {
+  const status = await bossRouter.routerStatus();
+  res.end(JSON.stringify({ ok: true, ...status }));
+};
+
+ROUTES['GET /api/local/models'] = async (_, res) => {
+  try {
+    const r    = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(2000) });
+    const data = await r.json();
+    res.end(JSON.stringify({ ok: true, models: data.models || [] }));
+  } catch (_) {
+    res.end(JSON.stringify({ ok: false, models: [], error: 'Ollama not running' }));
+  }
+};
+
+ROUTES['POST /api/local/pull'] = async (req, res) => {
+  const data  = await body(req);
+  const model = data.model || 'qwen2.5:7b';
+  // Fire-and-forget — stream progress via a basic SSE or just kick off
+  const { spawn } = require('child_process');
+  const proc = spawn('ollama', ['pull', model], { detached: true, stdio: 'ignore' });
+  proc.unref();
+  res.end(JSON.stringify({ ok: true, message: `Pulling ${model} in background. Check /api/local/models in ~30s.` }));
+};
+
+ROUTES['POST /api/local/chat'] = async (req, res) => {
+  const data = await body(req);
+  const model = data.model || 'qwen2.5:7b';
+  const msgs  = Array.isArray(data.messages) ? data.messages : [{ role: 'user', content: data.message || '' }];
+  try {
+    const r = await fetch('http://localhost:11434/api/chat', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ model, messages: msgs, stream: false }),
+      signal:  AbortSignal.timeout(60000),
+    });
+    const result = await r.json();
+    res.end(JSON.stringify({ ok: true, reply: result.message?.content || '', model }));
+  } catch (e) {
+    res.end(JSON.stringify({ ok: false, error: e.message }));
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// B.O.S.S  ROUTER STATUS
+// ─────────────────────────────────────────────────────────────────────────────
+
+ROUTES['GET /api/boss/router'] = async (req, res) => {
+  const cfg    = readJSON('config.json');
+  if (cfg.anthropicApiKey) process.env.ANTHROPIC_API_KEY = cfg.anthropicApiKey;
+  if (cfg.groqApiKey)      process.env.GROQ_API_KEY      = cfg.groqApiKey;
+  const status = await bossRouter.routerStatus();
+  status.anthropic = !!cfg.anthropicApiKey;
+  status.groq      = !!cfg.groqApiKey;
+  res.end(JSON.stringify({ ok: true, ...status }));
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// B.O.S.S  CREATIVE STUDIO — Anime Morph renderer
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ANIME_MORPH_DIR = require('path').join(__dirname, 'creative', 'anime-morph');
+
+ROUTES['GET /api/creative/status'] = (_, res) => {
+  const fs   = require('fs');
+  const path = require('path');
+  const out  = path.join(ANIME_MORPH_DIR, 'out', 'AnimeMorph.mp4');
+  const assets = path.join(ANIME_MORPH_DIR, 'public', 'assets');
+  let assetList = [];
+  try { assetList = fs.readdirSync(assets).filter(f => /\.(png|jpg|webp)$/i.test(f)); } catch (_) {}
+  const mp4Exists  = fs.existsSync(out);
+  const mp4Size    = mp4Exists ? fs.statSync(out).size : 0;
+  res.end(JSON.stringify({
+    ok: true,
+    mp4: mp4Exists,
+    mp4SizeMB: +(mp4Size / 1024 / 1024).toFixed(1),
+    mp4Path: mp4Exists ? '/api/creative/download' : null,
+    assets: assetList,
+    assetsDir: assets,
+    renderDir: ANIME_MORPH_DIR,
+  }));
+};
+
+ROUTES['GET /api/creative/download'] = (_, res) => {
+  const fs   = require('fs');
+  const path = require('path');
+  const out  = path.join(ANIME_MORPH_DIR, 'out', 'AnimeMorph.mp4');
+  if (!fs.existsSync(out)) { res.writeHead(404); res.end('Not found'); return; }
+  res.writeHead(200, {
+    'Content-Type':        'video/mp4',
+    'Content-Disposition': 'attachment; filename="AnimeMorph.mp4"',
+    'Content-Length':      fs.statSync(out).size,
+  });
+  fs.createReadStream(out).pipe(res);
+};
+
+ROUTES['POST /api/creative/render'] = async (req, res) => {
+  const { spawn } = require('child_process');
+  const path      = require('path');
+  const fs        = require('fs');
+
+  // Mark render in progress
+  bossWriteState({ render_status: 'running', render_started: new Date().toISOString() });
+
+  const outDir = path.join(ANIME_MORPH_DIR, 'out');
+  fs.mkdirSync(outDir, { recursive: true });
+
+  // Spawn npm run render in anime-morph dir
+  const proc = spawn('npm', ['run', 'render'], {
+    cwd:   ANIME_MORPH_DIR,
+    shell: true,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  let log = '';
+  proc.stdout.on('data', d => { log += d.toString(); });
+  proc.stderr.on('data', d => { log += d.toString(); });
+
+  proc.on('close', code => {
+    const ok = code === 0;
+    bossWriteState({
+      render_status:   ok ? 'done' : 'error',
+      render_finished: new Date().toISOString(),
+      render_log_tail: log.slice(-500),
+    });
+  });
+
+  res.end(JSON.stringify({
+    ok:      true,
+    message: 'Render started in background (~2-5 min). Watch progress in Creative Studio.',
+    pid:     proc.pid,
+  }));
+};
+
+ROUTES['GET /api/creative/assets'] = (_, res) => {
+  const fs   = require('fs');
+  const path = require('path');
+  const dir  = path.join(ANIME_MORPH_DIR, 'public', 'assets');
+  try {
+    const files = fs.readdirSync(dir).filter(f => /\.(png|jpg|webp)$/i.test(f));
+    res.end(JSON.stringify({ ok: true, assets: files }));
+  } catch (_) { res.end(JSON.stringify({ ok: true, assets: [] })); }
+};
+
+// Serve individual asset images for the Creative Studio grid
+function serveCreativeAsset(req, res) {
+  const fs   = require('fs');
+  const path = require('path');
+  const file = decodeURIComponent(req.url.replace('/api/creative/asset/', ''));
+  const full = path.join(ANIME_MORPH_DIR, 'public', 'assets', path.basename(file));
+  if (!fs.existsSync(full)) { res.writeHead(404); res.end('Not found'); return; }
+  const ext  = path.extname(full).toLowerCase();
+  const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+  res.writeHead(200, { 'Content-Type': mime });
+  fs.createReadStream(full).pipe(res);
+}
+
+ROUTES['GET /api/creative/render-status'] = (_, res) => {
+  const state = bossReadState();
+  res.end(JSON.stringify({
+    ok:      true,
+    status:  state.render_status  || 'idle',
+    started: state.render_started || null,
+    finished:state.render_finished|| null,
+    logTail: state.render_log_tail|| '',
+  }));
+};
 
 server.on('upgrade', (req, socket) => {
   const pathname = (req.url || '').split('?')[0];

@@ -1,117 +1,212 @@
 /**
- * ai/router.js — multi-model router
+ * ai/router.js — B.O.S.S Hybrid LLM Router v2
  *
- * One call signature, many providers:
- *   await route({ taskKind, system, messages, maxTokens })
+ * Smart 3-tier routing:
+ *   TIER 1  Ollama  (local, free, instant)   ← simple / private tasks
+ *   TIER 2  Groq    (cloud, free tier, fast)  ← analysis / content
+ *   TIER 3  Claude  (cloud, paid, best)        ← pitches / strategy / code
  *
- * Providers supported:
- *   - anthropic  (Claude — primary)
- *   - groq       (Llama fast lane)
- *   - ooba       (Oobabooga local, OpenAI-compatible)
+ * Route rules defined in boss.config.js → routing.*
+ * Falls back automatically if a tier is offline / unconfigured.
  *
- * Falls back automatically through cfg.models.fallback if a provider is unconfigured
- * or throws. Every call is logged to decisions.log.
+ * Usage:
+ *   const { route, routerStatus } = require('./ai/router');
+ *   const r = await route({ taskKind:'pitch', system, messages, maxTokens:800 });
+ *   if (r.ok) console.log(r.text, r.provider, r.tier);
  */
 
-const cfg    = require('../config/boss.config');
-const memory = require('./memory');
+'use strict';
 
-// Lazy-load Anthropic SDK only if present.
+const cfg = require('../config/boss.config');
+
+// --- Anthropic SDK (lazy) ---
 let Anthropic = null;
 try { Anthropic = require('@anthropic-ai/sdk'); } catch (_) {}
 
-function pickModel(taskKind = 'default') {
-  return cfg.models[taskKind] || cfg.models.default;
+// --- helpers ---
+function readCfgKey(key) {
+  // Check env first, then data/config.json cache (set by POST /api/config)
+  if (process.env[key]) return process.env[key];
+  try {
+    const fs   = require('fs');
+    const p    = require('path').join(__dirname, '..', 'data', 'config.json');
+    const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+    // Map env key names → config.json field names
+    const MAP  = {
+      ANTHROPIC_API_KEY: 'anthropicApiKey',
+      GROQ_API_KEY:      'groqApiKey',
+      OLLAMA_URL:        'ollamaUrl',
+    };
+    return data[MAP[key]] || null;
+  } catch (_) { return null; }
+}
+
+function ollamaBase() {
+  return readCfgKey('OLLAMA_URL') || cfg.ollama.baseUrl;
 }
 
 function isConfigured(provider) {
-  if (provider === 'anthropic') return !!(process.env[cfg.env.anthropic] && Anthropic);
-  if (provider === 'groq')      return !!process.env[cfg.env.groq];
-  if (provider === 'openai')    return !!process.env[cfg.env.openai];
-  if (provider === 'ooba')      return !!process.env[cfg.env.oobaboogaUrl];
+  if (provider === 'anthropic') return !!(readCfgKey('ANTHROPIC_API_KEY') && Anthropic);
+  if (provider === 'groq')      return !!readCfgKey('GROQ_API_KEY');
+  if (provider === 'ollama')    return true; // checked live via ping
   return false;
 }
 
+// --- provider call functions ---
+
 async function callAnthropic({ modelId, system, messages, maxTokens }) {
-  const client = new Anthropic({ apiKey: process.env[cfg.env.anthropic] });
+  const key    = readCfgKey('ANTHROPIC_API_KEY');
+  if (!key || !Anthropic) throw new Error('no anthropic key');
+  const client = new Anthropic({ apiKey: key });
   const r = await client.messages.create({
-    model: modelId,
+    model:      modelId || 'claude-haiku-4-5-20251001',
     max_tokens: maxTokens || 600,
     system,
-    messages: messages.slice(-16),
+    messages:   messages.slice(-16),
   });
   return r.content?.[0]?.text || '';
 }
 
 async function callGroq({ modelId, system, messages, maxTokens }) {
+  const key = readCfgKey('GROQ_API_KEY');
+  if (!key) throw new Error('no groq key');
   const body = {
-    model: modelId,
+    model:      modelId || 'llama-3.1-8b-instant',
     max_tokens: maxTokens || 600,
     messages: [
       ...(system ? [{ role: 'system', content: system }] : []),
       ...messages.slice(-16),
     ],
   };
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env[cfg.env.groq]}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
+  const res  = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method:  'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify(body),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || 'groq error');
   return data.choices?.[0]?.message?.content || '';
 }
 
-async function callOoba({ modelId, system, messages, maxTokens }) {
-  const base = process.env[cfg.env.oobaboogaUrl].replace(/\/+$/, '');
+async function callOllama({ modelId, system, messages, maxTokens }) {
+  const base = ollamaBase();
   const body = {
-    model: modelId || 'local',
-    max_tokens: maxTokens || 600,
+    model:  modelId || cfg.ollama.models.balanced,
+    stream: false,
+    options: { num_predict: maxTokens || 600 },
     messages: [
       ...(system ? [{ role: 'system', content: system }] : []),
       ...messages.slice(-16),
     ],
   };
-  const res = await fetch(`${base}/v1/chat/completions`, {
-    method: 'POST',
+  const res  = await fetch(`${base}/api/chat`, {
+    method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body:    JSON.stringify(body),
+    signal:  AbortSignal.timeout(60000),
   });
+  if (!res.ok) throw new Error(`ollama ${res.status}`);
   const data = await res.json();
-  if (!res.ok) throw new Error(data?.error?.message || 'ooba error');
-  return data.choices?.[0]?.message?.content || '';
+  return data.message?.content || '';
 }
 
-async function callProvider(provider, args) {
-  if (provider === 'anthropic') return callAnthropic(args);
-  if (provider === 'groq')      return callGroq(args);
-  if (provider === 'ooba')      return callOoba(args);
-  throw new Error('unknown provider: ' + provider);
+// --- tier classification ---
+
+function classifyTier(taskKind) {
+  if (cfg.routing.local.includes(taskKind)) return 'local';
+  if (cfg.routing.groq.includes(taskKind))  return 'groq';
+  if (cfg.routing.cloud.includes(taskKind)) return 'cloud';
+  return 'cloud'; // default to best quality
 }
 
-async function route({ taskKind = 'default', system = '', messages = [], maxTokens = 600, actor = 'router' } = {}) {
-  const primary = pickModel(taskKind);
-  const chain = [primary.provider, ...cfg.models.fallback.filter(p => p !== primary.provider)];
-  let lastErr = null;
+// Heuristic: classify a freeform message into a taskKind
+function classifyMessage(msg = '') {
+  const m = msg.toLowerCase();
+  if (m.length < 80 && !m.includes('pitch') && !m.includes('strategy'))
+    return 'quickReply';
+  if (/pitch|propose|write.*email|cold.*outreach|sales/.test(m)) return 'pitch';
+  if (/strateg|plan|roadmap|how.*grow|next.*move/.test(m))       return 'strategy';
+  if (/code|build|implement|fix.*bug|write.*function/.test(m))   return 'code';
+  if (/analys|review|compare|research|find/.test(m))             return 'analyse';
+  if (/post|content|tweet|caption|social/.test(m))               return 'socialPost';
+  if (/summar|tl;dr|recap|what.*said/.test(m))                   return 'summarise';
+  return 'default';
+}
+
+// Build provider chain based on tier
+function buildChain(tier) {
+  if (tier === 'local')  return ['ollama', 'groq', 'anthropic'];
+  if (tier === 'groq')   return ['groq', 'anthropic', 'ollama'];
+  return                        ['anthropic', 'groq', 'ollama'];
+}
+
+function modelFor(provider, taskKind) {
+  if (provider === 'ollama') {
+    if (taskKind === 'code') return cfg.ollama.models.code;
+    if (taskKind === 'quickReply' || taskKind === 'summarise')
+      return cfg.ollama.models.fast;
+    return cfg.ollama.models.balanced;
+  }
+  if (provider === 'groq') {
+    return taskKind === 'fast'
+      ? 'llama-3.1-8b-instant'
+      : 'llama-3.3-70b-versatile';
+  }
+  // anthropic
+  if (taskKind === 'build' || taskKind === 'code') return 'claude-sonnet-4-5';
+  return 'claude-haiku-4-5-20251001';
+}
+
+// --- main export ---
+
+async function route({
+  taskKind  = null,
+  message   = '',
+  system    = '',
+  messages  = [],
+  maxTokens = 600,
+} = {}) {
+  const kind  = taskKind || classifyMessage(message);
+  const tier  = classifyTier(kind);
+  const chain = buildChain(tier);
 
   for (const provider of chain) {
-    if (!isConfigured(provider)) continue;
-    const modelId = provider === primary.provider
-      ? primary.id
-      : (cfg.models[taskKind]?.id || cfg.models.default.id);
+    if (provider !== 'ollama' && !isConfigured(provider)) continue;
+    const modelId = modelFor(provider, kind);
     try {
-      const text = await callProvider(provider, { modelId, system, messages, maxTokens });
-      memory.logDecision(actor, `route ${taskKind} → ${provider}:${modelId} ok (${text.length} chars)`);
-      return { ok: true, provider, modelId, text };
+      let text;
+      if (provider === 'anthropic') text = await callAnthropic({ modelId, system, messages, maxTokens });
+      else if (provider === 'groq') text = await callGroq({ modelId, system, messages, maxTokens });
+      else                          text = await callOllama({ modelId, system, messages, maxTokens });
+      return { ok: true, provider, modelId, tier, taskKind: kind, text };
     } catch (e) {
-      lastErr = e;
-      memory.logDecision(actor, `route ${taskKind} → ${provider} FAIL: ${e.message}`);
+      // try next in chain
     }
   }
-  return { ok: false, error: lastErr ? lastErr.message : 'no provider configured' };
+  return { ok: false, error: 'All providers failed or unconfigured', tier, taskKind: kind };
 }
 
-module.exports = { route, pickModel, isConfigured };
+// --- status check (used by /api/local/status) ---
+async function routerStatus() {
+  const status = { anthropic: false, groq: false, ollama: { running: false, models: [] } };
+
+  status.anthropic = isConfigured('anthropic');
+  status.groq      = isConfigured('groq');
+
+  try {
+    const res  = await fetch(`${ollamaBase()}/api/tags`, { signal: AbortSignal.timeout(2000) });
+    if (res.ok) {
+      const data = await res.json();
+      status.ollama.running = true;
+      status.ollama.models  = (data.models || []).map(m => ({
+        name:  m.name,
+        size:  m.size,
+        sizeMB: Math.round((m.size || 0) / 1024 / 1024),
+      }));
+    }
+  } catch (_) {}
+
+  return status;
+}
+
+module.exports = { route, routerStatus, classifyMessage, classifyTier };

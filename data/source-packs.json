@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "updatedAt": "2026-04-15T00:00:00.000Z",
+  "description": "Edit this file to add niche packs — no code changes required. Empty redditSubs = use the server's full business sub list.",
+  "packs": [
+    {
+      "id": "default",
+      "label": "All niches (broad scan)",
+      "description": "Full Reddit list + HN + 𝕏 + Serper (whatever you have configured).",
+      "defaultKeyword": "need clients",
+      "redditSubs": [],
+      "sources": { "reddit": true, "hn": true, "x": true, "serper": true },
+      "serperSites": "",
+      "nicheTags": ["general"]
+    },
+    {
+      "id": "saas_founder",
+      "label": "SaaS / Founder pack",
+      "description": "Startups, indie builders, product-led pain.",
+      "defaultKeyword": "saas no customers",
+      "redditSubs": [
+        "startups", "SaaS", "Entrepreneur", "indiehackers", "SideProject",
+        "IMadeThis", "roastmystartup", "EntrepreneurRideAlong", "SaaSmarketing"
+      ],
+      "sources": { "reddit": true, "hn": true, "x": true, "serper": true },
+      "serperSites": "news.ycombinator.com reddit.com indiehackers.com producthunt.com",
+      "nicheTags": ["saas", "founder", "tech"]
+    },
+    {
+      "id": "local_business",
+      "label": "Local / trades pack",
+      "description": "Home services, local operators, geo-heavy pain.",
+      "defaultKeyword": "no work coming in",
+      "redditSubs": [
+        "smallbusiness", "sweatystartup", "HomeImprovement", "Plumbing", "HVAC",
+        "landscaping", "cleaning_business", "realestate", "realtors", "Construction"
+      ],
+      "sources": { "reddit": true, "hn": false, "x": true, "serper": true },
+      "serperSites": "facebook.com/groups nextdoor.com yelp.com",
+      "nicheTags": ["local", "trades", "services"]
+    },
+    {
+      "id": "freelancer_agency",
+      "label": "Freelancer / agency pack",
+      "description": "Designers, marketers, devs hunting clients.",
+      "defaultKeyword": "no freelance clients",
+      "redditSubs": [
+        "freelance", "forhire", "web_design", "graphic_design", "digital_marketing",
+        "copywriting", "webdev", "WorkOnline", "agency", "socialmediamarketing"
+      ],
+      "sources": { "reddit": true, "hn": true, "x": true, "serper": true },
+      "serperSites": "linkedin.com reddit.com/r/forhire upwork.com",
+      "nicheTags": ["freelance", "agency", "creative"]
+    },
+    {
+      "id": "ecommerce",
+      "label": "E-commerce pack",
+      "description": "Shopify, Amazon sellers, product brands.",
+      "defaultKeyword": "shopify no sales",
+      "redditSubs": [
+        "ecommerce", "shopify", "AmazonSeller", "FulfillmentByAmazon", "smallbusiness",
+        "Entrepreneur", "sidehustle"
+      ],
+      "sources": { "reddit": true, "hn": true, "x": true, "serper": true },
+      "serperSites": "reddit.com shopify.com/community amazon seller forums",
+      "nicheTags": ["ecommerce", "retail", "product"]
+    }
+  ]
+}

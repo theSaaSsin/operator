@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "updatedAt": "2026-04-16T21:43:31.365Z",
+  "totals": {
+    "closes": 0,
+    "deads": 1
+  },
+  "features": {
+    "platform:reddit": {
+      "closes": 0,
+      "deads": 1,
+      "trials": 2,
+      "lastUpdated": "2026-04-16T21:43:31.365Z"
+    }
+  },
+  "recent": [
+    {
+      "outcome": "ignored",
+      "features": [
+        "platform:reddit"
+      ],
+      "at": "2026-04-16T21:43:31.365Z"
+    },
+    {
+      "outcome": "ignored",
+      "features": [
+        "platform:reddit"
+      ],
+      "at": "2026-04-16T21:03:02.207Z"
+    }
+  ]
+}

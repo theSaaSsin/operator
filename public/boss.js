@@ -398,4 +398,227 @@
     }
   }, 30000);
 
+  // Show which AI tier handled a reply in the chat
+  function tierBadge(provider, tier) {
+    const map = {
+      ollama:    { label: 'LOCAL',  color: '#c8ff00' },
+      groq:      { label: 'GROQ',   color: '#00aaff' },
+      anthropic: { label: 'CLAUDE', color: '#aa44ff' },
+    };
+    const b = map[provider] || { label: provider?.toUpperCase() || 'AI', color: '#888' };
+    return `<span style="font-size:.6rem;background:${b.color}22;color:${b.color};padding:1px 6px;border-radius:100px;font-weight:700;margin-left:6px;vertical-align:middle">${b.label}</span>`;
+  }
+
+  // Override addMsg to support HTML (for tier badges)
+  const _origAddMsg = addMsg;
+  function addMsgRich(role, html) {
+    const div = document.createElement('div');
+    div.className = `boss-msg ${role}`;
+    div.innerHTML = html;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  // Patch bossSend to show tier badge
+  const _origBossSend = window.bossSend;
+  window.bossSend = async function(e) {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    // Slash command intercepts
+    if (text === '/models' || text === '/local') {
+      addMsg('user', text);
+      document.querySelector('[data-panel="boss-models"]')?.click();
+      addMsgRich('bot', '📡 Opening <strong>Local Models</strong> panel…');
+      return;
+    }
+    if (text === '/render' || text === '/studio') {
+      addMsg('user', text);
+      document.querySelector('[data-panel="boss-creative"]')?.click();
+      addMsgRich('bot', '🎬 Opening <strong>Creative Studio</strong>…');
+      return;
+    }
+    if (text === '/keys' || text === '/settings') {
+      addMsg('user', text);
+      document.querySelector('[data-panel="boss-config"]')?.click();
+      addMsgRich('bot', '🔑 Opening <strong>API Keys & Settings</strong>…');
+      return;
+    }
+
+    addMsg('user', text);
+    showTyping();
+    HISTORY.push({ role: 'user', content: text });
+
+    try {
+      const r = await fetch(API + '/boss/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, messages: HISTORY.slice(-12) }),
+      }).then(x => x.json());
+      removeTyping();
+      if (r.ok) {
+        const badge = tierBadge(r.provider, r.tier);
+        addMsgRich('bot', r.reply.replace(/\n/g, '<br>') + badge);
+        HISTORY.push({ role: 'assistant', content: r.reply });
+        if (VOICE_ON) bossSpeak(r.reply);
+      } else {
+        addMsg('bot', '⚠️ ' + (r.error || 'B.O.S.S offline — check API Keys & Settings.'));
+      }
+    } catch (err) {
+      removeTyping();
+      addMsg('bot', '⚠️ Server not reachable.');
+    }
+  };
+
+  // ── LOCAL MODELS PANEL ───────────────────────────────────────────────────
+
+  window.bossLoadModels = async function() {
+    const msg = document.getElementById('models-msg');
+
+    // Load router status
+    try {
+      const r = await fetch(API + '/boss/router').then(x => x.json());
+      const rtLocal = document.getElementById('rt-local');
+      const rtGroq  = document.getElementById('rt-groq');
+      const rtCloud = document.getElementById('rt-cloud');
+      const rtLV    = document.getElementById('rt-local-val');
+      const rtGV    = document.getElementById('rt-groq-val');
+      const rtCV    = document.getElementById('rt-cloud-val');
+
+      if (r.ollama?.running) {
+        rtLocal?.classList.add('on');
+        if (rtLV) rtLV.textContent = `${r.ollama.models?.length || 0} model(s) ready`;
+        document.getElementById('ollama-install-banner')?.setAttribute('style','display:none');
+      } else {
+        if (rtLV) rtLV.textContent = 'Not running — install Ollama';
+        document.getElementById('ollama-install-banner')?.setAttribute('style','display:block;background:#0d0d0d;border:1px solid #c8ff0033;border-radius:12px;padding:18px 22px;margin-bottom:24px');
+      }
+      if (r.groq)      { rtGroq?.classList.add('groq-on');  if (rtGV) rtGV.textContent = 'Connected'; }
+      else             { if (rtGV) rtGV.textContent = 'No key — get free at groq.com'; }
+      if (r.anthropic) { rtCloud?.classList.add('cloud-on'); if (rtCV) rtCV.textContent = 'Connected'; }
+      else             { if (rtCV) rtCV.textContent = 'No key — add in Settings'; }
+    } catch (_) {}
+
+    // Load downloaded models
+    const listEl = document.getElementById('local-models-list');
+    try {
+      const r = await fetch(API + '/local/models').then(x => x.json());
+      if (r.models && r.models.length) {
+        listEl.innerHTML = r.models.map(m =>
+          `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#0d0d0d;border:1px solid #1a1a1a;border-radius:8px;margin-bottom:6px">
+            <span style="font-weight:700;font-size:.8rem;color:#f5f2ec">${m.name}</span>
+            <span style="font-size:.7rem;color:#666">${Math.round((m.size||0)/1024/1024/1024*10)/10} GB</span>
+          </div>`
+        ).join('');
+      } else {
+        listEl.innerHTML = '<div style="color:#555;font-size:.78rem">No models downloaded yet. Pull one above.</div>';
+      }
+    } catch (_) {
+      listEl.innerHTML = '<div style="color:#555;font-size:.78rem">Ollama not running.</div>';
+    }
+
+    // Load groq key
+    const cfg = await fetch(API + '/config').then(r => r.json()).catch(() => ({}));
+    const groqInp = document.getElementById('cfg-groq-key');
+    if (groqInp && cfg.groqApiKey) groqInp.value = cfg.groqApiKey;
+  };
+
+  window.bossPullModel = async function(model) {
+    const msg = document.getElementById('models-msg');
+    if (msg) { msg.textContent = `⬇ Pulling ${model} in background…`; msg.style.color = '#c8ff00'; }
+    try {
+      await fetch(API + '/local/pull', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model }),
+      });
+      if (msg) msg.textContent = `✓ Pull started for ${model}. Takes 2-10 min depending on size. Refresh in a bit.`;
+      setTimeout(bossLoadModels, 15000);
+    } catch (_) {
+      if (msg) { msg.textContent = 'Failed — is Ollama installed and running?'; msg.style.color = '#f55'; }
+    }
+  };
+
+  window.bossGroqSave = async function() {
+    const key = (document.getElementById('cfg-groq-key')?.value || '').trim();
+    const msg = document.getElementById('models-msg');
+    if (!key) { if (msg) { msg.textContent = 'Paste your Groq key first.'; msg.style.color = '#f55'; } return; }
+    await fetch(API + '/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groqApiKey: key }),
+    });
+    if (msg) { msg.textContent = '✓ Groq key saved — analysis tasks now free and fast.'; msg.style.color = '#00aaff'; }
+    setTimeout(bossLoadModels, 500);
+  };
+
+  // ── CREATIVE STUDIO PANEL ────────────────────────────────────────────────
+
+  let _renderPoll = null;
+
+  window.bossLoadCreative = async function() {
+    await bossCreativeRefresh();
+  };
+
+  window.bossCreativeRefresh = async function() {
+    try {
+      const r = await fetch(API + '/creative/status').then(x => x.json());
+      document.getElementById('cs-mp4-status').textContent  = r.mp4 ? '✓ Ready' : 'Not rendered yet';
+      document.getElementById('cs-mp4-status').style.color  = r.mp4 ? '#c8ff00' : '#666';
+      document.getElementById('cs-mp4-size').textContent    = r.mp4 ? `${r.mp4SizeMB} MB` : '—';
+      document.getElementById('cs-assets').textContent      = `${r.assets?.length || 0} images`;
+
+      const dlBtn = document.getElementById('cs-download-btn');
+      if (dlBtn) dlBtn.style.display = r.mp4 ? 'inline-flex' : 'none';
+
+      // Asset grid
+      const grid = document.getElementById('cs-asset-grid');
+      if (grid && r.assets?.length) {
+        grid.innerHTML = r.assets.map(a => {
+          const scene = a.replace(/\.(png|jpg|webp)/i,'');
+          return `<div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:8px;overflow:hidden;text-align:center">
+            <img src="/api/creative/asset/${a}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block" onerror="this.style.background='#111'">
+            <div style="font-size:.65rem;color:#666;padding:5px;text-transform:uppercase;letter-spacing:.06em">${scene}</div>
+          </div>`;
+        }).join('');
+      }
+    } catch (_) {}
+
+    // Render status
+    try {
+      const r = await fetch(API + '/creative/render-status').then(x => x.json());
+      const el = document.getElementById('cs-render-status');
+      const log = document.getElementById('cs-log');
+      if (el) {
+        el.textContent = r.status;
+        el.style.color = r.status === 'done' ? '#c8ff00' : r.status === 'running' ? '#ffaa00' : r.status === 'error' ? '#f55' : '#666';
+      }
+      if (log && r.logTail) log.textContent = r.logTail;
+      if (r.status === 'running' && !_renderPoll) {
+        _renderPoll = setInterval(bossCreativeRefresh, 5000);
+      } else if (r.status !== 'running' && _renderPoll) {
+        clearInterval(_renderPoll); _renderPoll = null;
+      }
+    } catch (_) {}
+  };
+
+  window.bossRenderVideo = async function() {
+    const btn = document.getElementById('cs-render-btn');
+    const log = document.getElementById('cs-log');
+    if (btn) { btn.textContent = '⏳ Rendering…'; btn.disabled = true; }
+    if (log) log.textContent = 'Starting render…';
+    try {
+      const r = await fetch(API + '/creative/render', { method: 'POST' }).then(x => x.json());
+      if (log) log.textContent = r.message || 'Render started…';
+      // Poll every 5s
+      _renderPoll = setInterval(bossCreativeRefresh, 5000);
+      setTimeout(bossCreativeRefresh, 2000);
+    } catch (_) {
+      if (log) log.textContent = 'Failed to start render. Is the server running?';
+      if (btn) { btn.textContent = '▶ Render MP4'; btn.disabled = false; }
+    }
+  };
+
 })();
