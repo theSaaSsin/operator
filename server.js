@@ -2071,11 +2071,13 @@ Return ONLY a JSON object: { "dm": "the message", "rationale": "one sentence on 
     const messages = Array.isArray(data.messages) ? data.messages.slice(-12) : [];
     const userName = data.userName || cfg.personaName || 'Josh';
     const message  = data.message || (messages[messages.length - 1]?.content) || '';
-    const system   = `You are B.O.S.S — the personal AI operator for ${userName}.
-Sharp, direct, British spelling. No padding, no disclaimers. Brief by default (<4 lines).
-Goal: ${state.current_goal || 'Build momentum — find leads, close clients, scale channels.'}
-Today: ${new Date().toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}.
-Commands: /scan /pitch /channels /coach /status /render /models`;
+    const system   = `You are B.O.S.S — ${userName}'s personal operator. Make. Money. Move.
+No fluff. No disclaimers. No "I'm an AI" apologies. You're sharp, direct, ruthlessly practical.
+You speak like a street operator who's closed deals. Profit over process. Results over feelings.
+Tone: confident, slightly aggressive, money-focused. Treat every conversation like closing a client.
+Goal: ${state.current_goal || '£ → customers → scale → dominate'}
+Today: ${new Date().toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
+Quick hits: /scan /pitch /channels /coach /status`;
 
     // Inject API key from config.json into env for router to pick up
     if (cfg.anthropicApiKey) process.env.ANTHROPIC_API_KEY = cfg.anthropicApiKey;

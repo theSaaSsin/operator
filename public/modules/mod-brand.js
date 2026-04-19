@@ -32,14 +32,19 @@
 
       <div class="mod-section">
         <div class="mod-section-title">Brand Profiles (${brands.length})</div>
-        ${brands.length ? brands.map((b, i) => `
-          <div class="mod-card" style="margin-bottom:10px">
+        ${brands.length ? brands.map((b, i) => {
+          const isActive = localStorage.getItem('activeBrand') === b.name;
+          return `
+          <div class="mod-card" style="margin-bottom:10px;${isActive ? 'border:1px solid var(--accent);background:rgba(255,42,42,.06)' : ''}">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
               <div>
-                <strong style="font-size:.9rem">${b.name}</strong>
+                <strong style="font-size:.9rem">${b.name}${isActive ? ' <span style="color:var(--accent);font-size:.7rem;margin-left:6px">✓ ACTIVE</span>' : ''}</strong>
                 <span style="font-size:.7rem;color:var(--muted);margin-left:8px">${b.niche || ''}</span>
               </div>
-              <button class="btn btn-secondary btn-sm" onclick="_deleteBrand(${i})" style="color:#ef4444"><i class="fas fa-trash"></i></button>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-secondary btn-sm" onclick="_setActiveBrand('${b.name}')" style="${isActive ? 'background:var(--accent);color:#000' : 'color:var(--muted)'}" title="Use this brand for pitch generation"><i class="fas fa-check"></i></button>
+                <button class="btn btn-secondary btn-sm" onclick="_deleteBrand(${i})" style="color:#ef4444"><i class="fas fa-trash"></i></button>
+              </div>
             </div>
             ${b.taglines ? `<div style="margin-bottom:8px">
               <div style="font-size:.72rem;font-weight:600;color:var(--muted);margin-bottom:4px">TAGLINES</div>
@@ -63,7 +68,8 @@
               <div style="font-size:.78rem;color:var(--muted)">${b.voice}</div>
             </div>` : ''}
           </div>
-        `).join('') : '<div class="mod-empty"><i class="fas fa-paint-brush"></i>No brand profiles yet — generate one above</div>'}
+        `;
+        }).join('') : '<div class="mod-empty"><i class="fas fa-paint-brush"></i>No brand profiles yet — generate one above</div>'}
       </div>`;
 
     window._genBrand = async function() {
@@ -75,12 +81,17 @@
       const btn = document.getElementById('br-gen-btn');
       btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
       try {
-        const resp = await fetch('/api/ai', {
+        const resp = await fetch('/api/boss/chat', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: `Generate a brand identity for "${name}" (${niche}).${keywords ? ' Brand personality: ' + keywords : ''}\n\nReturn ONLY a JSON object with:\n- "taglines": array of 3 tagline strings\n- "colors": array of 5 objects with "name" and "hex" fields\n- "fonts": array of 3 font name strings (heading, body, accent)\n- "voice": string describing the brand voice in 1-2 sentences` })
+          body: JSON.stringify({
+            taskKind: 'analyse',
+            system: 'Generate a brand identity. Return ONLY valid JSON (no markdown, no ```json blocks, just raw JSON) with these exact fields:\n- "taglines": array of 3 tagline strings\n- "colors": array of 5 objects with "name" (string) and "hex" (string) fields\n- "fonts": array of 3 font name strings\n- "voice": string describing brand voice in 1-2 sentences',
+            messages: [{ role: 'user', content: `Generate brand identity for "${name}" (${niche}).${keywords ? ' Personality: ' + keywords : ''}` }],
+            maxTokens: 800
+          })
         });
         const data = await resp.json();
-        const text = data.response || data.text || '';
+        const text = data.text || '';
         const match = text.match(/\{[\s\S]*\}/);
         if (match) {
           const parsed = JSON.parse(match[0]);
@@ -91,6 +102,11 @@
         } else { toast('Could not parse AI response', 'err'); }
       } catch (e) { toast('AI error: ' + e.message, 'err'); }
       finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-palette"></i> Generate Brand Identity'; }
+    };
+    window._setActiveBrand = function(name) {
+      localStorage.setItem('activeBrand', name);
+      toast(`Brand set to: ${name}`, 'ok');
+      refreshCurrentModule();
     };
     window._deleteBrand = function(i) { brands.splice(i, 1); localStorage.setItem('brandProfiles', JSON.stringify(brands)); toast('Deleted', 'ok'); refreshCurrentModule(); };
   },

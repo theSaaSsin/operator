@@ -1,0 +1,10 @@
+EXIT
+2026-04-19T23:01:31.156Z [gateway] [plugins] plugin id mismatch (manifest uses "wecom", entry hints "wecom-openclaw-plugin") (plugin=wecom, source=C:\Program Files\AutoClaw\resources\gateway\openclaw\extensions\wecom\dist\index.esm.js)
+2026-04-19T23:01:31.261Z [canvas] host mounted at http://127.0.0.1:18789/__openclaw__/canvas/ (root C:\Users\joshu\.openclaw-autoclaw\canvas)
+2026-04-19T23:01:31.406Z [heartbeat] started
+2026-04-19T23:01:31.410Z [health-monitor] started (interval: 300s, grace: 60s)
+2026-04-19T23:01:31.414Z [gateway] agent model: zai/zai_glm-5-turbo
+2026-04-19T23:01:31.421Z [gateway] listening on ws://127.0.0.1:18789, ws://[::1]:18789 (PID 30192)
+2026-04-19T23:01:31.426Z [gateway] log file: C:\Users\joshu\AppData\Local\Temp\openclaw\openclaw-2026-04-20.log
+2026-04-19T23:01:31.457Z [browser/server] Browser control listening on http://127.0.0.1:18791/ (auth=token)
+2026-04-19T23:01:31.714Z [gateway] update available (latest): v2026.4.15 (current v2026.2.25). Run: openclaw update

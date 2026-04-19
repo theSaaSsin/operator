@@ -1,0 +1,11 @@
+[2026-04-19 23:58:56:457] [BizTrace] gateway.start.begin {"attemptId":1,"healthUrl":"http://127.0.0.1:18789/health","port":18789,"preferredPort":18789,"packaged":true,"platform":"win32"}
+[2026-04-19 23:58:56:489] [BizTrace] gateway.primary_model.synced {"primaryModel":"zai/zai_glm-5-turbo","providerKey":"zai","provider":"zhipu","model":"zai_glm-5-turbo","alias":"GLM-5-Turbo","isCustom":false,"routeType":"builtin-zai"}
+[2026-04-19 23:59:06:542] [BizTrace] gateway.config.validation_unparseable {"round":0,"stderr":""}
+[2026-04-20 00:00:37:074] [BizTrace] gateway.health.timeout {"attemptId":1,"attempts":120,"elapsedMs":60498,"lastProbeFailure":"error:Error: connect ECONNREFUSED 127.0.0.1:18789","recentStderr":[]}
+[2026-04-20 00:00:37:075] [BizTrace] gateway.start.failed {"attemptId":1,"stage":"wait_for_health","error":"Error: [GatewayManager] Timed out waiting for gateway health (attempts=120, elapsedMs=60498, lastProbeFailure=error:Error: connect ECONNREFUSED 127.0.0.1:18789)","recentStderr":[]}
+[2026-04-20 00:00:39:534] [BizTrace] gateway.force_restart.begin {"traceId":null,"source":"main-auto-restart","reason":"gateway-exit-attempt-1","modelRef":null,"usingExternalGateway":false,"hasLiveChild":false}
+[2026-04-20 00:00:39:665] [BizTrace] gateway.start.begin {"attemptId":2,"healthUrl":"http://127.0.0.1:18789/health","port":18789,"preferredPort":18789,"packaged":true,"platform":"win32"}
+[2026-04-20 00:01:31:809] [BizTrace] gateway.health.ready {"attemptId":2,"attempts":75,"status":200,"elapsedMs":37689}
+[2026-04-20 00:01:31:810] [BizTrace] gateway.start.ready {"attemptId":2,"childPid":30192,"usingExternalGateway":false,"stderrLines":0}
+[2026-04-20 00:01:31:812] [BizTrace] config_guard.backup_created {"path":"C:\\Users\\joshu\\.openclaw-autoclaw\\openclaw.json.known-good","sizeBytes":1020}
+[2026-04-20 00:01:31:813] [BizTrace] gateway.force_restart.done {"traceId":null,"source":"main-auto-restart","reason":"gateway-exit-attempt-1","modelRef":null}

@@ -21,15 +21,15 @@
   const slashEl = document.getElementById('boss-slash');
 
   const SLASH_CMDS = [
-    { cmd: '/scan',        hint: '/scan [keyword] - sweep Reddit for leads' },
-    { cmd: '/pitch',       hint: '/pitch [target] - generate full outreach pack (email + DM + call opener + pain points)' },
-    { cmd: '/orchestrate', hint: '/orchestrate [goal] - deploy all agents' },
-    { cmd: '/agents',      hint: '/agents - see the full agent roster' },
-    { cmd: '/studio',      hint: '/studio - open Creative Studio' },
-    { cmd: '/channels',    hint: '/channels - platform status' },
-    { cmd: '/models',      hint: '/models - local AI models panel' },
-    { cmd: '/keys',        hint: '/keys - API keys and settings' },
-    { cmd: '/coach',       hint: '/coach - proactive next-move advice' },
+    { cmd: '/scan',        hint: '/scan [niche] - find prospects bleeding pain on Reddit + Forums' },
+    { cmd: '/pitch',       hint: '/pitch [market] - full battle pack → email, DM, opener, close line' },
+    { cmd: '/orchestrate', hint: '/orchestrate [goal] - burn through all agents, assemble the plan' },
+    { cmd: '/agents',      hint: '/agents - meet the crew (Scout, Growth, Copywriter, Builder)' },
+    { cmd: '/studio',      hint: '/studio - design assets, landing pages, offer sheets' },
+    { cmd: '/channels',    hint: '/channels - which platforms are live? where can you reach?' },
+    { cmd: '/models',      hint: '/models - local AI running on your machine (offline speed)' },
+    { cmd: '/keys',        hint: '/keys - wire up your API keys (Groq, OpenRouter, Claude)' },
+    { cmd: '/coach',       hint: '/coach - what\'s the next move? Let\'s make money.' },
     { cmd: '/status',      hint: '/status - system state' },
     { cmd: '/plan',        hint: '/plan [goal] - strategic breakdown' },
   ];
@@ -570,10 +570,23 @@
       }
       const typing = showTyping();
       try {
-        const systemPrompt = `You are B.O.S.S — a sharp sales operator. Generate complete, ready-to-send outreach assets. Be direct, punchy, and persuasive. No fluff. Make everything immediately usable.`;
-        const userPrompt = `Generate a complete cold outreach campaign pack for: "${target}"
+        // Load active brand profile (client-specific brand tone)
+        let brandInfo = '';
+        try {
+          const activeBrand = localStorage.getItem('activeBrand');
+          if (activeBrand) {
+            const brands = JSON.parse(localStorage.getItem('brandProfiles') || '[]');
+            const selected = brands.find(b => b.name === activeBrand);
+            if (selected) {
+              brandInfo = `\n\nBrand Context: "${selected.name}" (${selected.niche})\nBrand Voice: ${selected.voice || ''}\nTone Keywords: ${selected.keywords || ''}\nTaglines: ${selected.taglines?.join(', ') || ''}`;
+            }
+          }
+        } catch (e) {}
 
-Deliver ALL of these, each clearly labelled:
+        const systemPrompt = `You are B.O.S.S — a sharp sales operator. Generate complete, ready-to-send outreach assets.${brandInfo ? ' Maintain the brand identity below while staying aggressive and money-focused.' : ''} Be direct, punchy, and persuasive. No fluff. Make everything immediately usable and on-brand.`;
+        const userPrompt = `Generate a complete cold outreach campaign pack for: "${target}"${brandInfo}
+
+Deliver ALL of these, each clearly labelled and CONSISTENT with the brand above:
 
 📧 COLD EMAIL (subject line + 4-line body + CTA)
 💬 REDDIT/FORUM DM (2-3 casual lines, no pitch vibe)
@@ -599,7 +612,12 @@ Keep everything tight. Real words, not templates. Output only the pack.`;
         removeTyping();
         const out = r.text || r.reply || r.message || 'Could not generate — try again.';
         const badge = tierBadge(r.provider, null);
-        const html = `<div style="margin-bottom:8px"><strong>🎯 Pitch Pack</strong>${badge} <span style="opacity:.5;font-size:.72rem">for: ${target.slice(0,50)}</span></div>`
+        let activeBrandLabel = '';
+        try {
+          const ab = localStorage.getItem('activeBrand');
+          if (ab) activeBrandLabel = ` | Brand: <strong>${ab}</strong>`;
+        } catch (e) {}
+        const html = `<div style="margin-bottom:8px"><strong>🎯 Pitch Pack</strong>${badge} <span style="opacity:.5;font-size:.72rem">for: ${target.slice(0,50)}${activeBrandLabel}</span></div>`
           + `<div style="font-size:.8rem;white-space:pre-wrap;line-height:1.6;color:#d0d0e0">${out.replace(/</g,'&lt;')}</div>`
           + `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">`
           + `<button style="background:rgba(255,42,42,.12);border:1px solid rgba(255,42,42,.2);color:var(--accent);border-radius:6px;padding:5px 12px;font-size:.75rem;cursor:pointer;font-family:inherit" onclick="navigator.clipboard.writeText(this.closest('#boss-msgs').querySelector('.boss-msg:last-of-type .boss-msg-text pre')?.textContent||'').then(()=>toast('Pack copied','ok'))"><i class="fas fa-copy"></i> Copy All</button>`
