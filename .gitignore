@@ -28,3 +28,4 @@ Videos/
 data/
 .env
 node_modules/
+.lovable-import/
