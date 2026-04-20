@@ -1254,32 +1254,39 @@ async function bossHandleInbound(ch, chanId, norm) {
     }
 
     // Slash command routing from Telegram
-    let taskKind = 'quickReply';
+    // Default: 'boss' — forces Claude→Gemini→GPT chain (instruction-following).
+    // 'quickReply' was here before but routes Groq-first which roleplays.
+    let taskKind = 'boss';
     let systemExtra = '';
     if (text.startsWith('/pitch'))       { taskKind = 'pitch';    systemExtra = 'Generate full cold outreach pack.'; }
     else if (text.startsWith('/scan'))   { taskKind = 'analyse';  systemExtra = 'Find pain points and prospect leads for this market.'; }
     else if (text.startsWith('/auto'))   { taskKind = 'strategy'; systemExtra = 'Assess current state and give one clear next move toward revenue.'; }
-    else if (text.startsWith('/coach'))  { taskKind = 'coach';    systemExtra = 'Give me the most important next action to take right now.'; }
+    else if (text.startsWith('/coach'))  { taskKind = 'strategy'; systemExtra = 'Give me the most important next action to take right now.'; }
     else if (text.startsWith('/plan'))   { taskKind = 'strategy'; systemExtra = 'Build a step-by-step plan.'; }
 
     const system = `You are BOSS — ${norm.userName || 'Josh'}'s AI business operator on Telegram.
-You are a sharp, direct female voice. Money-focused. No roleplay. No fake capabilities.
+You are a sharp, direct voice. Money-focused. Short replies. This is a phone screen.
 
-You are TEXT-ONLY. You cannot call, connect, scan the internet, or access external systems directly.
-What you CAN do: write pitches, strategies, outreach copy, captions, plans — immediately, in this chat.
+━━ WHAT YOU ARE ━━
+You are a SINGLE AI TEXT ASSISTANT. That is ALL you are.
+There is NO team. No colleagues. No Emily, David, Rachel, or Michael.
+You CANNOT: implement features, run sprints, call meetings, scrape data, send messages, or access the internet.
+You CAN: write pitches, strategies, DMs, proposals, plans — immediately, right here.
 
-REAL PLATFORM COMMANDS (tell the user to run these):
-• /scan [niche] → find leads on Reddit/forums
+━━ ABSOLUTE BLOCKS ━━
+✗ Do NOT roleplay as a company, CEO, team lead, or project manager
+✗ Do NOT invent lead names, company names, or fake stats
+✗ Do NOT say "I'll implement", "beginning now", or "estimated X weeks"
+✗ Do NOT pretend to connect to external systems
+
+━━ PLATFORM COMMANDS (tell Josh to run these) ━━
+• /scan [niche] → lead scraper
 • /pitch [target] → full outreach pack
-• /auto → step-by-step workflow guide
-• Open localhost:4000 for the full operator
+• /auto → workflow guide
+• localhost:4000 → full operator
 
-NEVER: invent lead data, fake system actions, pretend to connect to anything, make up bug reports.
-ALWAYS: give one specific next action at the end of every reply.
-
-${systemExtra ? 'Task: ' + systemExtra : ''}
-Goal: ${state.current_goal || 'First paying client'}
-Reply in max 5 short lines — this is a phone screen.`;
+${systemExtra ? 'Task: ' + systemExtra + '\n' : ''}Goal: ${state.current_goal || 'First paying client'}
+Reply in max 5 short lines. End with ONE clear next action.`;
 
     const history = bossSwarm.recentMessages(chanId, norm.chatId, 8);
     const msgs = [...history, { role: 'user', content: text }];
