@@ -1169,6 +1169,7 @@ const bossChannels = require('./channels/registry');
 const bossSwarm    = require('./channels/agents');
 const bossRouter   = require('./ai/router');
 const bossMem      = require('./ai/memory-manager');
+const bossVector   = require('./ai/vector');
 
 // ── Specialized agent configs — each has a role, model priority, token budget ─
 const AGENTS = {
@@ -2827,6 +2828,59 @@ ROUTES['POST /api/boss/ai/prefs'] = (req, res) => {
 
   writeJSON('config.json', cfg);
   res.end(JSON.stringify({ ok: true, disabledProviders: cfg.disabledProviders, pinnedProvider: cfg.pinnedProvider }));
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ======================================================
+// VECTOR STORE API
+// ======================================================
+
+ROUTES['GET /api/vector/stats'] = (_, res) => {
+  res.end(JSON.stringify({ ok: true, ...bossVector.stats() }));
+};
+
+ROUTES['GET /api/vector/list'] = (req, res) => {
+  const url = new URL(req.url, 'http://x');
+  const ns  = url.searchParams.get('ns') || null;
+  const docs = bossVector.list(ns);
+  res.end(JSON.stringify({ ok: true, count: docs.length, docs }));
+};
+
+ROUTES['POST /api/vector/upsert'] = async (req, res) => {
+  const { id, content, metadata, ns } = req.body || {};
+  if (!id || !content) { res.statusCode = 400; return res.end(JSON.stringify({ ok: false, error: 'id and content required' })); }
+  try {
+    const r = await bossVector.upsert(id, content, metadata || {}, ns || 'default');
+    res.end(JSON.stringify({ ok: true, ...r }));
+  } catch (e) {
+    res.statusCode = 500;
+    res.end(JSON.stringify({ ok: false, error: e.message }));
+  }
+};
+
+ROUTES['POST /api/vector/search'] = async (req, res) => {
+  const { query, topK, ns, threshold } = req.body || {};
+  if (!query) { res.statusCode = 400; return res.end(JSON.stringify({ ok: false, error: 'query required' })); }
+  try {
+    const results = await bossVector.search(query, { topK: topK || 5, ns: ns || null, threshold: threshold || 0.3 });
+    res.end(JSON.stringify({ ok: true, count: results.length, results }));
+  } catch (e) {
+    res.statusCode = 500;
+    res.end(JSON.stringify({ ok: false, error: e.message }));
+  }
+};
+
+ROUTES['DELETE /api/vector/doc'] = (req, res) => {
+  const { id } = req.body || {};
+  if (!id) { res.statusCode = 400; return res.end(JSON.stringify({ ok: false, error: 'id required' })); }
+  res.end(JSON.stringify(bossVector.remove(id)));
+};
+
+ROUTES['DELETE /api/vector/ns'] = (req, res) => {
+  const { ns } = req.body || {};
+  if (!ns) { res.statusCode = 400; return res.end(JSON.stringify({ ok: false, error: 'ns required' })); }
+  res.end(JSON.stringify(bossVector.clearNs(ns)));
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
