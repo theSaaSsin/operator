@@ -2520,6 +2520,71 @@ Return JSON only:
     res.end(JSON.stringify({ ok: true, agents: bossSwarm.list() }));
   },
 
+  // ── Telegram: verify token + auto-detect chat ID ───────────────────────
+  'POST /api/telegram/verify': async (req, res) => {
+    const d   = await body(req);
+    const tok = d.token || readJSON('config.json').telegramBotToken || '';
+    if (!tok) { res.end(JSON.stringify({ ok: false, error: 'No token supplied' })); return; }
+    try {
+      const r  = await fetch(`https://api.telegram.org/bot${tok}/getMe`);
+      const me = await r.json();
+      if (!me.ok) { res.end(JSON.stringify({ ok: false, error: me.description || 'Invalid token' })); return; }
+      // Save valid token
+      const cfg = readJSON('config.json');
+      cfg.telegramBotToken = tok;
+      writeJSON('config.json', cfg);
+      process.env.TELEGRAM_BOT_TOKEN = tok;
+      res.end(JSON.stringify({ ok: true, bot: me.result }));
+    } catch(e) { res.end(JSON.stringify({ ok: false, error: e.message })); }
+  },
+
+  // Returns the chat_id of whoever last messaged the bot (so user can find their ID)
+  'GET /api/telegram/find-me': async (req, res) => {
+    const tok = process.env.TELEGRAM_BOT_TOKEN || readJSON('config.json').telegramBotToken || '';
+    if (!tok) { res.end(JSON.stringify({ ok: false, error: 'No bot token configured' })); return; }
+    try {
+      const r  = await fetch(`https://api.telegram.org/bot${tok}/getUpdates?limit=10&allowed_updates=["message"]`);
+      const d  = await r.json();
+      if (!d.ok || !d.result.length) {
+        res.end(JSON.stringify({ ok: false, error: 'No messages received yet — send "/hi" to your bot in Telegram first, then try again.' }));
+        return;
+      }
+      // Pick the most recent sender
+      const latest = d.result[d.result.length - 1];
+      const chat   = latest.message?.chat || {};
+      const from   = latest.message?.from || {};
+      const chatId = String(chat.id || '');
+      const username = from.username ? '@' + from.username : (from.first_name || 'unknown');
+      // Auto-save if not already set
+      const cfg = readJSON('config.json');
+      if (chatId && cfg.telegramChatIds !== chatId) {
+        cfg.telegramChatIds = chatId;
+        writeJSON('config.json', cfg);
+        process.env.TELEGRAM_CHAT_IDS = chatId;
+      }
+      res.end(JSON.stringify({ ok: true, chatId, username, name: chat.first_name || from.first_name || username }));
+    } catch(e) { res.end(JSON.stringify({ ok: false, error: e.message })); }
+  },
+
+  // Send a test message to the configured chat
+  'POST /api/telegram/test-send': async (req, res) => {
+    const d   = await body(req);
+    const cfg = readJSON('config.json');
+    const tok = cfg.telegramBotToken || '';
+    const chatId = d.chatId || cfg.telegramChatIds || '';
+    if (!tok) { res.end(JSON.stringify({ ok: false, error: 'No bot token' })); return; }
+    if (!chatId || chatId === '#ffffff') { res.end(JSON.stringify({ ok: false, error: 'No chat ID — use Find My ID first' })); return; }
+    try {
+      const r  = await fetch(`https://api.telegram.org/bot${tok}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: d.text || '👋 B.O.S.S is live. You can now chat with me on Telegram.', parse_mode: 'Markdown' }),
+      });
+      const result = await r.json();
+      res.end(JSON.stringify({ ok: result.ok, result }));
+    } catch(e) { res.end(JSON.stringify({ ok: false, error: e.message })); }
+  },
+
   'POST /api/predictive/signal': async (req, res) => {
     const data = await body(req);
     const outcome = data.outcome;

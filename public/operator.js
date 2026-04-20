@@ -242,16 +242,18 @@ function buildNav() {
     'api-layer':'fa-plug','plugins':'fa-puzzle-piece','revenue':'fa-sack-dollar',
     'billing':'fa-credit-card','affiliates':'fa-people-arrows','teams':'fa-users','global-analytics':'fa-earth-americas',
     'system-matcher':'fa-puzzle-piece',
+    'ai-models':'fa-microchip','social-post':'fa-thumbs-up',
   };
 
   // Deduplicated module list per category (prefer entry with panel)
   const MODULES_BY_CAT = {
     core: [
-      { key:'feed',     label:'Lead Feed',          status:'active',   icon:'fa-satellite-dish' },
-      { key:'crm',      label:'CRM Pipeline',       status:'active',   icon:'fa-chart-line' },
-      { key:'outreach', label:'Outreach Queue',     status:'active',   icon:'fa-paper-plane' },
-      { key:'client',   label:'New Client',         status:'active',   icon:'fa-user-plus' },
-      { key:'analytics',label:'Analytics',          status:'active',   icon:'fa-chart-bar', fn:'loadAnalytics()' },
+      { key:'feed',          label:'Lead Feed',        status:'active',   icon:'fa-satellite-dish' },
+      { key:'crm',           label:'CRM Pipeline',     status:'active',   icon:'fa-chart-line' },
+      { key:'outreach',      label:'Outreach Queue',   status:'active',   icon:'fa-paper-plane' },
+      { key:'client',        label:'New Client',       status:'active',   icon:'fa-user-plus' },
+      { key:'analytics',     label:'Analytics',        status:'active',   icon:'fa-chart-bar', fn:'loadAnalytics()' },
+      { key:'mod-ai-models', label:'AI Models',        status:'active',   icon:'fa-microchip' },
       { key:'mod-system-matcher', label:'System Matcher', status:'building', icon:'fa-puzzle-piece' },
     ],
     acquisition: [
@@ -286,7 +288,7 @@ function buildNav() {
       { key:'mod-social-post',      label:'Social Posts',     status:'active',  icon:'fa-thumbs-up' },
       { key:'mod-scheduler',        label:'Scheduler',        status:'planned', icon:'fa-calendar-days' },
       { key:'mod-visual-assets',    label:'Visual Assets',    status:'planned', icon:'fa-image' },
-      { key:'mod-brand',            label:'Brand Identity',   status:'planned', icon:'fa-palette' },
+      { key:'mod-brand',            label:'Brand Identity',   status:'active',  icon:'fa-palette' },
       { key:'mod-profile-optimizer',label:'Profile Optimizer',status:'planned', icon:'fa-user-pen' },
       { key:'mod-engagement',       label:'Engagement',       status:'planned', icon:'fa-comments' },
       { key:'mod-content-perf',     label:'Content Tracker',  status:'planned', icon:'fa-chart-simple' },

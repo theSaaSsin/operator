@@ -229,6 +229,68 @@
     addMsg('bot', msg);
   };
 
+  // ── Telegram Setup Wizard ────────────────────────────────────────────────
+  window.bossTelegramVerify = async function () {
+    const tok = document.getElementById('cfg-telegram-token').value.trim();
+    const statusEl = document.getElementById('tg-verify-status');
+    if (!tok) { statusEl.textContent = '⚠ Paste your bot token first'; statusEl.style.color = '#f59e0b'; statusEl.style.display = ''; return; }
+    statusEl.textContent = '⏳ Verifying…'; statusEl.style.color = '#888'; statusEl.style.display = '';
+    try {
+      const r = await fetch('/api/telegram/verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: tok })
+      });
+      const d = await r.json();
+      if (d.ok) {
+        statusEl.innerHTML = `✅ Bot verified: <strong>@${d.bot.username}</strong> (${d.bot.first_name})`;
+        statusEl.style.color = '#22c55e';
+        statusEl.style.display = '';
+        document.getElementById('tg-verify-status').insertAdjacentHTML('afterend',
+          `<div style="font-size:.67rem;color:#2aabee;margin-top:4px">2. Now open Telegram → search <strong>@${d.bot.username}</strong> → send <strong>/hi</strong> → then click <em>Find My ID</em> below</div>`);
+      } else {
+        statusEl.textContent = '❌ ' + (d.error || 'Invalid token');
+        statusEl.style.color = '#ef4444';
+        statusEl.style.display = '';
+      }
+    } catch(e) { statusEl.textContent = '❌ ' + e.message; statusEl.style.color = '#ef4444'; statusEl.style.display = ''; }
+  };
+
+  window.bossTelegramFindMe = async function () {
+    const statusEl = document.getElementById('tg-findme-status');
+    statusEl.textContent = '⏳ Looking for your message…'; statusEl.style.color = '#888'; statusEl.style.display = '';
+    try {
+      const r = await fetch('/api/telegram/find-me');
+      const d = await r.json();
+      if (d.ok) {
+        document.getElementById('cfg-telegram-chatid').value = d.chatId;
+        statusEl.innerHTML = `✅ Found you: <strong>${d.username}</strong> — Chat ID: <code>${d.chatId}</code> (auto-saved)`;
+        statusEl.style.color = '#22c55e';
+        statusEl.style.display = '';
+        document.getElementById('tg-test-btn').style.display = '';
+        bossCfgDirty();
+      } else {
+        statusEl.textContent = '⚠ ' + (d.error || 'Not found');
+        statusEl.style.color = '#f59e0b';
+        statusEl.style.display = '';
+      }
+    } catch(e) { statusEl.textContent = '❌ ' + e.message; statusEl.style.color = '#ef4444'; statusEl.style.display = ''; }
+  };
+
+  window.bossTelegramTestSend = async function () {
+    const chatId = document.getElementById('cfg-telegram-chatid').value.trim();
+    const btn = document.getElementById('tg-test-btn');
+    btn.textContent = '⏳ Sending…'; btn.disabled = true;
+    try {
+      const r = await fetch('/api/telegram/test-send', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId, text: '🔥 B.O.S.S is connected. You can now chat with me directly here. Send me anything.' })
+      });
+      const d = await r.json();
+      btn.textContent = d.ok ? '✅ Message sent! Check Telegram.' : '❌ ' + (d.error || 'Failed');
+      btn.disabled = false;
+    } catch(e) { btn.textContent = '❌ ' + e.message; btn.disabled = false; }
+  };
+
   // Initialize voice state from localStorage
   VOICE_ON = localStorage.getItem('boss_voice_enabled') !== 'false';
   setTimeout(() => {
