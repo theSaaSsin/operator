@@ -1170,6 +1170,7 @@ const bossSwarm    = require('./channels/agents');
 const bossRouter   = require('./ai/router');
 const bossMem      = require('./ai/memory-manager');
 const bossVector   = require('./ai/vector');
+const openClaw     = require('./ai/openclaw');
 
 // ── Specialized agent configs — each has a role, model priority, token budget ─
 const AGENTS = {
@@ -2888,6 +2889,69 @@ ROUTES['DELETE /api/vector/ns'] = (req, res) => {
   const { ns } = req.body || {};
   if (!ns) { res.statusCode = 400; return res.end(JSON.stringify({ ok: false, error: 'ns required' })); }
   res.end(JSON.stringify(bossVector.clearNs(ns)));
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ======================================================
+// OPENCLAW API
+// ======================================================
+
+ROUTES['GET /api/openclaw/status'] = async (_, res) => {
+  const s = await openClaw.status();
+  res.end(JSON.stringify({ ok: true, ...s }));
+};
+
+ROUTES['GET /api/openclaw/sessions'] = async (_, res) => {
+  try {
+    const sessions = await openClaw.listSessions();
+    res.end(JSON.stringify({ ok: true, sessions }));
+  } catch (e) {
+    res.statusCode = 500;
+    res.end(JSON.stringify({ ok: false, error: e.message }));
+  }
+};
+
+ROUTES['GET /api/openclaw/history'] = async (req, res) => {
+  const url = new URL(req.url, 'http://x');
+  const session = url.searchParams.get('session') || 'main';
+  const limit   = parseInt(url.searchParams.get('limit')) || 20;
+  try {
+    const messages = await openClaw.getHistory(session, limit);
+    res.end(JSON.stringify({ ok: true, session, messages }));
+  } catch (e) {
+    res.statusCode = 500;
+    res.end(JSON.stringify({ ok: false, error: e.message }));
+  }
+};
+
+ROUTES['POST /api/openclaw/message'] = async (req, res) => {
+  const { message, session } = req.body || {};
+  if (!message) { res.statusCode = 400; return res.end(JSON.stringify({ ok: false, error: 'message required' })); }
+  try {
+    const reply = await openClaw.sendMessage(message, session || 'main');
+    res.end(JSON.stringify({ ok: true, ...reply }));
+  } catch (e) {
+    res.statusCode = 500;
+    res.end(JSON.stringify({ ok: false, error: e.message }));
+  }
+};
+
+ROUTES['POST /api/openclaw/delegate'] = async (req, res) => {
+  // BOSS delegates a task to OpenClaw — returns the response
+  const { task, context } = req.body || {};
+  if (!task) { res.statusCode = 400; return res.end(JSON.stringify({ ok: false, error: 'task required' })); }
+  try {
+    const messages = [
+      ...(context ? [{ role: 'system', content: context }] : []),
+      { role: 'user', content: task },
+    ];
+    const reply = await openClaw.chat(messages);
+    res.end(JSON.stringify({ ok: true, reply }));
+  } catch (e) {
+    res.statusCode = 500;
+    res.end(JSON.stringify({ ok: false, error: e.message }));
+  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

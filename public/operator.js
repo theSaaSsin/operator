@@ -255,6 +255,7 @@ function buildNav() {
       { key:'analytics',     label:'Analytics',        status:'active',   icon:'fa-chart-bar', fn:'loadAnalytics()' },
       { key:'mod-ai-models', label:'AI Models',        status:'active',   icon:'fa-microchip' },
       { key:'mod-vector',    label:'Vector Store',     status:'active',   icon:'fa-database' },
+      { key:'mod-openclaw',  label:'OpenClaw',          status:'active',   icon:'fa-lobster' },
       { key:'mod-system-matcher', label:'System Matcher', status:'building', icon:'fa-puzzle-piece' },
     ],
     acquisition: [
