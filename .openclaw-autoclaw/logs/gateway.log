@@ -8,3 +8,6 @@ EXIT
 2026-04-19T23:01:31.426Z [gateway] log file: C:\Users\joshu\AppData\Local\Temp\openclaw\openclaw-2026-04-20.log
 2026-04-19T23:01:31.457Z [browser/server] Browser control listening on http://127.0.0.1:18791/ (auth=token)
 2026-04-19T23:01:31.714Z [gateway] update available (latest): v2026.4.15 (current v2026.2.25). Run: openclaw update
+2026-04-20T02:01:36.123+01:00 [pi-ai] [AutoClawRequestTrace] request method=POST url=https://autoglm-api.autoglm.ai/autoclaw-proxy/proxy/autoclaw/chat/completions provider=zai model.id=zai_glm-5-turbo body.model=glm-5-turbo requestId=7331f47c-a648-480d-a93a-53d1a2ecd43f xSessionId=68fa438e-aa38-487a-b27f-cabb30ca2df7
+2026-04-20T02:01:36.688+01:00 [pi-ai] [AutoClawRequestTrace] response method=POST url=https://autoglm-api.autoglm.ai/autoclaw-proxy/proxy/autoclaw/chat/completions status=401 provider=zai model.id=zai_glm-5-turbo requestId=7331f47c-a648-480d-a93a-53d1a2ecd43f xSessionId=68fa438e-aa38-487a-b27f-cabb30ca2df7
+2026-04-20T01:01:36.706Z [agent/embedded] embedded run agent end: runId=455b8185-0412-4822-aaca-f374b9b8c963 isError=true error=HTTP 401: "Invalid token"

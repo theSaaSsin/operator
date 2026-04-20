@@ -1,1 +1,5 @@
 {"ts":"2026-04-19T22:58:55.673Z","level":"INFO","event":"refresh-scheduler.started","check_interval_ms":60000,"refresh_ahead_ms":300000,"unknown_exp_refresh_interval_ms":1500000,"hourly_refresh_interval_ms":3600000}
+{"ts":"2026-04-19T23:58:55.699Z","level":"WARN","event":"hourly-refresh.failed"}
+{"ts":"2026-04-20T00:34:59.594Z","level":"INFO","event":"refresh-scheduler.system-resume"}
+{"ts":"2026-04-20T00:58:49.967Z","level":"WARN","event":"hourly-refresh.failed"}
+{"ts":"2026-04-20T01:58:49.979Z","level":"WARN","event":"hourly-refresh.failed"}

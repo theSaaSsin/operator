@@ -79,26 +79,18 @@
     const hasKey = !!cfg.anthropicApiKey;
     const leadCount = (leads.leads || []).length;
 
-    const onboard = `B.O.S.S online${name !== 'Boss' ? ', ' + name : ''}.\n\n` +
-      `━━━ SYSTEM STATUS ━━━\n` +
-      `🧠 AI Brain: ${hasKey ? '✓ Active (Anthropic Claude)' : '⛔ OFFLINE — you need an Anthropic API key'}\n` +
-      `📊 CRM: ${leadCount} lead${leadCount !== 1 ? 's' : ''} in pipeline\n\n` +
-      (!hasKey
-        ? `⚠️  FIRST THING TO DO:\n` +
-          `1. Go to console.anthropic.com → sign up (free $5 credit)\n` +
-          `2. Create an API key → copy it\n` +
-          `3. In THIS app: sidebar → 🔑 API Keys & Settings (top of B.O.S.S Core section)\n` +
-          `4. Paste key → Save & Activate\n` +
-          `5. Come back here — I'll wake up fully\n\n` +
-          `Everything else is live (Lead Feed, CRM, Outreach) — AI just needs the key.\n\n`
-        : `━━━ WHAT TO DO NOW ━━━\n\n` +
-          `1️⃣  /scan need more clients  →  live Reddit lead sweep\n` +
-          `2️⃣  Click any lead in Lead Feed  →  I write the pitch instantly\n` +
-          `3️⃣  /channels  →  activate Telegram so you can talk to me on your phone\n` +
-          `4️⃣  Just talk  →  tell me your goal, I'll build the plan\n\n` +
-          `🎤 Mic button = voice mode. Speak to me like Jarvis.\n\n`
-      ) +
-      `What are we building today?`;
+    const onboard = `BOSS online${name !== 'Boss' ? ' — ' + name : ''}.\n` +
+      `AI: ${hasKey ? '✓ Active' : '⚠ No key — go to API Keys'} · CRM: ${leadCount} lead${leadCount !== 1 ? 's' : ''}\n\n` +
+      `━━ WHAT I CAN DO FOR YOU RIGHT NOW ━━\n` +
+      `/scan [niche] → find real leads on Reddit/forums\n` +
+      `/pitch [target] → write the full outreach pack here\n` +
+      `/auto → walk you step by step to first client\n` +
+      `/coach → tell me where you're stuck, I'll break it down\n\n` +
+      `━━ WHAT I CANNOT DO ━━\n` +
+      `I can't call, text, or connect to anything on your behalf.\n` +
+      `I won't invent leads or fake system actions.\n` +
+      `I generate real copy you can use immediately.\n\n` +
+      `What's the target market? Let's build the pitch.`;
 
     addMsg('bot', onboard);
   }
