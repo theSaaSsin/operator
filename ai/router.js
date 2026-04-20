@@ -36,6 +36,7 @@ function readCfgKey(key) {
       ANTHROPIC_API_KEY:  'anthropicApiKey',
       GROQ_API_KEY:       'groqApiKey',
       OPENROUTER_API_KEY: 'openrouterApiKey',
+      CEREBRAS_API_KEY:   'cerebrasApiKey',
       KIMI_API_KEY:       'kimiApiKey',
       MINIMAX_API_KEY:    'minimaxApiKey',
       GLM_API_KEY:        'glmApiKey',
@@ -53,6 +54,7 @@ function isConfigured(provider) {
   if (provider === 'anthropic')  return !!(readCfgKey('ANTHROPIC_API_KEY') && Anthropic);
   if (provider === 'groq')       return !!readCfgKey('GROQ_API_KEY');
   if (provider === 'openrouter') return !!readCfgKey('OPENROUTER_API_KEY');
+  if (provider === 'cerebras')   return !!readCfgKey('CEREBRAS_API_KEY');
   if (provider === 'kimi')       return !!readCfgKey('KIMI_API_KEY');
   if (provider === 'minimax')    return !!readCfgKey('MINIMAX_API_KEY');
   if (provider === 'glm')        return !!readCfgKey('GLM_API_KEY');
@@ -166,6 +168,28 @@ async function callMinimax({ modelId, system, messages, maxTokens }) {
   return data.choices?.[0]?.message?.content || '';
 }
 
+// Cerebras — fastest inference available (2000+ tok/s), free tier, English signup
+async function callCerebras({ modelId, system, messages, maxTokens }) {
+  const key = readCfgKey('CEREBRAS_API_KEY');
+  if (!key) throw new Error('no cerebras key');
+  const body = {
+    model:      modelId || 'llama-3.3-70b',   // same 70B quality as Groq but often faster
+    max_tokens: maxTokens || 600,
+    messages: [
+      ...(system ? [{ role: 'system', content: system }] : []),
+      ...messages.slice(-16),
+    ],
+  };
+  const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || 'cerebras error');
+  return data.choices?.[0]?.message?.content || '';
+}
+
 // GLM (Zhipu AI) — GLM-4, excellent for code + reasoning
 async function callGLM({ modelId, system, messages, maxTokens }) {
   const key = readCfgKey('GLM_API_KEY');
@@ -234,33 +258,41 @@ function classifyMessage(msg = '') {
 }
 
 // Build provider chain — free/cheap first, paid last
-// Priority: Groq → GLM-flash(free) → OpenRouter-free → Kimi → MiniMax → Ollama → Claude
-function buildChain(tier) {
-  if (tier === 'local')  return ['ollama', 'groq', 'glm', 'openrouter', 'anthropic'];
-  if (tier === 'groq')   return ['groq', 'glm', 'openrouter', 'kimi', 'minimax', 'ollama', 'anthropic'];
-  return                        ['groq', 'glm', 'openrouter', 'kimi', 'minimax', 'ollama', 'anthropic'];
+// Priority: Groq → Cerebras → OpenRouter-free → GLM → Kimi → MiniMax → Ollama → Claude
+// Code tasks: OpenRouter DeepSeek Coder first (best free coder)
+function buildChain(tier, taskKind) {
+  if (taskKind === 'code' || taskKind === 'build') {
+    // Code-specific chain: DeepSeek via OpenRouter → Cerebras → Groq → Claude
+    return ['openrouter', 'cerebras', 'groq', 'glm', 'anthropic'];
+  }
+  if (tier === 'local')  return ['ollama', 'groq', 'cerebras', 'openrouter', 'glm', 'anthropic'];
+  if (tier === 'groq')   return ['groq', 'cerebras', 'openrouter', 'glm', 'kimi', 'minimax', 'ollama', 'anthropic'];
+  return                        ['groq', 'cerebras', 'openrouter', 'glm', 'kimi', 'minimax', 'ollama', 'anthropic'];
 }
 
 function modelFor(provider, taskKind) {
   if (provider === 'ollama') {
-    if (taskKind === 'code') return cfg.ollama.models.code;
-    if (taskKind === 'quickReply' || taskKind === 'summarise')
-      return cfg.ollama.models.fast;
+    if (taskKind === 'code' || taskKind === 'build') return cfg.ollama.models.code;
+    if (taskKind === 'quickReply' || taskKind === 'summarise') return cfg.ollama.models.fast;
     return cfg.ollama.models.balanced;
   }
   if (provider === 'groq') {
-    // llama-3.3-70b is FREE on Groq — use it for everything
-    if (taskKind === 'quickReply' || taskKind === 'summarise')
-      return 'llama-3.1-8b-instant'; // faster for simple stuff
-    return 'llama-3.3-70b-versatile'; // best free model for everything else
+    if (taskKind === 'quickReply' || taskKind === 'summarise') return 'llama-3.1-8b-instant';
+    return 'llama-3.3-70b-versatile';
+  }
+  if (provider === 'cerebras') {
+    // Cerebras runs Llama-3.3-70B at 2000+ tok/s — ultra fast for everything
+    if (taskKind === 'quickReply' || taskKind === 'summarise') return 'llama-3.1-8b';
+    return 'llama-3.3-70b';
   }
   if (provider === 'openrouter') {
-    // Free models on OpenRouter (no credits needed)
-    if (taskKind === 'code') return 'qwen/qwen-2.5-coder-32b-instruct:free';
+    // DeepSeek Coder v2 — best FREE coding model (beats GPT-4 on HumanEval)
+    if (taskKind === 'code' || taskKind === 'build') return 'deepseek/deepseek-coder-v2:free';
     if (taskKind === 'quickReply') return 'meta-llama/llama-3.1-8b-instruct:free';
     return 'meta-llama/llama-3.3-70b-instruct:free';
   }
-  // anthropic — heavy lifting only
+  if (provider === 'glm') return 'glm-4-flash';
+  // anthropic — heavy lifting backup only
   if (taskKind === 'build' || taskKind === 'code') return 'claude-sonnet-4-5';
   return 'claude-haiku-4-5-20251001';
 }
@@ -276,7 +308,7 @@ async function route({
 } = {}) {
   const kind  = taskKind || classifyMessage(message);
   const tier  = classifyTier(kind);
-  const chain = buildChain(tier);
+  const chain = buildChain(tier, kind);
 
   for (const provider of chain) {
     if (provider !== 'ollama' && !isConfigured(provider)) continue;
@@ -285,6 +317,7 @@ async function route({
       let text;
       if      (provider === 'anthropic')  text = await callAnthropic({ modelId, system, messages, maxTokens });
       else if (provider === 'groq')       text = await callGroq({ modelId, system, messages, maxTokens });
+      else if (provider === 'cerebras')   text = await callCerebras({ modelId, system, messages, maxTokens });
       else if (provider === 'openrouter') text = await callOpenRouter({ modelId, system, messages, maxTokens });
       else if (provider === 'kimi')       text = await callKimi({ modelId, system, messages, maxTokens });
       else if (provider === 'minimax')    text = await callMinimax({ modelId, system, messages, maxTokens });
@@ -306,10 +339,11 @@ async function route({
 
 // --- status check (used by /api/local/status) ---
 async function routerStatus() {
-  const status = { anthropic: false, groq: false, openrouter: false, ollama: { running: false, models: [] } };
+  const status = { anthropic: false, groq: false, openrouter: false, cerebras: false, ollama: { running: false, models: [] } };
 
   status.anthropic  = isConfigured('anthropic');
   status.groq       = isConfigured('groq');
+  status.cerebras   = isConfigured('cerebras');
   status.openrouter = isConfigured('openrouter');
   status.kimi       = isConfigured('kimi');
   status.minimax    = isConfigured('minimax');

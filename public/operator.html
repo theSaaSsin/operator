@@ -1140,6 +1140,24 @@ gr.Interface(fn=generate,
             </div>
           </div>
 
+          <!-- ── CEREBRAS — fastest inference, free, English ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#f97316">CEREBRAS</span>
+                <span style="font-size:.65rem;color:#2cb67d;font-weight:700;margin-left:8px;background:#2cb67d18;padding:2px 7px;border-radius:100px">FREE · 2000+ tok/s</span>
+              </div>
+              <a href="https://cloud.cerebras.ai" target="_blank" style="font-size:.65rem;color:#f97316;text-decoration:none;opacity:.7">Get key →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Fastest inference on the planet. Llama-3.3-70B at 2000+ tok/s. English signup, free tier, no card needed. Best for real-time chat.</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-cerebras-key" type="password" placeholder="csk-..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleVisible('cfg-cerebras-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
+            </div>
+          </div>
+
           <!-- ── KIMI ── -->
           <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
