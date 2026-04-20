@@ -185,7 +185,7 @@
      SECTION 2 — PROVIDER TOGGLES
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="mod-section">
-  <div class="mod-section-title"><i class="fas fa-plug" style="margin-right:6px"></i>Provider Toggles — Routing Chain</div>
+  <div class="mod-section-title"><i class="fas fa-plug" style="margin-right:6px"></i>Provider Control — Toggle & Pin</div>
   ${PROVIDERS.map(p => `
     <div class="ai-prov-card ${providerToggles[p.id] === false ? 'prov-off' : ''}" id="aim-prov-card-${p.id}">
       <div class="ai-prov-info">
@@ -193,6 +193,7 @@
           ${p.name}
           <span class="ai-prov-badge" style="background:${p.badgeColor}">${p.badgeText}</span>
           ${p.auto ? '<span style="font-size:.65rem;color:#3b82f6;margin-left:4px">auto-detects</span>' : ''}
+          <span id="aim-prov-pin-${p.id}" style="font-size:.65rem;color:#f59e0b;margin-left:4px;display:none"><i class="fas fa-thumbtack"></i> PINNED</span>
         </div>
         <div class="ai-prov-cost">
           ${p.costPer1k === 0 ? 'No cost per 1k tokens' : `~$${p.costPer1k.toFixed(4)} per 1k tokens`}
@@ -200,15 +201,27 @@
         </div>
         ${p.warn ? `<div class="ai-prov-warn"><i class="fas fa-triangle-exclamation"></i> Paid provider — tokens consume budget. Use sparingly or route free models first.</div>` : ''}
       </div>
-      <label class="ai-toggle-wrap" title="Toggle ${p.name}">
-        <input type="checkbox" id="aim-prov-${p.id}" data-prov="${p.id}" ${providerToggles[p.id] !== false ? 'checked' : ''}
-          onchange="(function(el){
-            const card=document.getElementById('aim-prov-card-${p.id}');
-            if(el.checked){card.classList.remove('prov-off');}else{card.classList.add('prov-off');}
-          })(this)">
-        <span class="ai-sw"><span class="ai-sw-track"></span><span class="ai-sw-thumb"></span></span>
-        <span style="font-size:.72rem;color:var(--muted);min-width:24px">${providerToggles[p.id] !== false ? 'ON' : 'OFF'}</span>
-      </label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost btn-sm" id="aim-pin-${p.id}" data-prov="${p.id}" title="Pin this provider to always use first"
+          onclick="(function(el){
+            document.querySelectorAll('[id^=aim-pin-]').forEach(b=>b.classList.remove('btn-primary'));
+            document.querySelectorAll('[id^=aim-prov-pin-]').forEach(s=>s.style.display='none');
+            el.classList.add('btn-primary');
+            document.getElementById('aim-prov-pin-${p.id}').style.display='inline';
+            window._currentPinnedProvider='${p.id}';
+          })(this)" style="min-width:auto">
+          <i class="fas fa-thumbtack"></i>
+        </button>
+        <label class="ai-toggle-wrap" title="Toggle ${p.name}">
+          <input type="checkbox" id="aim-prov-${p.id}" data-prov="${p.id}" ${providerToggles[p.id] !== false ? 'checked' : ''}
+            onchange="(function(el){
+              const card=document.getElementById('aim-prov-card-${p.id}');
+              if(el.checked){card.classList.remove('prov-off');}else{card.classList.add('prov-off');}
+            })(this)">
+          <span class="ai-sw"><span class="ai-sw-track"></span><span class="ai-sw-thumb"></span></span>
+          <span style="font-size:.72rem;color:var(--muted);min-width:24px">${providerToggles[p.id] !== false ? 'ON' : 'OFF'}</span>
+        </label>
+      </div>
     </div>`).join('')}
 </div>
 
@@ -315,18 +328,37 @@
       localStorage.setItem('boss_prov_toggles',  JSON.stringify(newToggles));
       localStorage.setItem('boss_daily_budget',  String(newBudget));
 
-      // POST to server
+      // POST to server (config + AI prefs)
       try {
         await fetch('/api/config', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ agentModels: newAgentModels, providerToggles: newToggles, dailyTokenBudget: newBudget }),
         });
+        const disabledProviders = [];
+        PROVIDERS.forEach(p => {
+          const el = document.getElementById(`aim-prov-${p.id}`);
+          if (el && !el.checked) disabledProviders.push(p.id);
+        });
+        await fetch('/api/boss/ai/prefs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ disabledProviders, pinnedProvider: window._currentPinnedProvider || null }),
+        });
         toast('AI config saved', 'ok');
       } catch {
         toast('Saved locally (server offline)', 'ok');
       }
     };
+    window._currentPinnedProvider = routerStatus.pinnedProvider || null;
+
+    // Initialize pinned provider display on load
+    if (routerStatus.pinnedProvider) {
+      const pinBtn = document.getElementById(`aim-pin-${routerStatus.pinnedProvider}`);
+      const pinLabel = document.getElementById(`aim-prov-pin-${routerStatus.pinnedProvider}`);
+      if (pinBtn) pinBtn.classList.add('btn-primary');
+      if (pinLabel) pinLabel.style.display = 'inline';
+    }
   },
 
   renderSettings(sidebar) {

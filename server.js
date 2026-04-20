@@ -2813,6 +2813,22 @@ ROUTES['GET /api/boss/router'] = async (req, res) => {
   res.end(JSON.stringify({ ok: true, ...status }));
 };
 
+ROUTES['POST /api/boss/ai/prefs'] = (req, res) => {
+  const cfg = readJSON('config.json');
+  const body = req.body || {};
+
+  // Update disabled/pinned providers if provided
+  if (Array.isArray(body.disabledProviders)) {
+    cfg.disabledProviders = body.disabledProviders;
+  }
+  if (body.pinnedProvider !== undefined) {
+    cfg.pinnedProvider = body.pinnedProvider || null;
+  }
+
+  writeJSON('config.json', cfg);
+  res.end(JSON.stringify({ ok: true, disabledProviders: cfg.disabledProviders, pinnedProvider: cfg.pinnedProvider }));
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

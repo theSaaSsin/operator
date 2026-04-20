@@ -60,6 +60,20 @@ function ollamaBase() {
   return readCfgKey('OLLAMA_URL') || cfg.ollama.baseUrl;
 }
 
+function readAiPrefs() {
+  try {
+    const fs = require('fs');
+    const p = require('path').join(__dirname, '..', 'data', 'config.json');
+    const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+    return {
+      disabledProviders: Array.isArray(data.disabledProviders) ? data.disabledProviders : [],
+      pinnedProvider: typeof data.pinnedProvider === 'string' ? data.pinnedProvider : null,
+    };
+  } catch (_) {
+    return { disabledProviders: [], pinnedProvider: null };
+  }
+}
+
 function isConfigured(provider) {
   if (provider === 'anthropic')  return !!(readCfgKey('ANTHROPIC_API_KEY') && Anthropic);
   if (provider === 'groq')       return !!readCfgKey('GROQ_API_KEY');
@@ -316,27 +330,29 @@ function classifyMessage(msg = '') {
 
 // Build provider chain — instruction-following first for BOSS/pitch/strategy
 // Groq/Llama demoted to fallback (fast but roleplays & hallucinates)
-function buildChain(tier, taskKind) {
+function buildChain(tier, taskKind, disabled = []) {
+  // If a provider is disabled, remove it from all chains
+  const filter = (chain) => chain.filter(p => !disabled.includes(p));
+
   // CODE: best free coder first, then paid
   if (taskKind === 'code' || taskKind === 'build') {
-    return ['anthropic', 'openrouter', 'openai', 'cerebras', 'groq', 'glm'];
-    //       Sonnet       DeepSeek        4o-mini   llama70b    llama   glm
+    return filter(['anthropic', 'openrouter', 'openai', 'cerebras', 'groq', 'glm']);
   }
   // BOSS CHAT / PITCH / STRATEGY: instruction-following models lead
   // Claude/Gemini/GPT stay in character and follow rules. Groq roleplays.
   if (taskKind === 'boss' || taskKind === 'pitch' || taskKind === 'strategy') {
-    return ['anthropic', 'gemini', 'openai', 'cerebras', 'openrouter', 'groq', 'kimi', 'minimax'];
+    return filter(['anthropic', 'gemini', 'openai', 'cerebras', 'openrouter', 'groq', 'kimi', 'minimax']);
   }
   // QUICK REPLY / SUMMARISE: speed matters, Groq leads
   if (taskKind === 'quickReply' || taskKind === 'summarise') {
-    return ['groq', 'cerebras', 'gemini', 'openai', 'openrouter', 'anthropic'];
+    return filter(['groq', 'cerebras', 'gemini', 'openai', 'openrouter', 'anthropic']);
   }
   // LOCAL: try Ollama first
   if (tier === 'local') {
-    return ['ollama', 'groq', 'cerebras', 'gemini', 'openai', 'anthropic'];
+    return filter(['ollama', 'groq', 'cerebras', 'gemini', 'openai', 'anthropic']);
   }
   // DEFAULT: instruction-following leads
-  return ['anthropic', 'gemini', 'openai', 'cerebras', 'groq', 'openrouter', 'kimi', 'minimax', 'ollama'];
+  return filter(['anthropic', 'gemini', 'openai', 'cerebras', 'groq', 'openrouter', 'kimi', 'minimax', 'ollama']);
 }
 
 function modelFor(provider, taskKind) {
@@ -387,7 +403,13 @@ async function route({
 } = {}) {
   const kind  = taskKind || classifyMessage(message);
   const tier  = classifyTier(kind);
-  const chain = buildChain(tier, kind);
+  const prefs = readAiPrefs();
+  let chain   = buildChain(tier, kind, prefs.disabledProviders);
+
+  // If a provider is pinned and available, put it first
+  if (prefs.pinnedProvider && chain.includes(prefs.pinnedProvider)) {
+    chain = [prefs.pinnedProvider, ...chain.filter(p => p !== prefs.pinnedProvider)];
+  }
 
   for (const provider of chain) {
     if (provider !== 'ollama' && !isConfigured(provider)) continue;
@@ -404,7 +426,7 @@ async function route({
       else if (provider === 'minimax')    text = await callMinimax({ modelId, system, messages, maxTokens });
       else if (provider === 'glm')        text = await callGLM({ modelId, system, messages, maxTokens });
       else                                text = await callOllama({ modelId, system, messages, maxTokens });
-      return { ok: true, provider, modelId, tier, taskKind: kind, text };
+      return { ok: true, provider, modelId, tier, taskKind: kind, text, pinned: provider === prefs.pinnedProvider };
     } catch (e) {
       // Surface credit exhaustion immediately — no point trying other providers for this error
       if (e?.status === 400 && e?.message?.includes('credit balance')) {
@@ -421,6 +443,7 @@ async function route({
 // --- status check (used by /api/local/status) ---
 async function routerStatus() {
   const status = { anthropic: false, groq: false, openrouter: false, cerebras: false, ollama: { running: false, models: [] } };
+  const prefs = readAiPrefs();
 
   status.anthropic  = isConfigured('anthropic');
   status.gemini     = isConfigured('gemini');
@@ -431,6 +454,8 @@ async function routerStatus() {
   status.kimi       = isConfigured('kimi');
   status.minimax    = isConfigured('minimax');
   status.glm        = isConfigured('glm');
+  status.disabledProviders = prefs.disabledProviders;
+  status.pinnedProvider = prefs.pinnedProvider;
 
   try {
     const res  = await fetch(`${ollamaBase()}/api/tags`, { signal: AbortSignal.timeout(2000) });
