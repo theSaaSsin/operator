@@ -14,6 +14,7 @@
       groq:        true,
       glm:         true,
       openrouter:  true,
+      cerebras:    true,
       kimi:        false,
       minimax:     false,
       anthropic:   true,
@@ -64,6 +65,7 @@
       { id: 'groq',       name: 'Groq',             badgeColor: '#22c55e', badgeText: 'FREE',             costPer1k: 0,      latency: '~0.4s' },
       { id: 'glm',        name: 'GLM-4 Flash',       badgeColor: '#22c55e', badgeText: 'FREE FOREVER',     costPer1k: 0,      latency: '~0.8s' },
       { id: 'openrouter', name: 'OpenRouter',         badgeColor: '#f59e0b', badgeText: 'FREE MODELS',      costPer1k: 0,      latency: '~1.2s' },
+      { id: 'cerebras',   name: 'Cerebras \u26a1',   badgeColor: '#22c55e', badgeText: '2000+ tok/s free', costPer1k: 0,      latency: '~0.2s' },
       { id: 'kimi',       name: 'Kimi',               badgeColor: '#6b7280', badgeText: 'PAID',             costPer1k: 0.0015, latency: '~1.0s' },
       { id: 'minimax',    name: 'MiniMax',            badgeColor: '#6b7280', badgeText: 'PAID',             costPer1k: 0.001,  latency: '~1.1s' },
       { id: 'anthropic',  name: 'Anthropic Claude',   badgeColor: '#a855f7', badgeText: 'PAID - SPARINGLY', costPer1k: 0.003,  latency: '~1.5s', warn: true },
@@ -358,7 +360,7 @@
     // ── Preset logic ────────────────────────────────────────────────────────
     window._aimApplyPreset = function(preset) {
       const agentSelects = ['scout','copywriter','analyst','builder','coach'];
-      const provInputs = ['groq','glm','openrouter','kimi','minimax','anthropic','ollama'];
+      const provInputs = ['groq','glm','openrouter','cerebras','kimi','minimax','anthropic','ollama'];
 
       if (preset === 'free') {
         // Assign all agents to free fast model, disable paid
@@ -366,7 +368,7 @@
           const el = document.getElementById(`aim-agent-${id}`);
           if (el) el.value = id === 'builder' ? 'glm/glm-4-flash' : 'groq/llama-3.1-8b-instant';
         });
-        const freeOn = { groq:true, glm:true, openrouter:true, kimi:false, minimax:false, anthropic:false, ollama:false };
+        const freeOn = { groq:true, glm:true, openrouter:true, cerebras:true, kimi:false, minimax:false, anthropic:false, ollama:false };
         provInputs.forEach(id => {
           const el = document.getElementById(`aim-prov-${id}`);
           if (el) { el.checked = !!freeOn[id]; el.dispatchEvent(new Event('change')); }
@@ -377,7 +379,7 @@
           const el = document.getElementById(`aim-agent-${id}`);
           if (el) el.value = id === 'scout' ? 'groq/llama-3.1-8b-instant' : id === 'builder' ? 'glm/glm-4-flash' : 'groq/llama-3.3-70b-versatile';
         });
-        const balOn = { groq:true, glm:true, openrouter:true, kimi:false, minimax:false, anthropic:true, ollama:false };
+        const balOn = { groq:true, glm:true, openrouter:true, cerebras:true, kimi:false, minimax:false, anthropic:true, ollama:false };
         provInputs.forEach(id => {
           const el = document.getElementById(`aim-prov-${id}`);
           if (el) { el.checked = !!balOn[id]; el.dispatchEvent(new Event('change')); }
@@ -388,7 +390,7 @@
           const el = document.getElementById(`aim-agent-${id}`);
           if (el) el.value = id === 'scout' ? 'groq/llama-3.1-8b-instant' : 'anthropic/claude-sonnet-4-5';
         });
-        const perfOn = { groq:true, glm:true, openrouter:true, kimi:false, minimax:false, anthropic:true, ollama:false };
+        const perfOn = { groq:true, glm:true, openrouter:true, cerebras:true, kimi:false, minimax:false, anthropic:true, ollama:false };
         provInputs.forEach(id => {
           const el = document.getElementById(`aim-prov-${id}`);
           if (el) { el.checked = !!perfOn[id]; el.dispatchEvent(new Event('change')); }

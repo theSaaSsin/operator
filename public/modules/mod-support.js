@@ -3,7 +3,7 @@
   async render(container) {
     let tickets = [];
     try { tickets = JSON.parse(localStorage.getItem('supportTickets') || '[]'); } catch {}
-    const clients = await fetch('/api/clients').then(r => r.json()).catch(() => []);
+    const clients = await fetch('/api/clients').then(r => r.json()).then(d => Array.isArray(d) ? d : (d.clients || [])).catch(() => []);
 
     const statusCounts = { open: 0, in_progress: 0, resolved: 0, closed: 0 };
     tickets.forEach(t => { if (statusCounts[t.status] !== undefined) statusCounts[t.status]++; });

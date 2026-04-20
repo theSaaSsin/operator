@@ -3,7 +3,7 @@
   async render(container) {
     let projects = [];
     try { projects = JSON.parse(localStorage.getItem('clientProjects') || '[]'); } catch {}
-    const clients = await fetch('/api/clients').then(r => r.json()).catch(() => []);
+    const clients = await fetch('/api/clients').then(r => r.json()).then(d => Array.isArray(d) ? d : (d.clients || [])).catch(() => []);
 
     const totalMilestones = projects.reduce((s, p) => s + (p.milestones || []).length, 0);
     const completedMilestones = projects.reduce((s, p) => s + (p.milestones || []).filter(m => m.done).length, 0);

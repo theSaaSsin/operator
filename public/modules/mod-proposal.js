@@ -3,7 +3,7 @@
   async render(container) {
     let proposals = [];
     try { proposals = JSON.parse(localStorage.getItem('proposals') || '[]'); } catch {}
-    const clients = await fetch('/api/clients').then(r => r.json()).catch(() => []);
+    const clients = await fetch('/api/clients').then(r => r.json()).then(d => Array.isArray(d) ? d : (d.clients || [])).catch(() => []);
 
     const sentCount = proposals.filter(p => p.status === 'sent').length;
     const acceptedCount = proposals.filter(p => p.status === 'accepted').length;

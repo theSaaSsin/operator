@@ -2,7 +2,7 @@
   init() {},
   async render(container) {
     const modules = await fetch('/api/modules').then(r => r.json()).catch(() => ({ modules: {} }));
-    const clients = await fetch('/api/clients').then(r => r.json()).catch(() => []);
+    const clients = await fetch('/api/clients').then(r => r.json()).then(d => Array.isArray(d) ? d : (d.clients || [])).catch(() => []);
     const modList = modules.modules || modules;
     const activeModules = Object.entries(modList).filter(([, v]) => v.status === 'active' || v.active);
 

@@ -5,7 +5,7 @@
     try { rules = JSON.parse(localStorage.getItem('crmAutoRules') || '[]'); } catch {}
     let autoLog = [];
     try { autoLog = JSON.parse(localStorage.getItem('crmAutoLog') || '[]'); } catch {}
-    const leads = await fetch('/api/leads').then(r => r.json()).catch(() => []);
+    const leads = await fetch('/api/leads').then(r => r.json()).then(d => Array.isArray(d) ? d : (d.leads || [])).catch(() => []);
 
     const activeRules = rules.filter(r => r.active).length;
 

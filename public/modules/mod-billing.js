@@ -7,7 +7,7 @@
     try { subscribers = JSON.parse(localStorage.getItem('subscribers') || '[]'); } catch {}
     let settings = {};
     try { settings = ((await fetch('/api/module-settings').then(r => r.json())).settings || {})['67'] || {}; } catch {}
-    const clients = await fetch('/api/clients').then(r => r.json()).catch(() => []);
+    const clients = await fetch('/api/clients').then(r => r.json()).then(d => Array.isArray(d) ? d : (d.clients || [])).catch(() => []);
 
     const mrr = subscribers.filter(s => s.status === 'active').reduce((sum, s) => {
       const plan = plans.find(p => p.name === s.plan);

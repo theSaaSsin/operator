@@ -2,8 +2,8 @@
   init() {},
   async render(container) {
     const analytics = await fetch('/api/analytics').then(r => r.json()).catch(() => ({}));
-    const leads = await fetch('/api/leads').then(r => r.json()).catch(() => []);
-    const clients = await fetch('/api/clients').then(r => r.json()).catch(() => []);
+    const leads = await fetch('/api/leads').then(r => r.json()).then(d => Array.isArray(d) ? d : (d.leads || [])).catch(() => []);
+    const clients = await fetch('/api/clients').then(r => r.json()).then(d => Array.isArray(d) ? d : (d.clients || [])).catch(() => []);
     const outreach = await fetch('/api/outreach').then(r => r.json()).catch(() => []);
     let deals = [];
     try { deals = JSON.parse(localStorage.getItem('deals') || '[]'); } catch {}

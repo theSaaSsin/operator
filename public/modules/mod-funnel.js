@@ -3,7 +3,7 @@
   async render(container) {
     let funnels = [];
     try { funnels = JSON.parse(localStorage.getItem('funnels') || '[]'); } catch {}
-    const clients = await fetch('/api/clients').then(r => r.json()).catch(() => []);
+    const clients = await fetch('/api/clients').then(r => r.json()).then(d => Array.isArray(d) ? d : (d.clients || [])).catch(() => []);
 
     const activeCount = funnels.filter(f => f.active).length;
     const totalSteps = funnels.reduce((s, f) => s + (f.stages || []).length, 0);

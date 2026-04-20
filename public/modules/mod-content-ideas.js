@@ -3,7 +3,7 @@
   async render(container) {
     let ideas = [];
     try { ideas = JSON.parse(localStorage.getItem('contentIdeas') || '[]'); } catch {}
-    const leads = await fetch('/api/leads').then(r => r.json()).catch(() => []);
+    const leads = await fetch('/api/leads').then(r => r.json()).then(d => Array.isArray(d) ? d : (d.leads || [])).catch(() => []);
     const niches = [...new Set(leads.map(l => l.niche).filter(Boolean))];
 
     container.innerHTML = `

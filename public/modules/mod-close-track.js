@@ -3,7 +3,7 @@
   async render(container) {
     let deals = [];
     try { deals = JSON.parse(localStorage.getItem('deals') || '[]'); } catch {}
-    const clients = await fetch('/api/clients').then(r => r.json()).catch(() => []);
+    const clients = await fetch('/api/clients').then(r => r.json()).then(d => Array.isArray(d) ? d : (d.clients || [])).catch(() => []);
 
     const stages = ['proposal_sent', 'negotiation', 'closed_won', 'closed_lost'];
     const stageLabels = { proposal_sent: 'Proposal Sent', negotiation: 'Negotiation', closed_won: 'Closed Won', closed_lost: 'Closed Lost' };

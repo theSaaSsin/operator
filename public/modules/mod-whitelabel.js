@@ -3,7 +3,7 @@
   async render(container) {
     let whitelabelConfigs = [];
     try { whitelabelConfigs = JSON.parse(localStorage.getItem('whitelabelConfigs') || '[]'); } catch {}
-    const clients = await fetch('/api/clients').then(r => r.json()).catch(() => []);
+    const clients = await fetch('/api/clients').then(r => r.json()).then(d => Array.isArray(d) ? d : (d.clients || [])).catch(() => []);
 
     container.innerHTML = `
       <div class="mod-stat-row">
