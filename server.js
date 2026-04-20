@@ -1403,6 +1403,48 @@ function callClaude(apiKey, prompt, maxTokens, res) {
   apiReq.end();
 }
 
+// ── BOSS Hallucination Sanitizer ──────────────────────────────────────────
+// Hard filter on every BOSS reply before it hits the browser.
+// Groq/Llama routinely ignores system-prompt honesty rules — this is the net.
+function sanitizeBossReply(text) {
+  if (!text) return text;
+
+  // Phrases that signal a fake lead sequence was generated
+  const FAKE_TRIGGERS = [
+    /i.{0,5}(will|'ll) initiate a lead.{0,40}sequence/i,
+    /leads? generated:/i,
+    /targeting potential clients in the \[/i,
+    /i.{0,5}(will|'ll) scrape.{0,30}databases/i,
+    /scraping.{0,30}databases.{0,50}social media/i,
+    /current lead list:/i,
+    /lead profiles include:/i,
+    /would you like me to prioritize them/i,
+    /reviewing the list.{0,30}notice.{0,30}promising prospect/i,
+  ];
+
+  // Bullet list of "Name Surname, Title at Company" — 2+ = fake lead list
+  const fakeNameLines = (text.match(/^[-•*]\s+[A-Z][a-z]+ [A-Z][a-z]+,\s+\w/mg) || []).length;
+
+  const isFake = FAKE_TRIGGERS.some(p => p.test(text)) || fakeNameLines >= 2;
+
+  if (isFake) {
+    return `Those names aren't real — I don't generate fake lead lists. Invented people = wasted effort.
+
+To get ACTUAL leads right now:
+
+→ **Lead Scraper** (sidebar → Lead Feed) — pulls real Reddit/forum posts from real people expressing real pain
+
+Best search terms for trade & construction:
+• "struggling to get clients" — r/smallbusiness
+• "need more work" — r/construction
+• "marketing not working for my business" — r/Entrepreneur
+
+Open Lead Scraper, enter your niche, hit Scan. Come back with a real signal and I'll write the DM for it.`;
+  }
+
+  return text;
+}
+
 const ROUTES = {
   'GET /api/feed': async (req, res) => {
     const qs  = req.url.includes('?') ? req.url.split('?')[1] : '';
@@ -2194,6 +2236,11 @@ Return ONLY a JSON object: { "dm": "the message", "rationale": "one sentence on 
   // B.O.S.S — Jarvis-tier AI backbone
   // ═══════════════════════════════════════════════════════════
 
+  // ── BOSS Hallucination Filter ─────────────────────────────────────────────
+  // Catches fake lead lists / fake scan results before they reach the UI.
+  // Groq/Llama ignores honesty rules — this is the safety net.
+  // ─────────────────────────────────────────────────────────────────────────
+
   // Memory palace
   'GET /api/boss/state': (_, res) => {
     res.end(JSON.stringify({ ok: true, state: bossReadState() }));
@@ -2216,33 +2263,38 @@ You are a sharp, direct female voice. Confident. Money-focused. No corporate sof
 
 ━━ WHAT YOU ACTUALLY ARE ━━
 You are a TEXT-BASED AI assistant. You generate words — pitches, strategies, copy, plans.
-You do NOT have: Bluetooth, phone calls, voice, real-time internet, ability to send messages yourself, access to external systems, or a physical presence.
-You CAN see: the current session state below.
+You do NOT have: internet access, the ability to scrape data, access to any databases, Bluetooth, phone, or external systems.
+You CAN see: the current session state below. Nothing else.
 
-━━ WHAT THE PLATFORM CAN DO (these are REAL features ${userName} can use) ━━
-• /scan [niche] → scrapes Reddit/forums for real leads with pain
+━━ WHAT THE PLATFORM CAN DO (REAL features ${userName} can use) ━━
+• Lead Scraper (sidebar → Lead Feed) → ACTUALLY scrapes Reddit/forums for real people with real pain
 • /pitch [target] → generates full outreach pack (email, DM, LinkedIn, call opener)
 • /auto → step-by-step workflow from zero to first client
 • Brand Assets panel → AI generates brand identity (voice, colours, taglines)
 • Cold Outreach module → AI writes personalised messages per lead
-• Social Posts module → AI writes captions + generates images (FLUX) + posts to X/LinkedIn/IG
-• Telegram → chat with me on your phone (needs bot token in API Keys)
+• Social Posts module → AI writes captions + generates images + posts to X/LinkedIn/IG
 • Outreach Queue → approve and track every message before it goes out
 • CRM Pipeline → track leads from new → contacted → qualified → closed
 
+━━ LEAD GENERATION — READ THIS CAREFULLY ━━
+NEVER generate a list of names, job titles, or companies. Not even as examples.
+NEVER say "I'll initiate a lead generation sequence" or similar. You cannot do this.
+NEVER output names like "Sarah Lee, CEO of XYZ Corp" — these are FABRICATED and USELESS.
+If ${userName} asks for leads or a scan: say "Use the Lead Scraper in the sidebar" and give them the EXACT search terms to enter. That's all.
+The Lead Scraper is REAL and WORKS. Direct them there every time.
+
 ━━ HONESTY RULES — NEVER BREAK THESE ━━
-1. NEVER pretend to do something you can't. No fake Bluetooth, no fake lead lists, no fake bug fixes.
-2. NEVER invent lead data (names, emails, phone numbers). That's lying and useless.
-3. NEVER claim to have sent a message, made a call, or connected to any system.
-4. NEVER say "I checked the system" or "I ran a scan" — you can't. Tell ${userName} which button/command to use instead.
-5. If asked for something outside your capability, say: "I can't do that directly — here's what you CAN do: [specific action in the platform]"
+1. NEVER invent lead data (names, emails, phone numbers, companies). It's lying and it's useless.
+2. NEVER claim to have sent a message, run a scan, or connected to any system.
+3. NEVER pretend to scrape, search, or access external data. You can't.
+4. NEVER say "I checked" or "I ran" anything — tell ${userName} which button to click instead.
+5. If asked for something outside your capability: "I can't do that — here's what you CAN do: [specific platform action]"
 
 ━━ HOW TO ACTUALLY HELP ━━
-• When ${userName} asks "find me leads" → tell them to run /scan [niche] in this chat or use Lead Scraper
-• When they ask "write me a pitch" → ask for the target, then generate the FULL pitch text right here
-• When they ask about Telegram → tell them exactly what to configure in API Keys
-• When they ask what to do next → look at the state below and give ONE specific next action
-• Generate real, usable content: email copy, DM scripts, call openers, post captions — immediately
+• "Find me leads" → "Open Lead Scraper (sidebar) → enter [specific niche] → hit Scan. Here are the best search terms: [give 3 specific terms]"
+• "Write me a pitch" → ask for the target, then write the FULL pitch text immediately, right here
+• "What do I do next?" → look at state below, give ONE specific next action with exact steps
+• Generate real, usable content immediately: email copy, DM scripts, call scripts, post captions
 
 ━━ CURRENT STATE ━━
 Leads in CRM: ${state.leads_count || 0}
@@ -2254,7 +2306,7 @@ Date: ${new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', 
 
 ━━ STYLE ━━
 Short. Punchy. Every message ends with ONE clear next action.
-If ${userName} is stuck, break the paralysis with a direct question or a piece of content they can use right now.`;
+If ${userName} is stuck, give them something they can use RIGHT NOW — real copy, real search terms, a real next step.`;
 
     // Inject API key from config.json into env for router to pick up
     if (cfg.anthropicApiKey) process.env.ANTHROPIC_API_KEY = cfg.anthropicApiKey;
@@ -2267,7 +2319,9 @@ If ${userName} is stuck, break the paralysis with a direct question or a piece o
       maxTokens: Math.min(Number(data.maxTokens) || 600, 1400),
     });
     if (r.ok) {
-      res.end(JSON.stringify({ ok: true, reply: r.text, provider: r.provider, tier: r.tier, taskKind: r.taskKind }));
+      // ── Hallucination filter: catch fake lead lists before they reach the UI ──
+      const reply = sanitizeBossReply(r.text);
+      res.end(JSON.stringify({ ok: true, reply, provider: r.provider, tier: r.tier, taskKind: r.taskKind }));
     } else {
       const userMsg = r.error === 'credits_exhausted'
         ? '💳 Anthropic credits exhausted. Get a FREE Groq key at console.groq.com → paste in API Keys → instant access.'

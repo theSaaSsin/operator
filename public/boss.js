@@ -197,6 +197,36 @@
       return;
     }
 
+    // ── /scan — intercept BEFORE sending to AI ──────────────────────────────
+    // AI cannot actually scan. Route to real Lead Scraper and give search terms.
+    if (text.startsWith('/scan')) {
+      const niche = text.replace(/^\/scan\s*/i, '').trim();
+      const nicheLabel = niche || 'your target market';
+      // Switch to Lead Feed panel and pre-fill the search box
+      if (typeof switchPanel === 'function') switchPanel('feed');
+      setTimeout(() => {
+        const feedInput = document.getElementById('kw-input') || document.getElementById('feed-search') || document.querySelector('input[placeholder*="search"]');
+        if (feedInput && niche) { feedInput.value = niche; feedInput.dispatchEvent(new Event('input')); }
+      }, 300);
+
+      // Give useful search guidance from Scout agent
+      const typing = showTyping();
+      const r = await fetch(API + '/boss/agent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent: 'scout',
+          message: `Give me 5 specific Reddit/forum search queries to find ${nicheLabel} businesses actively complaining about getting clients or growing. Format: one per line, ready to paste into a search bar. Also name the top 3 subreddits to check.`,
+          maxTokens: 400
+        })
+      }).then(x => x.json()).catch(() => ({ ok: false }));
+      removeTyping();
+
+      const queries = r.ok ? r.reply : `Try these:\n• "struggling to get clients" site:reddit.com\n• "need more work" + ${nicheLabel}\n• "marketing not working" site:reddit.com/r/smallbusiness`;
+      addMsgRich('bot', `<strong>🛰 Scout — searching for: ${nicheLabel}</strong>\n\n<div style="font-size:.82rem;white-space:pre-wrap;color:#d0d0e0;margin-top:8px">${queries.replace(/</g,'&lt;')}</div>\n\n<div style="margin-top:10px;font-size:.75rem;color:#888">↑ Lead Scraper is open. Paste any of these terms in and hit Scan. Real pain, real people.</div>`);
+      if (VOICE_ON) bossSpeak('I switched to the Lead Scraper. Here are your search queries. Paste one in and hit scan.');
+      return;
+    }
+
     const typing = showTyping();
     try {
       const r = await fetch(API + '/boss/chat', {
