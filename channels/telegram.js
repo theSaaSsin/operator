@@ -73,20 +73,77 @@ async function broadcast(text) {
 }
 
 function ingest(update) {
-  // Telegram Update object → normalised
+  // Telegram Update object → normalised (handles text, photos, voice, docs, stickers)
   const msg = update.message || update.edited_message || update.channel_post;
   if (!msg) return null;
+
+  let text = msg.text || msg.caption || '';
+  let mediaType = null;
+  let mediaFileId = null;
+
+  // Photo — get largest size
+  if (msg.photo && msg.photo.length > 0) {
+    mediaType = 'photo';
+    mediaFileId = msg.photo[msg.photo.length - 1].file_id;
+    if (!text) text = '[Photo received]';
+  }
+  // Voice note
+  if (msg.voice) {
+    mediaType = 'voice';
+    mediaFileId = msg.voice.file_id;
+    if (!text) text = '[Voice note received — transcription not yet wired. Try typing your message.]';
+  }
+  // Audio
+  if (msg.audio) {
+    mediaType = 'audio';
+    mediaFileId = msg.audio.file_id;
+    if (!text) text = '[Audio file received]';
+  }
+  // Document
+  if (msg.document) {
+    mediaType = 'document';
+    mediaFileId = msg.document.file_id;
+    const fname = msg.document.file_name || 'file';
+    if (!text) text = `[Document received: ${fname}]`;
+  }
+  // Sticker → treat as emoji
+  if (msg.sticker) {
+    text = msg.sticker.emoji || '[sticker]';
+  }
+
   return {
-    chatId: msg.chat?.id,
-    userId: msg.from?.id,
-    userName: msg.from?.first_name || msg.from?.username || 'friend',
-    text: msg.text || msg.caption || '',
+    chatId:      msg.chat?.id,
+    userId:      msg.from?.id,
+    userName:    msg.from?.first_name || msg.from?.username || 'friend',
+    text,
+    mediaType,
+    mediaFileId,
     raw: update,
   };
 }
 
+// ── Send a photo (file path or URL or Buffer) ─────────────────────────────
+async function sendPhoto({ to, photoUrl, caption = '' } = {}) {
+  if (!to || !photoUrl) return { ok: false, error: 'to + photoUrl required' };
+  try {
+    const r = await tg('sendPhoto', {
+      chat_id: to,
+      photo: photoUrl,
+      caption: caption.slice(0, 1024),
+    });
+    return { ok: true, message_id: r.message_id };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
+// ── Download a Telegram file and return its URL ────────────────────────────
+async function getFileUrl(file_id) {
+  const fileInfo = await tg('getFile', { file_id });
+  const filePath = fileInfo.file_path;
+  return `https://api.telegram.org/file/bot${token()}/${filePath}`;
+}
+
 async function setWebhook(url) {
-  return tg('setWebhook', { url, allowed_updates: ['message','edited_message','channel_post'] });
+  return tg('setWebhook', { url, allowed_updates: ['message','edited_message','channel_post','callback_query'] });
 }
 async function deleteWebhook() { return tg('deleteWebhook', {}); }
 async function getMe() { return tg('getMe', {}); }
@@ -116,8 +173,8 @@ function stopPolling() { _polling = false; }
 
 module.exports = {
   id: ID, label: 'Telegram', kind: 'messaging',
-  configured, send, broadcast, ingest, setWebhook, deleteWebhook, getMe,
-  startPolling, stopPolling, isAllowed,
-  capabilities: ['inbound-chat','outbound-message','broadcast','image-attachments'],
+  configured, send, sendPhoto, broadcast, ingest, setWebhook, deleteWebhook, getMe,
+  getFileUrl, startPolling, stopPolling, isAllowed,
+  capabilities: ['inbound-chat','outbound-message','broadcast','photo-receive','photo-send','voice-receive'],
   setupNote: 'Set TELEGRAM_BOT_TOKEN (from @BotFather). Optionally TELEGRAM_ALLOWED_CHAT_IDS to restrict + TELEGRAM_WEBHOOK_SECRET for security. Set TELEGRAM_POLLING=1 to skip needing a public URL.',
 };

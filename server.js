@@ -1220,12 +1220,33 @@ const AGENTS = {
 async function bossHandleInbound(ch, chanId, norm) {
   try {
     const state    = bossReadState();
-    const persona  = bossSwarm.getPersona(chanId);
     const cfg      = readJSON('config.json');
     if (cfg.groqApiKey)      process.env.GROQ_API_KEY      = cfg.groqApiKey;
     if (cfg.anthropicApiKey) process.env.ANTHROPIC_API_KEY = cfg.anthropicApiKey;
+    if (cfg.glmApiKey)       process.env.GLM_API_KEY        = cfg.glmApiKey;
 
     const text = (norm.text || '').trim();
+
+    // Handle photo — acknowledge + ask what to do with it
+    if (norm.mediaType === 'photo') {
+      try {
+        const fileUrl = await ch.getFileUrl(norm.mediaFileId);
+        const reply = `📸 Photo received.\n\nWhat do you want me to do with it?\n→ "analyse this image" — I'll describe what I see\n→ "use this for a post" — I'll write a caption\n→ "generate a pitch using this" — I'll build outreach around it\n\nImage URL: ${fileUrl}`;
+        bossSwarm.pushMessage(chanId, norm.chatId, 'assistant', reply);
+        if (ch.configured()) await ch.send({ to: norm.chatId, text: reply });
+        return;
+      } catch (e) {
+        await ch.send({ to: norm.chatId, text: '📸 Photo received — file download failed. Try sending as a document instead.' });
+        return;
+      }
+    }
+
+    // Voice note — acknowledge
+    if (norm.mediaType === 'voice') {
+      const reply = `🎤 Voice note received.\n\nVoice transcription isn't wired yet — type your message instead for now.\n\nOr send me:\n→ What you were just saying\n→ A pitch request, market question, or task`;
+      await ch.send({ to: norm.chatId, text: reply });
+      return;
+    }
 
     // Slash command routing from Telegram
     let taskKind = 'quickReply';
