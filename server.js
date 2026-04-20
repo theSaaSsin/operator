@@ -1221,9 +1221,13 @@ async function bossHandleInbound(ch, chanId, norm) {
   try {
     const state    = bossReadState();
     const cfg      = readJSON('config.json');
-    if (cfg.groqApiKey)      process.env.GROQ_API_KEY      = cfg.groqApiKey;
-    if (cfg.anthropicApiKey) process.env.ANTHROPIC_API_KEY = cfg.anthropicApiKey;
-    if (cfg.glmApiKey)       process.env.GLM_API_KEY        = cfg.glmApiKey;
+    if (cfg.anthropicApiKey)  process.env.ANTHROPIC_API_KEY  = cfg.anthropicApiKey;
+    if (cfg.groqApiKey)       process.env.GROQ_API_KEY       = cfg.groqApiKey;
+    if (cfg.geminiApiKey)     process.env.GEMINI_API_KEY     = cfg.geminiApiKey;
+    if (cfg.openaiApiKey)     process.env.OPENAI_API_KEY     = cfg.openaiApiKey;
+    if (cfg.cerebrasApiKey)   process.env.CEREBRAS_API_KEY   = cfg.cerebrasApiKey;
+    if (cfg.openrouterApiKey) process.env.OPENROUTER_API_KEY = cfg.openrouterApiKey;
+    if (cfg.glmApiKey)        process.env.GLM_API_KEY        = cfg.glmApiKey;
 
     const text = (norm.text || '').trim();
 
@@ -2330,14 +2334,19 @@ Date: ${new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', 
 Short. Direct. End every reply with ONE clear next action.
 If you're uncertain about something — say it. Honesty builds more trust than confident fiction.`;
 
-    // Inject API key from config.json into env for router to pick up
-    if (cfg.anthropicApiKey) process.env.ANTHROPIC_API_KEY = cfg.anthropicApiKey;
-    if (cfg.groqApiKey)      process.env.GROQ_API_KEY      = cfg.groqApiKey;
+    // Inject all API keys from config.json into env for router to pick up
+    if (cfg.anthropicApiKey) process.env.ANTHROPIC_API_KEY  = cfg.anthropicApiKey;
+    if (cfg.groqApiKey)      process.env.GROQ_API_KEY       = cfg.groqApiKey;
+    if (cfg.geminiApiKey)    process.env.GEMINI_API_KEY     = cfg.geminiApiKey;
+    if (cfg.openaiApiKey)    process.env.OPENAI_API_KEY     = cfg.openaiApiKey;
+    if (cfg.cerebrasApiKey)  process.env.CEREBRAS_API_KEY   = cfg.cerebrasApiKey;
+    if (cfg.openrouterApiKey)process.env.OPENROUTER_API_KEY = cfg.openrouterApiKey;
 
     const r = await bossRouter.route({
       message,
       system,
       messages,
+      taskKind:  'boss',   // forces Claude→Gemini→GPT chain, never Groq-first
       maxTokens: Math.min(Number(data.maxTokens) || 600, 1400),
     });
     if (r.ok) {
@@ -2383,9 +2392,13 @@ If you're uncertain about something — say it. Honesty builds more trust than c
     const state   = bossReadState();
     const mem     = bossMem.buildContext(600);
 
-    if (cfg.groqApiKey)      process.env.GROQ_API_KEY      = cfg.groqApiKey;
-    if (cfg.anthropicApiKey) process.env.ANTHROPIC_API_KEY = cfg.anthropicApiKey;
-    if (cfg.glmApiKey)       process.env.GLM_API_KEY        = cfg.glmApiKey;
+    if (cfg.anthropicApiKey)  process.env.ANTHROPIC_API_KEY  = cfg.anthropicApiKey;
+    if (cfg.groqApiKey)       process.env.GROQ_API_KEY       = cfg.groqApiKey;
+    if (cfg.geminiApiKey)     process.env.GEMINI_API_KEY     = cfg.geminiApiKey;
+    if (cfg.openaiApiKey)     process.env.OPENAI_API_KEY     = cfg.openaiApiKey;
+    if (cfg.cerebrasApiKey)   process.env.CEREBRAS_API_KEY   = cfg.cerebrasApiKey;
+    if (cfg.openrouterApiKey) process.env.OPENROUTER_API_KEY = cfg.openrouterApiKey;
+    if (cfg.glmApiKey)        process.env.GLM_API_KEY        = cfg.glmApiKey;
 
     // Check provider toggles
     const toggles = cfg.providerToggles || {};

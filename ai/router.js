@@ -1,18 +1,26 @@
 /**
- * ai/router.js — B.O.S.S Hybrid LLM Router v2
+ * ai/router.js — B.O.S.S Hybrid LLM Router v3
  *
- * Smart 3-tier routing:
- *   TIER 1  Ollama  (local, free, instant)   ← simple / private tasks
- *   TIER 2  Groq    (cloud, free tier, fast)  ← analysis / content
- *   TIER 3  Claude  (cloud, paid, best)        ← pitches / strategy / code
+ * Provider chains (first configured wins):
  *
- * Route rules defined in boss.config.js → routing.*
- * Falls back automatically if a tier is offline / unconfigured.
+ *   BOSS CHAT  → Claude Haiku → Gemini Flash → GPT-4o Mini → Cerebras → Groq → OpenRouter
+ *   PITCH/STRAT→ Claude Haiku → Gemini Pro   → GPT-4o Mini → Cerebras → Groq → OpenRouter
+ *   CODE       → Claude Sonnet → DeepSeek(OR)→ GPT-4o Mini → Cerebras → Groq
+ *   QUICK      → Groq → Cerebras → Gemini Flash → GPT-4o Mini → Claude Haiku
+ *   LOCAL      → Ollama → Groq → Cerebras → Claude Haiku
  *
- * Usage:
- *   const { route, routerStatus } = require('./ai/router');
- *   const r = await route({ taskKind:'pitch', system, messages, maxTokens:800 });
- *   if (r.ok) console.log(r.text, r.provider, r.tier);
+ * Instruction-following models (Claude, Gemini, GPT) lead for anything that
+ * requires honesty / staying in character. Groq/Llama is fast but roleplays —
+ * kept only as cheap fallback for quick/summarise tasks.
+ *
+ * Providers & signup:
+ *   Anthropic  → anthropic.com/api          (Claude Haiku — best instruction-following)
+ *   Gemini     → aistudio.google.com        (Flash — free 1500 RPD, no card needed)
+ *   OpenAI     → platform.openai.com        (GPT-4o Mini — cheap, reliable)
+ *   Cerebras   → cloud.cerebras.ai          (2000+ tok/s, free tier, English signup)
+ *   OpenRouter → openrouter.ai              (DeepSeek Coder free — best code model)
+ *   Groq       → console.groq.com           (800 tok/s, free forever)
+ *   Ollama     → ollama.ai                  (local, private, free)
  */
 
 'use strict';
@@ -37,6 +45,8 @@ function readCfgKey(key) {
       GROQ_API_KEY:       'groqApiKey',
       OPENROUTER_API_KEY: 'openrouterApiKey',
       CEREBRAS_API_KEY:   'cerebrasApiKey',
+      GEMINI_API_KEY:     'geminiApiKey',
+      OPENAI_API_KEY:     'openaiApiKey',
       KIMI_API_KEY:       'kimiApiKey',
       MINIMAX_API_KEY:    'minimaxApiKey',
       GLM_API_KEY:        'glmApiKey',
@@ -55,10 +65,12 @@ function isConfigured(provider) {
   if (provider === 'groq')       return !!readCfgKey('GROQ_API_KEY');
   if (provider === 'openrouter') return !!readCfgKey('OPENROUTER_API_KEY');
   if (provider === 'cerebras')   return !!readCfgKey('CEREBRAS_API_KEY');
+  if (provider === 'gemini')     return !!readCfgKey('GEMINI_API_KEY');
+  if (provider === 'openai')     return !!readCfgKey('OPENAI_API_KEY');
   if (provider === 'kimi')       return !!readCfgKey('KIMI_API_KEY');
   if (provider === 'minimax')    return !!readCfgKey('MINIMAX_API_KEY');
   if (provider === 'glm')        return !!readCfgKey('GLM_API_KEY');
-  if (provider === 'ollama')     return true; // checked live via ping
+  if (provider === 'ollama')     return true;
   return false;
 }
 
@@ -190,6 +202,51 @@ async function callCerebras({ modelId, system, messages, maxTokens }) {
   return data.choices?.[0]?.message?.content || '';
 }
 
+// Gemini (Google AI Studio) — free 1500 RPD, best instruction-following free model
+// Uses OpenAI-compatible endpoint so format is identical
+async function callGemini({ modelId, system, messages, maxTokens }) {
+  const key = readCfgKey('GEMINI_API_KEY');
+  if (!key) throw new Error('no gemini key');
+  const body = {
+    model:      modelId || 'gemini-2.0-flash',
+    max_tokens: maxTokens || 600,
+    messages: [
+      ...(system ? [{ role: 'system', content: system }] : []),
+      ...messages.slice(-16),
+    ],
+  };
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+    method:  'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || 'gemini error');
+  return data.choices?.[0]?.message?.content || '';
+}
+
+// OpenAI — GPT-4o Mini, reliable instruction-following, ~$0.15/1M input tokens
+async function callOpenAI({ modelId, system, messages, maxTokens }) {
+  const key = readCfgKey('OPENAI_API_KEY');
+  if (!key) throw new Error('no openai key');
+  const body = {
+    model:      modelId || 'gpt-4o-mini',
+    max_tokens: maxTokens || 600,
+    messages: [
+      ...(system ? [{ role: 'system', content: system }] : []),
+      ...messages.slice(-16),
+    ],
+  };
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method:  'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || 'openai error');
+  return data.choices?.[0]?.message?.content || '';
+}
+
 // GLM (Zhipu AI) — GLM-4, excellent for code + reasoning
 async function callGLM({ modelId, system, messages, maxTokens }) {
   const key = readCfgKey('GLM_API_KEY');
@@ -257,17 +314,29 @@ function classifyMessage(msg = '') {
   return 'default';
 }
 
-// Build provider chain — free/cheap first, paid last
-// Priority: Groq → Cerebras → OpenRouter-free → GLM → Kimi → MiniMax → Ollama → Claude
-// Code tasks: OpenRouter DeepSeek Coder first (best free coder)
+// Build provider chain — instruction-following first for BOSS/pitch/strategy
+// Groq/Llama demoted to fallback (fast but roleplays & hallucinates)
 function buildChain(tier, taskKind) {
+  // CODE: best free coder first, then paid
   if (taskKind === 'code' || taskKind === 'build') {
-    // Code-specific chain: DeepSeek via OpenRouter → Cerebras → Groq → Claude
-    return ['openrouter', 'cerebras', 'groq', 'glm', 'anthropic'];
+    return ['anthropic', 'openrouter', 'openai', 'cerebras', 'groq', 'glm'];
+    //       Sonnet       DeepSeek        4o-mini   llama70b    llama   glm
   }
-  if (tier === 'local')  return ['ollama', 'groq', 'cerebras', 'openrouter', 'glm', 'anthropic'];
-  if (tier === 'groq')   return ['groq', 'cerebras', 'openrouter', 'glm', 'kimi', 'minimax', 'ollama', 'anthropic'];
-  return                        ['groq', 'cerebras', 'openrouter', 'glm', 'kimi', 'minimax', 'ollama', 'anthropic'];
+  // BOSS CHAT / PITCH / STRATEGY: instruction-following models lead
+  // Claude/Gemini/GPT stay in character and follow rules. Groq roleplays.
+  if (taskKind === 'boss' || taskKind === 'pitch' || taskKind === 'strategy') {
+    return ['anthropic', 'gemini', 'openai', 'cerebras', 'openrouter', 'groq', 'kimi', 'minimax'];
+  }
+  // QUICK REPLY / SUMMARISE: speed matters, Groq leads
+  if (taskKind === 'quickReply' || taskKind === 'summarise') {
+    return ['groq', 'cerebras', 'gemini', 'openai', 'openrouter', 'anthropic'];
+  }
+  // LOCAL: try Ollama first
+  if (tier === 'local') {
+    return ['ollama', 'groq', 'cerebras', 'gemini', 'openai', 'anthropic'];
+  }
+  // DEFAULT: instruction-following leads
+  return ['anthropic', 'gemini', 'openai', 'cerebras', 'groq', 'openrouter', 'kimi', 'minimax', 'ollama'];
 }
 
 function modelFor(provider, taskKind) {
@@ -291,9 +360,19 @@ function modelFor(provider, taskKind) {
     if (taskKind === 'quickReply') return 'meta-llama/llama-3.1-8b-instruct:free';
     return 'meta-llama/llama-3.3-70b-instruct:free';
   }
+  if (provider === 'gemini') {
+    if (taskKind === 'code' || taskKind === 'build') return 'gemini-2.0-flash';
+    return 'gemini-2.0-flash';
+  }
+  if (provider === 'openai') {
+    if (taskKind === 'code' || taskKind === 'build') return 'gpt-4o-mini';
+    return 'gpt-4o-mini';
+  }
   if (provider === 'glm') return 'glm-4-flash';
-  // anthropic — heavy lifting backup only
-  if (taskKind === 'build' || taskKind === 'code') return 'claude-sonnet-4-5';
+  if (provider === 'anthropic') {
+    if (taskKind === 'build' || taskKind === 'code') return 'claude-sonnet-4-5';
+    return 'claude-haiku-4-5-20251001';
+  }
   return 'claude-haiku-4-5-20251001';
 }
 
@@ -316,6 +395,8 @@ async function route({
     try {
       let text;
       if      (provider === 'anthropic')  text = await callAnthropic({ modelId, system, messages, maxTokens });
+      else if (provider === 'gemini')     text = await callGemini({ modelId, system, messages, maxTokens });
+      else if (provider === 'openai')     text = await callOpenAI({ modelId, system, messages, maxTokens });
       else if (provider === 'groq')       text = await callGroq({ modelId, system, messages, maxTokens });
       else if (provider === 'cerebras')   text = await callCerebras({ modelId, system, messages, maxTokens });
       else if (provider === 'openrouter') text = await callOpenRouter({ modelId, system, messages, maxTokens });
@@ -342,6 +423,8 @@ async function routerStatus() {
   const status = { anthropic: false, groq: false, openrouter: false, cerebras: false, ollama: { running: false, models: [] } };
 
   status.anthropic  = isConfigured('anthropic');
+  status.gemini     = isConfigured('gemini');
+  status.openai     = isConfigured('openai');
   status.groq       = isConfigured('groq');
   status.cerebras   = isConfigured('cerebras');
   status.openrouter = isConfigured('openrouter');

@@ -197,6 +197,25 @@
       return;
     }
 
+    // ── /coach — dedicated next-move advisor, no roleplay ───────────────────
+    if (text.startsWith('/coach')) {
+      const context = text.replace(/^\/coach\s*/i, '').trim();
+      const typing = showTyping();
+      const r = await fetch(API + '/boss/agent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent: 'analyst',
+          message: `Give ${context || 'me'} one specific next move right now. I need the single highest-leverage action I can take in the next 2 hours to move toward getting a paying client. Be direct. State exactly what to do, how long it takes, and what result to expect. No fluff, no theory.${context ? ' Context: ' + context : ''}`,
+          maxTokens: 350
+        })
+      }).then(x => x.json()).catch(() => ({ ok: false }));
+      removeTyping();
+      const reply = r.ok ? r.reply : 'Coach offline — check your API keys.';
+      addMsgRich('bot', `<strong>🎯 Coach</strong> <span style="opacity:.4;font-size:.7rem">${r.provider || ''}</span>\n<div style="margin-top:8px;font-size:.84rem;line-height:1.6;white-space:pre-wrap">${reply.replace(/</g, '&lt;')}</div>`);
+      if (VOICE_ON) bossSpeak(reply.slice(0, 350));
+      return;
+    }
+
     // ── /scan — intercept BEFORE sending to AI ──────────────────────────────
     // AI cannot actually scan. Route to real Lead Scraper and give search terms.
     if (text.startsWith('/scan')) {
@@ -669,6 +688,8 @@ What's next? More leads or better close rate?`);
       set('cfg-anthropic-key',   cfg.anthropicApiKey);
       set('cfg-groq-key',        cfg.groqApiKey);
       set('cfg-cerebras-key',    cfg.cerebrasApiKey);
+      set('cfg-gemini-key',      cfg.geminiApiKey);
+      set('cfg-openai-key',      cfg.openaiApiKey);
       set('cfg-openrouter-key',  cfg.openrouterApiKey);
       set('cfg-glm-key',         cfg.glmApiKey);
       set('cfg-kimi-key',        cfg.kimiApiKey);
@@ -728,10 +749,12 @@ What's next? More leads or better close rate?`);
     const ort  = get('cfg-openrouter-key');
     const per  = get('cfg-persona');
     const off  = get('cfg-offer');
-    const ser  = get('cfg-serper-key');
-    const glm  = get('cfg-glm-key');
-    const kimi = get('cfg-kimi-key');
+    const ser    = get('cfg-serper-key');
+    const glm    = get('cfg-glm-key');
+    const kimi   = get('cfg-kimi-key');
     const cerebras = get('cfg-cerebras-key');
+    const gemini   = get('cfg-gemini-key');
+    const openai   = get('cfg-openai-key');
     const tgToken  = get('cfg-telegram-token');
     const tgChats  = get('cfg-telegram-chatid');
     const hfToken  = get('cfg-hf-token');
@@ -739,12 +762,14 @@ What's next? More leads or better close rate?`);
     const liToken  = get('cfg-linkedin-token');
     const igToken  = get('cfg-ig-token');
 
-    if (ant)     payload.anthropicApiKey  = ant;
-    if (grq)     payload.groqApiKey       = grq;
-    if (cerebras) payload.cerebrasApiKey  = cerebras;
-    if (ort)     payload.openrouterApiKey = ort;
-    if (glm)     payload.glmApiKey        = glm;
-    if (kimi)    payload.kimiApiKey       = kimi;
+    if (ant)      payload.anthropicApiKey  = ant;
+    if (grq)      payload.groqApiKey       = grq;
+    if (cerebras) payload.cerebrasApiKey   = cerebras;
+    if (gemini)   payload.geminiApiKey     = gemini;
+    if (openai)   payload.openaiApiKey     = openai;
+    if (ort)      payload.openrouterApiKey = ort;
+    if (glm)      payload.glmApiKey        = glm;
+    if (kimi)     payload.kimiApiKey       = kimi;
     if (per)     payload.personaName      = per;
     if (off)     payload.offer            = off;
     if (ser)     payload.serperApiKey     = ser;
@@ -866,7 +891,7 @@ What's next? More leads or better close rate?`);
         removeTyping();
         if (r.ok) {
           let html = '<div style="font-size:.8rem;opacity:.7;margin-bottom:8px">Agents ran: ' + r.agentCount + '</div>';
-          const EMOJIS = { boss:'', planner:'', builder:'', analyst:'', growth:'', creative:'', scout:'', copywriter:'', guardian:'' };
+          const EMOJIS = { boss:'🧠', planner:'📋', builder:'🔧', analyst:'📊', growth:'📈', creative:'🎨', scout:'🛰', copywriter:'✍️', guardian:'🛡' };
           r.steps.filter(s => s.task !== 'Assemble').forEach(s => {
             const em = EMOJIS[s.agent] || '';
             const badge = tierBadge(s.provider, null);

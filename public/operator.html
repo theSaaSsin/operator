@@ -35,8 +35,8 @@
       <div class="nav-item" data-panel="boss-config" onclick="bossLoadConfig()" style="color:#ff2a2a"><i class="fas fa-key"></i> API Keys</div>
       <div class="nav-item" data-panel="panel-ai-tools" onclick="bossLoadAITools()" style="color:#ff2a2a"><i class="fas fa-robot"></i> AI Models</div>
       <div class="nav-item" data-panel="panel-gpu" onclick="bossLoadGPU()" style="color:#ff2a2a"><i class="fas fa-microchip"></i> Free GPU</div>
-      <div class="nav-item" data-panel="boss-channels" style="color:#ff2a2a"><i class="fas fa-satellite-dish"></i> Channels</div>
-      <div class="nav-item" data-panel="boss-agents" style="color:#ff2a2a"><i class="fas fa-robot"></i> Agents</div>
+      <div class="nav-item" data-panel="boss-channels" onclick="bossLoadChannels()" style="color:#ff2a2a"><i class="fas fa-satellite-dish"></i> Channels</div>
+      <div class="nav-item" data-panel="boss-agents" onclick="bossLoadAgents()" style="color:#ff2a2a"><i class="fas fa-robot"></i> Agents</div>
 
     </nav>
     <div class="sidebar-footer">
@@ -1155,6 +1155,42 @@ gr.Interface(fn=generate,
                 style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
                 oninput="bossCfgDirty()">
               <button onclick="bossCfgToggleVisible('cfg-cerebras-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
+            </div>
+          </div>
+
+          <!-- ── GEMINI ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#4285f4">GEMINI FLASH</span>
+                <span style="font-size:.62rem;background:#0a2a1a;color:#22c55e;padding:2px 8px;border-radius:100px;margin-left:8px">FREE 1500 req/day</span>
+              </div>
+              <a href="https://aistudio.google.com/apikey" target="_blank" style="font-size:.65rem;color:#4285f4;text-decoration:none;opacity:.7">Get key →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Google Gemini 2.0 Flash — best free instruction-following model. Doesn't roleplay. 1500 requests/day free. No card needed at aistudio.google.com</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-gemini-key" type="password" placeholder="AIza..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleVisible('cfg-gemini-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
+            </div>
+          </div>
+
+          <!-- ── OPENAI ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#10a37f">GPT-4o MINI</span>
+                <span style="font-size:.62rem;background:#0d1a12;color:#10a37f;padding:2px 8px;border-radius:100px;margin-left:8px">~$5/month typical</span>
+              </div>
+              <a href="https://platform.openai.com/api-keys" target="_blank" style="font-size:.65rem;color:#10a37f;text-decoration:none;opacity:.7">Get key →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">OpenAI GPT-4o Mini — reliable, instruction-following, very cheap. Best backup when Gemini is rate-limited. $5 credit gets you thousands of conversations.</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-openai-key" type="password" placeholder="sk-..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleVisible('cfg-openai-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
             </div>
           </div>
 
