@@ -67,6 +67,7 @@ const MODULE_MAP = [
     icon: 'fa-bullseye', color: '#22c55e',
     modules: [
       { n:11, name:'Social Media Lead Scraper',     icon:'fa-hashtag',         status:'active', panel:'feed' },
+      { n:11.5, name:'Lead Intelligence',           icon:'fa-radar',           status:'active', panel:'mod-lead-intel' },
       { n:12, name:'Keyword Detection Engine',      icon:'fa-crosshairs',      status:'building' },
       { n:13, name:'Lead Intent Analyzer',          icon:'fa-brain',           status:'building' },
       { n:14, name:'Competitor Lead Hijack',        icon:'fa-user-secret',     status:'planned' },
@@ -222,7 +223,7 @@ function buildNav() {
 
   // Module icon map (filekey → FA icon)
   const MOD_ICONS = {
-    'cold-outreach':'fa-comment-dots','proposal':'fa-file-invoice','call-script':'fa-phone',
+    'lead-intel':'fa-radar','cold-outreach':'fa-comment-dots','proposal':'fa-file-invoice','call-script':'fa-phone',
     'intent':'fa-brain','followup':'fa-clock-rotate-left','competitor-hijack':'fa-user-secret',
     'local-finder':'fa-map-pin','keyword-detect':'fa-crosshairs','outreach-send':'fa-share-nodes',
     'reply-detect':'fa-reply','booking':'fa-calendar-check',
