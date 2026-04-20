@@ -255,6 +255,7 @@ function buildNav() {
     ],
     acquisition: [
       { key:'feed',                label:'Lead Scraper',      status:'active',   icon:'fa-hashtag' },
+      { key:'mod-lead-intel',      label:'Lead Intelligence', status:'active',   icon:'fa-radar' },
       { key:'mod-keyword-detect',  label:'Keyword Detect',    status:'building', icon:'fa-crosshairs' },
       { key:'mod-intent',          label:'Intent Analyzer',   status:'building', icon:'fa-brain' },
       { key:'mod-competitor-hijack',label:'Competitor Hijack',status:'planned',  icon:'fa-user-secret' },

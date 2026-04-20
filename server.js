@@ -1168,6 +1168,53 @@ function ensureModulesDB() {
 const bossChannels = require('./channels/registry');
 const bossSwarm    = require('./channels/agents');
 const bossRouter   = require('./ai/router');
+const bossMem      = require('./ai/memory-manager');
+
+// ── Specialized agent configs — each has a role, model priority, token budget ─
+const AGENTS = {
+  scout: {
+    label: 'Scout',
+    role:  'Lead intelligence specialist. Finds real pain in real markets. Outputs WHERE to find leads (subreddits, hashtags, search queries, communities). Never invents data.',
+    taskKind: 'analyse',
+    maxTokens: 600,
+    preferModels: ['groq/llama-3.1-8b-instant'], // fast + free
+  },
+  copywriter: {
+    label: 'Copywriter',
+    role:  'Elite pitch writer. Every word earns its place. Writes cold emails, DMs, call openers, captions that get replies. No fluff. No corporate speak. Pain → solution → proof → CTA.',
+    taskKind: 'pitch',
+    maxTokens: 1000,
+    preferModels: ['groq/llama-3.3-70b-versatile', 'anthropic/claude-haiku-4-5-20251001'],
+  },
+  analyst: {
+    label: 'Analyst',
+    role:  'Market intelligence expert. Identifies opportunities, gaps, pricing, competitor weaknesses, market timing. Data-first, revenue-focused.',
+    taskKind: 'analyse',
+    maxTokens: 800,
+    preferModels: ['groq/llama-3.3-70b-versatile', 'glm/glm-4-flash'],
+  },
+  builder: {
+    label: 'Builder',
+    role:  'Code specialist. Writes and fixes JavaScript modules for the B.O.S.S operator. Outputs working, clean code only. No explanations unless asked.',
+    taskKind: 'code',
+    maxTokens: 1200,
+    preferModels: ['glm/glm-4-flash', 'anthropic/claude-sonnet-4-5'],
+  },
+  coach: {
+    label: 'Coach',
+    role:  'Revenue strategist. Gives ONE clear next action that moves toward money. Handles objections, fixes mindset blocks, identifies the highest-leverage move right now.',
+    taskKind: 'strategy',
+    maxTokens: 500,
+    preferModels: ['groq/llama-3.3-70b-versatile'],
+  },
+  researcher: {
+    label: 'Researcher',
+    role:  'Deep research agent. Analyses markets, tools, platforms, integrations, competitors, AI APIs, business models. Produces actionable briefs overnight.',
+    taskKind: 'analyse',
+    maxTokens: 1400,
+    preferModels: ['groq/llama-3.3-70b-versatile', 'glm/glm-4-flash'],
+  },
+};
 
 // ── Inbound message handler (all channels → B.O.S.S AI → reply) ─────────────
 async function bossHandleInbound(ch, chanId, norm) {
@@ -2211,6 +2258,161 @@ If ${userName} is stuck, break the paralysis with a direct question or a piece o
   },
 
   // Coach — proactive next-move
+  // ── Token usage ──────────────────────────────────────────────────────────
+  'GET /api/boss/token-usage': (_, res) => {
+    res.end(JSON.stringify({ ok: true, ...bossMem.getTokenUsage() }));
+  },
+  'POST /api/boss/token-usage/reset': (_, res) => {
+    bossMem.resetDailyTokens();
+    res.end(JSON.stringify({ ok: true }));
+  },
+
+  // ── Memory ────────────────────────────────────────────────────────────────
+  'GET /api/boss/memory': (_, res) => {
+    res.end(JSON.stringify({ ok: true, memory: bossMem.read() }));
+  },
+  'POST /api/boss/memory/insight': async (req, res) => {
+    const d = await body(req);
+    bossMem.addInsight(d.topic || 'general', d.insight, d.confidence || 7);
+    res.end(JSON.stringify({ ok: true }));
+  },
+
+  // ── Specialized agent chat ────────────────────────────────────────────────
+  'POST /api/boss/agent': async (req, res) => {
+    const data  = await body(req);
+    const agentId = data.agent || 'copywriter';
+    const agent   = AGENTS[agentId] || AGENTS.copywriter;
+    const cfg     = readJSON('config.json');
+    const state   = bossReadState();
+    const mem     = bossMem.buildContext(600);
+
+    if (cfg.groqApiKey)      process.env.GROQ_API_KEY      = cfg.groqApiKey;
+    if (cfg.anthropicApiKey) process.env.ANTHROPIC_API_KEY = cfg.anthropicApiKey;
+    if (cfg.glmApiKey)       process.env.GLM_API_KEY        = cfg.glmApiKey;
+
+    // Check provider toggles
+    const toggles = cfg.providerToggles || {};
+    const agentModels = cfg.agentModels || {};
+    const assignedModel = agentModels[agentId];
+
+    const system = `You are the ${agent.label} agent inside the B.O.S.S operator.
+Role: ${agent.role}
+Owner: ${cfg.personaName || 'Josh'} — building TheSaaSsin customer acquisition business.
+${mem ? '\nMemory context:\n' + mem : ''}
+Goal: ${state.current_goal || 'First paying client'}
+Date: ${new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
+
+HONESTY RULES: Never invent data. Never claim to perform real actions. Generate content only.
+End every response with: ▶ NEXT: [one specific action]`;
+
+    const messages = Array.isArray(data.messages) ? data.messages.slice(-10) : [];
+    if (data.message) messages.push({ role: 'user', content: data.message });
+
+    // Route with preferred model if assigned
+    let routeOpts = { taskKind: agent.taskKind, system, messages, maxTokens: data.maxTokens || agent.maxTokens };
+    if (assignedModel) {
+      const [provider, ...modelParts] = assignedModel.split('/');
+      routeOpts.preferProvider = provider;
+      routeOpts.preferModel    = modelParts.join('/');
+    }
+
+    const r = await bossRouter.route(routeOpts);
+
+    if (r.ok) {
+      // Track tokens and memory
+      bossMem.trackTokens(r.provider, Math.ceil((r.text || '').length / 4));
+      if (agentId === 'scout' && data.message) bossMem.rememberMarket(data.message.slice(0, 80));
+      res.end(JSON.stringify({ ok: true, reply: r.text, agent: agentId, provider: r.provider, tier: r.tier }));
+    } else {
+      res.end(JSON.stringify({ ok: false, error: r.hint || r.error }));
+    }
+  },
+
+  // ── Overnight research — B.O.S.S analyses everything while user sleeps ────
+  'POST /api/boss/research/overnight': async (req, res) => {
+    const cfg   = readJSON('config.json');
+    const state = bossReadState();
+    if (cfg.groqApiKey) process.env.GROQ_API_KEY = cfg.groqApiKey;
+    if (cfg.anthropicApiKey) process.env.ANTHROPIC_API_KEY = cfg.anthropicApiKey;
+    if (cfg.glmApiKey) process.env.GLM_API_KEY = cfg.glmApiKey;
+
+    res.end(JSON.stringify({ ok: true, message: 'Overnight research started. Check /api/boss/memory in the morning.' }));
+
+    // Run async — don't block response
+    (async () => {
+      const topics = [
+        {
+          name: 'market_gaps',
+          prompt: `You are a market research analyst for a UK-based solo operator building TheSaaSsin — a customer acquisition system for small businesses (coaches, consultants, freelancers, agencies) who struggle to get clients.
+
+Identify the TOP 5 most underserved, high-pain markets RIGHT NOW (2025-2026) where a solo operator could charge £500-£3000/month.
+For each: market name, pain level (1-10), avg monthly budget, best outreach channel, easiest first offer, key objection to overcome.
+Be specific. Real niches, not vague categories.`,
+        },
+        {
+          name: 'ai_tools_worth_integrating',
+          prompt: `List the TOP 10 AI tools, APIs, or integrations that would most increase revenue for a customer acquisition operator serving small businesses.
+Consider: free tiers, ease of integration, ROI for client results, current market hype vs real utility.
+For each: tool name, what it does, free tier details, integration effort (1-5), revenue potential (1-10).`,
+        },
+        {
+          name: 'pitch_angles_that_convert',
+          prompt: `Based on 2025 buyer psychology for small business owners who are struggling to get clients:
+What are the TOP 5 cold outreach angles that currently convert best?
+For each: angle name, psychological trigger, example opening line, best platform to use it on, why it works now.
+Focus on coaches, consultants, freelancers, service businesses.`,
+        },
+        {
+          name: 'self_analysis',
+          prompt: `You are analysing a B.O.S.S operator platform (AI-powered business OS for solo operators). Current features: Lead scraping, CRM, cold outreach generator, brand identity builder, social posting with image gen, Telegram integration, AI routing (Groq/GLM/Claude), 70 modules.
+
+What are the 3 biggest gaps or improvements that would increase revenue generation capability?
+What should be built next?
+What's the single highest-leverage feature missing?`,
+        },
+      ];
+
+      const briefParts = [`# B.O.S.S Overnight Research Brief\n${new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}\n`];
+
+      for (const topic of topics) {
+        try {
+          const r = await bossRouter.route({
+            taskKind: 'analyse',
+            system: 'You are a sharp business analyst. Be specific, actionable, money-focused. No fluff.',
+            messages: [{ role: 'user', content: topic.prompt }],
+            maxTokens: 800,
+          });
+          if (r.ok) {
+            briefParts.push(`## ${topic.name.replace(/_/g, ' ').toUpperCase()}\n${r.text}\n`);
+            bossMem.addInsight(topic.name, r.text.slice(0, 300), 8);
+            bossMem.trackTokens(r.provider, Math.ceil(r.text.length / 4));
+          }
+        } catch (_) {}
+        // Small delay between requests to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      // Save the full brief to memory
+      const brief = briefParts.join('\n---\n');
+      const mem = bossMem.read();
+      mem.overnight_brief = { content: brief, generated_at: new Date().toISOString() };
+      bossMem.write(mem);
+
+      // Try to notify via Telegram if configured
+      const tg = bossChannels.get('telegram');
+      if (tg && tg.configured()) {
+        const summary = `📋 *Overnight Research Complete*\n\nI've analysed markets, tools, and pitch angles. Here's the top finding:\n\n${briefParts[1]?.slice(0, 500) || 'See full brief in operator.'}\n\n→ Open B.O.S.S → Coach → "What did you find overnight?"`;
+        tg.broadcast(summary).catch(() => {});
+      }
+    })();
+  },
+
+  // ── Get overnight brief ───────────────────────────────────────────────────
+  'GET /api/boss/research/brief': (_, res) => {
+    const mem = bossMem.read();
+    res.end(JSON.stringify({ ok: true, brief: mem.overnight_brief || null, insights: mem.insights.slice(0, 10) }));
+  },
+
   // ── Image generation ──────────────────────────────────────────────────────
   'POST /api/image/generate': async (req, res) => {
     const data = await body(req);

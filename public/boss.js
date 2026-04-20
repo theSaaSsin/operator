@@ -21,18 +21,18 @@
   const slashEl = document.getElementById('boss-slash');
 
   const SLASH_CMDS = [
-    { cmd: '/auto',        hint: '/auto - autonomous workflow: discover → brand → pitch → send → close' },
-    { cmd: '/scan',        hint: '/scan [niche] - find prospects bleeding pain on Reddit + Forums' },
-    { cmd: '/pitch',       hint: '/pitch [market] - full battle pack → email, DM, opener, close line' },
-    { cmd: '/orchestrate', hint: '/orchestrate [goal] - burn through all agents, assemble the plan' },
-    { cmd: '/agents',      hint: '/agents - meet the crew (Scout, Growth, Copywriter, Builder)' },
-    { cmd: '/studio',      hint: '/studio - design assets, landing pages, offer sheets' },
-    { cmd: '/channels',    hint: '/channels - which platforms are live? where can you reach?' },
-    { cmd: '/models',      hint: '/models - local AI running on your machine (offline speed)' },
-    { cmd: '/keys',        hint: '/keys - wire up your API keys (Groq, OpenRouter, Claude)' },
-    { cmd: '/coach',       hint: '/coach - what\'s the next move? Let\'s make money.' },
-    { cmd: '/status',      hint: '/status - system state' },
-    { cmd: '/plan',        hint: '/plan [goal] - strategic breakdown' },
+    { cmd: '/auto',       hint: '/auto — step-by-step: zero → first client' },
+    { cmd: '/scan',       hint: '/scan [niche] — Scout finds WHERE leads hide + exact search queries' },
+    { cmd: '/pitch',      hint: '/pitch [target] — Copywriter builds full battle pack' },
+    { cmd: '/analyse',    hint: '/analyse [market] — Analyst deep-dives opportunity' },
+    { cmd: '/coach',      hint: '/coach — one clear next move, no fluff' },
+    { cmd: '/build',      hint: '/build [feature] — Builder writes the code' },
+    { cmd: '/research',   hint: '/research — start overnight deep analysis (runs while you sleep)' },
+    { cmd: '/brief',      hint: '/brief — read overnight research results' },
+    { cmd: '/memory',     hint: '/memory — what BOSS remembers about your business' },
+    { cmd: '/tokens',     hint: '/tokens — see AI usage + cost today' },
+    { cmd: '/channels',   hint: '/channels — platform connection status' },
+    { cmd: '/status',     hint: '/status — full system health check' },
   ];
 
   window.bossToggle = function () {
@@ -121,14 +121,80 @@
     addMsg('user', text);
     HISTORY.push({ role: 'user', content: text });
 
-    // Handle slash commands locally
-    if (text.startsWith('/auto')) {
-      return bossAutoWorkflow();
+    // Handle slash commands
+    if (text.startsWith('/auto'))     return bossAutoWorkflow();
+    if (text.startsWith('/channels')) { bossLoadChannels(); return addMsg('bot', '↓ Opening Channels…'), void switchPanel?.('boss-channels'); }
+
+    if (text.startsWith('/research')) {
+      addMsg('bot', '🔬 Starting overnight research — Scout, Analyst and Researcher agents firing up.\n\nThey\'ll analyse: market gaps, AI tools worth integrating, pitch angles that convert, and platform self-analysis.\n\nCome back in 5-10 minutes and type /brief to see results.\nI\'ll also ping you on Telegram if it\'s connected.');
+      if (VOICE_ON) bossSpeak('Overnight research started. Come back in ten minutes for the brief.');
+      fetch(API + '/boss/research/overnight', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
+      return;
     }
-    if (text.startsWith('/channels')) { bossLoadChannels(); return addMsg('bot', '↓ Opening Channels panel…'), void switchPanel?.('boss-channels'); }
+
+    if (text.startsWith('/brief')) {
+      const typing = showTyping();
+      const r = await fetch(API + '/boss/research/brief').then(x => x.json()).catch(() => null);
+      removeTyping();
+      if (!r?.brief) return addMsg('bot', 'No overnight brief yet. Run /research first — takes ~5 minutes.');
+      const preview = r.brief.content?.slice(0, 1200) || 'Brief empty.';
+      addMsgRich('bot', `<strong>📋 Overnight Research Brief</strong> <span style="opacity:.4;font-size:.7rem">${r.brief.generated_at?.slice(0,10)||''}</span><pre style="white-space:pre-wrap;font-size:.78rem;color:#d0d0e0;margin-top:8px">${preview.replace(/</g,'&lt;')}</pre><div style="margin-top:8px;font-size:.72rem;opacity:.5">Full brief saved in memory. Ask me about any section.</div>`);
+      if (VOICE_ON) bossSpeak('Here is your overnight research brief.');
+      return;
+    }
+
+    if (text.startsWith('/memory')) {
+      const typing = showTyping();
+      const r = await fetch(API + '/boss/memory').then(x => x.json()).catch(() => null);
+      removeTyping();
+      if (!r?.memory) return addMsg('bot', '⚠️ Memory unavailable.');
+      const m = r.memory;
+      const out = `🧠 BOSS MEMORY\n\nMarkets scanned: ${(m.markets||[]).map(x=>x.niche).join(', ')||'none yet'}\nPitches generated: ${(m.pitches||[]).length}\nInsights stored: ${(m.insights||[]).length}\nSession context: ${m.conversation_summary?.slice(0,200)||'none'}\n\nType /brief to read overnight research.`;
+      addMsg('bot', out);
+      return;
+    }
+
+    if (text.startsWith('/tokens')) {
+      const r = await fetch(API + '/boss/token-usage').then(x => x.json()).catch(() => ({ today: 0, total: 0 }));
+      addMsg('bot', `💰 TOKEN USAGE\n\nToday: ${r.today?.toLocaleString() || 0} tokens\nAll time: ${r.total?.toLocaleString() || 0} tokens\n\nGroq/GLM/OpenRouter: FREE\nAnthropic: ~$0.00025/1k tokens (Haiku)\n\nTo save tokens: toggle providers off in AI Models panel.`);
+      return;
+    }
+
     if (text.startsWith('/status')) {
-      const s = await fetch(API + '/boss/state').then(r => r.json()).catch(() => null);
-      return addMsg('bot', s ? `📋 Goal: ${s.state?.current_goal}\nUpdated: ${s.state?.updated_at || 'never'}` : '⚠️ State unavailable');
+      const [s, st] = await Promise.all([
+        fetch(API + '/boss/state').then(r => r.json()).catch(() => null),
+        fetch(API + '/boss/router').then(r => r.json()).catch(() => null),
+      ]);
+      const providers = st ? Object.entries(st).filter(([k,v]) => v && k !== 'ollama').map(([k]) => k.toUpperCase()).join(', ') : '?';
+      return addMsg('bot', s ? `📋 SYSTEM STATUS\nGoal: ${s.state?.current_goal}\nAI providers: ${providers}\nOllama: ${st?.ollama?.running ? '✓ running' : '✗ offline'}\nUpdated: ${s.state?.updated_at?.slice(0,16)||'never'}` : '⚠️ State unavailable');
+    }
+
+    // Agent-specific routing for specialist commands
+    if (text.startsWith('/analyse') || text.startsWith('/analyze')) {
+      const target = text.replace(/^\/analy[sz]e\s*/i, '').trim();
+      if (!target) return addMsg('bot', 'Usage: /analyse [market or question]');
+      addMsg('user', text);
+      HISTORY.push({ role: 'user', content: text });
+      const typing = showTyping();
+      const r = await fetch(API + '/boss/agent', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ agent:'analyst', message: `Analyse this market/opportunity: ${target}`, maxTokens: 800 }) }).then(x=>x.json());
+      removeTyping();
+      const reply = r.ok ? r.reply : (r.error || 'Analyst offline');
+      addMsgRich('bot', `<strong>📊 Analyst</strong> <span style="opacity:.4;font-size:.7rem">${r.provider||''}</span>\n<div style="margin-top:6px;white-space:pre-wrap;font-size:.82rem">${reply.replace(/</g,'&lt;')}</div>`);
+      if (VOICE_ON) bossSpeak(reply.slice(0, 300));
+      return;
+    }
+
+    if (text.startsWith('/build')) {
+      const task = text.replace(/^\/build\s*/i, '').trim();
+      if (!task) return addMsg('bot', 'Usage: /build [feature description]');
+      addMsg('user', text);
+      HISTORY.push({ role: 'user', content: text });
+      const typing = showTyping();
+      const r = await fetch(API + '/boss/agent', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ agent:'builder', message: task, maxTokens: 1200 }) }).then(x=>x.json());
+      removeTyping();
+      const reply = r.ok ? r.reply : (r.error || 'Builder offline');
+      addMsgRich('bot', `<strong>🔧 Builder</strong> <span style="opacity:.4;font-size:.7rem">${r.provider||''}</span>\n<pre style="white-space:pre-wrap;font-size:.78rem;color:#d0d0e0;margin-top:6px">${reply.replace(/</g,'&lt;')}</pre>`);
+      return;
     }
 
     const typing = showTyping();
@@ -294,31 +360,72 @@ What's next? More leads or better close rate?`);
     }
   };
 
-  window.bossSpeak = function (text) {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    // Clean text: remove emoji, limit to first 400 chars
-    const cleanText = text.replace(/[\p{Emoji}]/gu, '').slice(0, 400);
-    const u = new SpeechSynthesisUtterance(cleanText);
-    u.lang  = 'en-US';
-    u.rate  = 1.0;
-    u.pitch = 1.1;  // Slightly higher for female voice
-    u.volume = 0.9;
-
+  // Pick best female voice — cached after first selection
+  let _selectedVoice = null;
+  function getBossVoice() {
+    if (_selectedVoice) return _selectedVoice;
     const voices = window.speechSynthesis.getVoices();
-    // Priority: American female voices (Zira, Samantha, Victoria, Moira)
-    const femaleVoices = [
-      'Zira',           // Microsoft Zira (US female)
-      'Samantha',       // Apple Samantha
-      'Victoria',       // Apple Victoria (British female)
-      'Moira',          // Apple Moira (Irish female)
-      'Google US English',
+    // Priority list: best female voices across platforms
+    const PRIORITY = [
+      'Microsoft Zira',       // Windows US female — natural
+      'Samantha',             // macOS/iOS US female
+      'Google US English',    // Chrome US
+      'Victoria',             // macOS British female
+      'Moira',                // macOS Irish female
+      'Fiona',                // macOS Scottish
+      'Karen',                // macOS Australian
     ];
-    const selectedVoice = voices.find(v => femaleVoices.some(f => v.name.includes(f)));
-    if (selectedVoice) u.voice = selectedVoice;
+    for (const name of PRIORITY) {
+      const v = voices.find(v => v.name.includes(name));
+      if (v) { _selectedVoice = v; return v; }
+    }
+    // Fallback: any en-US female voice
+    const fallback = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female'));
+    if (fallback) { _selectedVoice = fallback; return fallback; }
+    return null;
+  }
 
+  window.bossSpeak = function (text) {
+    if (!window.speechSynthesis || !VOICE_ON) return;
+    window.speechSynthesis.cancel();
+
+    // Clean: strip emoji, markdown symbols, limit length
+    const clean = text
+      .replace(/[#*_`~>]/g, '')
+      .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+      .replace(/━+/g, '.')
+      .replace(/→|▶/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 450);
+
+    if (!clean) return;
+
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang   = 'en-US';
+    u.rate   = parseFloat(localStorage.getItem('boss_voice_rate') || '1.0');
+    u.pitch  = parseFloat(localStorage.getItem('boss_voice_pitch') || '1.1');
+    u.volume = 0.92;
+
+    const voice = getBossVoice();
+    if (voice) u.voice = voice;
+
+    // Chrome bug: long utterances get cut off — split at sentences if long
     window.speechSynthesis.speak(u);
   };
+
+  // Voice controls (speed + pitch)
+  window.bossVoiceRate = function(val) {
+    localStorage.setItem('boss_voice_rate', val);
+  };
+  window.bossVoicePitch = function(val) {
+    localStorage.setItem('boss_voice_pitch', val);
+  };
+
+  // Reload voices on Chrome (they load async)
+  if (window.speechSynthesis) {
+    speechSynthesis.onvoiceschanged = () => { _selectedVoice = null; }; // reset cache on reload
+  }
 
   // ── CHANNELS PANEL ───────────────────────────────────────
   const CH_ICONS = {
