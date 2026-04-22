@@ -219,16 +219,34 @@
         </div>
         <div class="feed-kwbar">
           <div class="kw-row">
-            <div class="kw-btn active" data-kw="struggling to find">Struggling To Find</div>
-            <div class="kw-btn" data-kw="dead month">Dead Month</div>
-            <div class="kw-btn" data-kw="how do i get clients">How Do I Get Clients</div>
-            <div class="kw-btn" data-kw="nothing is working">Nothing Working</div>
-            <div class="kw-btn" data-kw="no clients">No Clients</div>
+            <div class="kw-btn active" data-kw="roast my landing page">Roast My LP</div>
+            <div class="kw-btn" data-kw="feedback">Feedback</div>
+            <div class="kw-btn" data-kw="no conversions">No Conversions</div>
+            <div class="kw-btn" data-kw="not getting users">No Users</div>
+            <div class="kw-btn" data-kw="just launched">Just Launched</div>
             <div class="kw-btn" data-kw="what am i doing wrong">Doing Wrong</div>
+            <div class="kw-btn" data-kw="struggling to find">Struggling</div>
           </div>
           <div class="kw-custom">
             <input type="text" id="feed-custom-kw" placeholder="Custom keyword (overrides pills)...">
           </div>
+        </div>
+        <div class="paste-bar">
+          <details>
+            <summary><i class="fas fa-paste"></i> Paste posts from X / LinkedIn (no API — manual)</summary>
+            <div class="paste-body">
+              <div class="paste-hint">Paste 1 post per line. Format: <code>PLATFORM | AUTHOR | URL | TEXT</code> — or just raw text lines (we'll tag platform=manual).</div>
+              <textarea id="paste-posts" placeholder="X | @founder_joe | https://x.com/... | Launched my SaaS today — no sign-ups. What am I doing wrong?
+LinkedIn | Jane Smith | https://linkedin.com/... | Roast my landing page please, I'll take all feedback
+Just raw text also works if you don't have the URL handy"></textarea>
+              <div class="paste-actions">
+                <button class="btn btn-primary btn-sm" id="btn-paste-score">
+                  <i class="fas fa-wand-magic-sparkles"></i> Score Pasted
+                </button>
+                <button class="btn btn-secondary btn-sm" id="btn-paste-clear">Clear</button>
+              </div>
+            </div>
+          </details>
         </div>
         <div class="feed-meta" id="feed-meta">Click Scan to start</div>
         <div class="feed-grid" id="feed-grid">

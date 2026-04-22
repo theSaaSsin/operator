@@ -186,6 +186,17 @@ tbody tr:hover td{background:rgba(255,255,255,0.02);}
 .kw-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
 .kw-custom{flex:1;min-width:180px;}
 .kw-custom input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:5px;padding:7px 10px;color:var(--text);font-size:.78rem;outline:none;}
+.paste-bar{padding:0 20px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2);}
+.paste-bar details{padding:10px 0;}
+.paste-bar summary{cursor:pointer;font-size:.75rem;color:var(--muted);font-weight:600;padding:4px 0;user-select:none;list-style:none;}
+.paste-bar summary::-webkit-details-marker{display:none;}
+.paste-bar summary i{margin-right:6px;color:var(--accent);}
+.paste-bar summary:hover{color:var(--text);}
+.paste-body{padding:10px 0 6px;display:flex;flex-direction:column;gap:8px;}
+.paste-hint{font-size:.7rem;color:var(--muted);line-height:1.4;}
+.paste-hint code{background:rgba(255,42,42,.1);color:var(--accent);padding:1px 5px;border-radius:3px;font-size:.68rem;}
+#paste-posts{width:100%;min-height:110px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:10px;color:var(--text);font-size:.78rem;font-family:'Courier New',monospace;outline:none;resize:vertical;}
+.paste-actions{display:flex;gap:8px;}
 .feed-meta{padding:8px 20px;font-size:.7rem;color:var(--muted);border-bottom:1px solid var(--border);flex-shrink:0;}
 .feed-grid{flex:1;overflow-y:auto;padding:16px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:14px;align-content:start;}
 .feed-loading,.feed-empty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--muted);gap:10px;}
@@ -205,6 +216,10 @@ tbody tr:hover td{background:rgba(255,255,255,0.02);}
 .feed-platform.producthunt{background:rgba(218,84,51,.15);color:#ff6b4a;}
 .feed-platform.indiehackers{background:rgba(16,120,216,.15);color:#4aa3ff;}
 .feed-platform.crunchbase{background:rgba(22,168,239,.15);color:#4fc0ff;}
+.feed-platform.x{background:rgba(29,161,242,.15);color:#4db8ff;}
+.feed-platform.twitter{background:rgba(29,161,242,.15);color:#4db8ff;}
+.feed-platform.linkedin{background:rgba(10,102,194,.18);color:#6fa8f5;}
+.feed-platform.manual{background:rgba(255,255,255,.08);color:var(--muted);}
 .feed-time{font-size:.68rem;color:var(--muted);margin-left:auto;}
 .feed-title{font-size:.88rem;font-weight:700;color:var(--text);line-height:1.35;width:100%;}
 .feed-company{display:flex;flex-direction:column;gap:3px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:6px;border-left:2px solid var(--accent);}

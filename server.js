@@ -50,7 +50,8 @@ async function cachedFetch(url, opts) {
 
 async function fetchReddit(kw, H) {
   const SUBS = ['smallbusiness','Entrepreneur','freelance','sidehustle',
-    'sweatystartup','EntrepreneurRideAlong','startups','sales'];
+    'sweatystartup','EntrepreneurRideAlong','startups','sales',
+    'SaaS','indiehackers','SideProject','roastmystartup','webdev','marketing'];
   const parsePost = p => ({
     id:        'r_' + p.id,
     platform:  'reddit',

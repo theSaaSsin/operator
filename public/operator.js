@@ -1160,6 +1160,23 @@ function esc(str) {
 ══════════════════════════════════ */
 
 /* ── LEAD QUALITY FILTERS ── */
+// SaaS founder feedback-seekers — highest conversion for free-teardown offers.
+// These are people publicly asking for free work. +60 score (above REAL_INTENT).
+const HIGH_INTENT = [
+  'roast my landing page','roast my site','roast my website','roast my saas',
+  'feedback on my','looking for feedback','critique my','teardown my',
+  'no conversions','low conversion','not converting','zero conversions',
+  'not getting users','not getting sign.?ups','no sign.?ups','can.?t get users',
+  'no one signs up','nobody signs up','users not signing up','users not converting',
+  'low engagement','no engagement','no one uses','nobody uses',
+  'no traffic','can.?t get traffic','traffic is zero','zero traffic',
+  'what am i doing wrong','am i doing this right','is this normal',
+  'why no users','why no customers','why zero','why no one',
+  'just launched','launched today','launched yesterday','launched last week',
+  'validate my idea','validate my saas','validate my startup',
+  'pre.?launch','pre launch','waitlist not growing'
+];
+
 const REAL_INTENT = [
   'no clients','no customers','not getting clients','not getting leads',
   'no sales','no bookings','dead','nothing working','tried everything',
@@ -1222,17 +1239,22 @@ function scorePost(title, text, isComment = false) {
   // Hard excludes — return 0 immediately
   if (HARD_EXCLUDE.some(k => raw.includes(k))) return 0;
 
+  // HIGH_INTENT bypasses business-context gate — founders asking for feedback
+  // are qualified leads even if they don't mention "business" explicitly.
+  const matchesHigh = HIGH_INTENT.some(k => new RegExp(k).test(raw));
+
   // Must have business context (comments are already business-context-adjacent)
-  if (!isComment && !hasBusinessContext(raw)) return 0;
+  if (!matchesHigh && !isComment && !hasBusinessContext(raw)) return 0;
 
   let score = 0;
   const hasBuyer = BUYER_SIGNALS.some(k => raw.includes(k));
 
-  // Strong pain signal — high confidence lead (passes alone)
-  if (REAL_INTENT.some(k => raw.includes(k))) {
+  // HIGH_INTENT = founder publicly asking for free help → highest conversion
+  if (matchesHigh) {
+    score += 60;
+  } else if (REAL_INTENT.some(k => raw.includes(k))) {
     score += 50;
   } else if (SOFT_INTENT.some(k => raw.includes(k)) && hasBuyer) {
-    // Softer intent only counts when combined with a specific buyer keyword
     score += 25;
   } else {
     return 0; // no clear intent + buyer combo → not a lead
@@ -1378,7 +1400,7 @@ function analyzePost(title, text, preScore, platform) {
 }
 
 /* ── KEYWORD PILLS ── */
-let activeFeedKw = 'struggling to find';
+let activeFeedKw = 'roast my landing page';
 
 document.querySelectorAll('.kw-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1430,7 +1452,8 @@ async function fetchFeed(keyword) {
     const TARGET_SUBS = new Set([
       'smallbusiness','entrepreneur','sidehustle','freelance','sales',
       'startups','sweatystartup','entrepreneurridealong','forhire',
-      'businessowners','growmybusiness','digital_marketing','marketinghelp','agency'
+      'businessowners','growmybusiness','digital_marketing','marketinghelp','agency',
+      'saas','indiehackers','sideproject','roastmystartup','webdev','marketing'
     ]);
 
     const leads = [];
@@ -1482,6 +1505,9 @@ function renderFeedCard(post) {
                :  post.platform === 'producthunt' ? 'Product Hunt'
                :  post.platform === 'indiehackers' ? 'Indie Hackers'
                :  post.platform === 'crunchbase' ? 'Crunchbase'
+               :  post.platform === 'x' || post.platform === 'twitter' ? 'X / Twitter'
+               :  post.platform === 'linkedin' ? 'LinkedIn'
+               :  post.platform === 'manual' ? 'Manual'
                :  esc(post.platform);
 
   const companyBlock = (company || website) ? `
@@ -1597,6 +1623,74 @@ async function saveFeedLead(id) {
     toast('Lead saved to CRM', 'ok');
   } catch { toast('Could not save lead', 'err'); }
 }
+
+/* ── MANUAL PASTE SCORING — X / LinkedIn without APIs ── */
+function parsePastedPosts(raw) {
+  return raw.split(/\n+/).map(line => line.trim()).filter(Boolean).map((line, i) => {
+    // Expected: PLATFORM | AUTHOR | URL | TEXT  — all optional except TEXT
+    const parts = line.split('|').map(s => s.trim());
+    if (parts.length >= 4) {
+      const [platform, author, url, ...rest] = parts;
+      return {
+        id: 'p_' + Date.now() + '_' + i,
+        platform: (platform || 'manual').toLowerCase(),
+        author: author || 'unknown',
+        url: url || '',
+        title: rest.join(' | ').substring(0, 120),
+        text: rest.join(' | '),
+        created: Math.floor(Date.now() / 1000),
+        score: 0
+      };
+    }
+    // Fallback: whole line is text
+    return {
+      id: 'p_' + Date.now() + '_' + i,
+      platform: 'manual',
+      author: 'unknown',
+      url: '',
+      title: line.substring(0, 120),
+      text: line,
+      created: Math.floor(Date.now() / 1000),
+      score: 0
+    };
+  });
+}
+
+function scorePastedPosts() {
+  const raw = document.getElementById('paste-posts').value.trim();
+  if (!raw) { toast('Paste some posts first', 'err'); return; }
+  const parsed = parsePastedPosts(raw);
+  // Manual paste: soften context gate — founders on X/LinkedIn rarely say "business"
+  const leads = parsed.map(p => {
+    // Force-score against HIGH_INTENT + REAL_INTENT + SOFT_INTENT regardless of business-context gate
+    const t = (p.title + ' ' + p.text).toLowerCase();
+    if (HARD_EXCLUDE.some(k => t.includes(k))) return null;
+    let score = 0;
+    if (HIGH_INTENT.some(k => new RegExp(k).test(t))) score += 60;
+    else if (REAL_INTENT.some(k => t.includes(k))) score += 50;
+    else if (SOFT_INTENT.some(k => t.includes(k))) score += 25;
+    else score += 15; // baseline — you pasted it, give it the benefit of the doubt
+    if (t.includes('?')) score += 10;
+    if (/desperate|urgent|asap|really struggling/.test(t)) score += 15;
+    return { ...p, _score: Math.min(score, 100) };
+  }).filter(Boolean);
+
+  if (!leads.length) { toast('All posts hit hard-exclude filter', 'err'); return; }
+
+  leads.sort((a, b) => b._score - a._score);
+  leads.forEach(l => { CURRENT_LEADS[l.id] = l; });
+  document.getElementById('feed-meta').textContent = `${leads.length} pasted leads scored · top = ${leads[0]._score}`;
+  const grid = document.getElementById('feed-grid');
+  // Append to existing cards rather than wipe — mixing scraped + manual is fine
+  const existing = grid.querySelector('.feed-empty') ? '' : grid.innerHTML;
+  grid.innerHTML = leads.map(renderFeedCard).join('') + existing;
+  toast(`Scored ${leads.length} pasted posts`, 'ok');
+}
+
+const pasteBtn = document.getElementById('btn-paste-score');
+if (pasteBtn) pasteBtn.addEventListener('click', scorePastedPosts);
+const pasteClear = document.getElementById('btn-paste-clear');
+if (pasteClear) pasteClear.addEventListener('click', () => { document.getElementById('paste-posts').value = ''; });
 
 /* ── SOURCES + BATCH WIRING ── */
 document.querySelectorAll('.src').forEach(c => {
