@@ -28,70 +28,151 @@ function body(req) {
   });
 }
 
+/* ── LEAD SOURCE FETCHERS ── */
+// All return Promise<Array<NormalizedPost>>.
+// NormalizedPost: { id, platform, title, text, author, url, created, subreddit?, companyHint?, websiteHint? }
+
+async function fetchReddit(kw, H) {
+  const SUBS = ['smallbusiness','Entrepreneur','freelance','sidehustle',
+    'sweatystartup','EntrepreneurRideAlong','startups','sales'];
+  const parsePost = p => ({
+    id:        'r_' + p.id,
+    platform:  'reddit',
+    title:     p.title || '',
+    text:      (p.selftext || p.title || '').substring(0, 600),
+    author:    p.author || 'unknown',
+    subreddit: p.subreddit || '',
+    url:       `https://reddit.com${p.permalink}`,
+    created:   p.created_utc,
+    score:     p.score || 0
+  });
+  try {
+    const subResults = await Promise.all(SUBS.map(async sub => {
+      try {
+        const url = `https://www.reddit.com/r/${sub}/search.json?q=${encodeURIComponent(kw)}&restrict_sr=1&sort=new&t=month&limit=8`;
+        const r = await fetch(url, { headers: H });
+        const d = await r.json();
+        return (d.data?.children || []).map(c => parsePost(c.data));
+      } catch { return []; }
+    }));
+    const seen = new Set();
+    return subResults.flat().filter(p => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+  } catch { return []; }
+}
+
+// Product Hunt — public GraphQL requires token, but daily/weekly RSS + search via official sitemap works without.
+// We use the public discover feed (JSON) which returns recent launches.
+async function fetchProductHunt(kw, H) {
+  try {
+    // Public unauthenticated discover endpoint (feed returns recent launches w/ tagline + site)
+    const url = 'https://www.producthunt.com/frontend/graphql';
+    const query = {
+      operationName: 'HomefeedPostsQuery',
+      variables: { order: 'RANKING', first: 20 },
+      query: `query HomefeedPostsQuery($first:Int,$order:String){posts(first:$first,order:$order){edges{node{id name tagline slug website createdAt votesCount user{name}}}}}`
+    };
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { ...H, 'Content-Type': 'application/json' },
+      body: JSON.stringify(query)
+    });
+    const d = await r.json();
+    const edges = d?.data?.posts?.edges || [];
+    const kwLow = kw.toLowerCase();
+    return edges
+      .map(e => e.node)
+      .filter(n => !kw || (n.name + ' ' + n.tagline).toLowerCase().includes(kwLow.split(' ')[0]))
+      .map(n => ({
+        id:       'ph_' + n.id,
+        platform: 'producthunt',
+        title:    n.name + ' — ' + (n.tagline || ''),
+        text:     n.tagline || '',
+        author:   n.user?.name || 'maker',
+        url:      `https://www.producthunt.com/posts/${n.slug}`,
+        created:  Math.floor(new Date(n.createdAt).getTime() / 1000),
+        score:    n.votesCount || 0,
+        companyHint: n.name,
+        websiteHint: n.website || ''
+      }));
+  } catch { return []; }
+}
+
+// Indie Hackers — public feed scrape (no API). Grab recent posts from /feed or topic pages.
+async function fetchIndieHackers(kw, H) {
+  try {
+    const url = `https://www.indiehackers.com/search.json?q=${encodeURIComponent(kw)}&type=posts`;
+    const r = await fetch(url, { headers: H });
+    if (!r.ok) return [];
+    const d = await r.json();
+    const posts = d?.posts || d?.results?.posts || [];
+    return posts.slice(0, 20).map(p => ({
+      id:       'ih_' + (p.id || p.slug || Math.random().toString(36).slice(2)),
+      platform: 'indiehackers',
+      title:    p.title || p.name || '',
+      text:     (p.rawBody || p.body || p.description || '').substring(0, 600),
+      author:   p.userName || p.user?.name || 'founder',
+      url:      p.url || `https://www.indiehackers.com/post/${p.slug || p.id}`,
+      created:  Math.floor(new Date(p.createdAt || Date.now()).getTime() / 1000),
+      score:    p.voteCount || 0,
+      companyHint: p.product?.name || '',
+      websiteHint: p.product?.website || ''
+    }));
+  } catch { return []; }
+}
+
+// Crunchbase stub — requires paid API key. Returns empty until CRUNCHBASE_API_KEY is set in env.
+async function fetchCrunchbase(kw, H) {
+  const key = process.env.CRUNCHBASE_API_KEY;
+  if (!key) return []; // silently skip if not configured
+  try {
+    const url = `https://api.crunchbase.com/api/v4/searches/organizations?user_key=${key}`;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { ...H, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        field_ids: ['identifier','short_description','website_url','categories'],
+        query: [{ type: 'predicate', field_id: 'identifier', operator_id: 'contains', values: [kw] }],
+        limit: 20
+      })
+    });
+    const d = await r.json();
+    return (d?.entities || []).map(e => ({
+      id:       'cb_' + e.uuid,
+      platform: 'crunchbase',
+      title:    e.properties?.identifier?.value || '',
+      text:     e.properties?.short_description || '',
+      author:   '',
+      url:      `https://www.crunchbase.com/organization/${e.properties?.identifier?.permalink}`,
+      created:  Math.floor(Date.now() / 1000),
+      score:    0,
+      companyHint: e.properties?.identifier?.value || '',
+      websiteHint: e.properties?.website_url || ''
+    }));
+  } catch { return []; }
+}
+
 const ROUTES = {
   'GET /api/feed': async (req, res) => {
     const qs  = req.url.includes('?') ? req.url.split('?')[1] : '';
     const kw  = decodeURIComponent((qs.match(/q=([^&]*)/) || [])[1] || 'need clients');
-    const H   = { 'User-Agent': 'TheSaaSsin-Operator/1.0 (lead discovery)' };
+    const srcParam = decodeURIComponent((qs.match(/sources=([^&]*)/) || [])[1] || 'reddit,producthunt,indiehackers');
+    const sources  = new Set(srcParam.split(',').map(s => s.trim().toLowerCase()));
+    const H = { 'User-Agent': 'TheSaaSsin-Operator/1.0 (lead discovery)' };
 
-    // Search each high-signal sub individually — Reddit ignores restrict_sr on multi-sub URLs
-    const TARGET_SUBS = [
-      'smallbusiness', 'Entrepreneur', 'freelance', 'sidehustle',
-      'sweatystartup', 'EntrepreneurRideAlong', 'startups', 'sales'
-    ];
-
-    function parsePost(p) {
-      return {
-        id:        p.id,
-        title:     p.title || '',
-        text:      (p.selftext || p.title || '').substring(0, 500),
-        author:    p.author || 'unknown',
-        subreddit: p.subreddit || '',
-        url:       `https://reddit.com${p.permalink}`,
-        permalink: p.permalink,
-        created:   p.created_utc,
-        score:     p.score || 0,
-        platform:  'reddit',
-        comments:  []
-      };
-    }
+    const tasks = [];
+    if (sources.has('reddit'))       tasks.push(fetchReddit(kw, H));
+    if (sources.has('producthunt'))  tasks.push(fetchProductHunt(kw, H));
+    if (sources.has('indiehackers')) tasks.push(fetchIndieHackers(kw, H));
+    if (sources.has('crunchbase'))   tasks.push(fetchCrunchbase(kw, H));
 
     try {
-      // Fetch all subs in parallel, 8 results each = up to 64 candidates
-      const subResults = await Promise.all(TARGET_SUBS.map(async sub => {
-        try {
-          const url = `https://www.reddit.com/r/${sub}/search.json?q=${encodeURIComponent(kw)}&restrict_sr=1&sort=new&t=month&limit=8`;
-          const r   = await fetch(url, { headers: H });
-          const d   = await r.json();
-          return (d.data?.children || []).map(c => parsePost(c.data));
-        } catch { return []; }
-      }));
-
-      // Merge, deduplicate by id
-      const seen = new Set();
-      const posts = subResults.flat().filter(p => {
-        if (seen.has(p.id)) return false;
-        seen.add(p.id);
-        return true;
-      });
-
-      // Fetch comments for top 6 posts in parallel (pain is often in comments)
-      await Promise.all(posts.slice(0, 6).map(async post => {
-        try {
-          const cr = await fetch(
-            `https://www.reddit.com/r/${post.subreddit}/comments/${post.id}.json?limit=10&sort=top&depth=1`,
-            { headers: H }
-          );
-          const cd = await cr.json();
-          post.comments = ((cd[1]?.data?.children) || [])
-            .filter(c => c.kind === 't1')
-            .map(c => (c.data.body || '').substring(0, 300))
-            .filter(b => b.length > 30 && b !== '[deleted]' && b !== '[removed]')
-            .slice(0, 5);
-        } catch { post.comments = []; }
-      }));
-
-      res.end(JSON.stringify({ ok: true, posts, keyword: kw }));
+      const results = await Promise.all(tasks);
+      const posts = results.flat();
+      res.end(JSON.stringify({ ok: true, posts, keyword: kw, sources: [...sources] }));
     } catch (e) {
       res.end(JSON.stringify({ ok: false, posts: [], error: e.message }));
     }

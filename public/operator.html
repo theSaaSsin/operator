@@ -22,6 +22,10 @@
       <div class="nav-item active" data-panel="client">
         <i class="fas fa-user-plus"></i> Client Creator
       </div>
+      <div class="nav-section">Discover</div>
+      <div class="nav-item" data-panel="feed">
+        <i class="fas fa-satellite-dish"></i> Lead Feed
+      </div>
       <div class="nav-section">Manage</div>
       <div class="nav-item" data-panel="crm">
         <i class="fas fa-chart-line"></i> CRM / Leads
@@ -192,6 +196,45 @@
               <p>Fill in the form and click Generate System</p>
             </div>
             <iframe id="preview-frame" style="display:none"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: LEAD FEED ── -->
+      <div class="panel" id="panel-feed">
+        <div class="feed-topbar">
+          <h2>Lead Feed</h2>
+          <div class="feed-sources">
+            <label class="src-chk" title="Pain-driven buyers (primary)"><input type="checkbox" class="src" data-src="reddit" checked><span>Reddit</span></label>
+            <label class="src-chk" title="Founders — inspiration / SaaS pain, not always buyers"><input type="checkbox" class="src" data-src="producthunt"><span>Product Hunt</span></label>
+            <label class="src-chk" title="Founders — inspiration / SaaS pain, not always buyers"><input type="checkbox" class="src" data-src="indiehackers"><span>Indie Hackers</span></label>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn btn-secondary btn-sm" id="btn-copy-batch" title="Copy selected leads as markdown for deeper analysis">
+            <i class="fas fa-copy"></i> Copy Selected (<span id="batch-count">0</span>)
+          </button>
+          <button class="btn btn-primary btn-sm" id="btn-feed-refresh" style="margin-left:8px">
+            <i class="fas fa-arrows-rotate"></i> Scan
+          </button>
+        </div>
+        <div class="feed-kwbar">
+          <div class="kw-row">
+            <div class="kw-btn active" data-kw="need clients">Need Clients</div>
+            <div class="kw-btn" data-kw="no bookings">No Bookings</div>
+            <div class="kw-btn" data-kw="struggling">Struggling</div>
+            <div class="kw-btn" data-kw="how do i get clients">How Do I Get Clients</div>
+            <div class="kw-btn" data-kw="slow month">Slow Month</div>
+            <div class="kw-btn" data-kw="launched">Just Launched</div>
+          </div>
+          <div class="kw-custom">
+            <input type="text" id="feed-custom-kw" placeholder="Custom keyword (overrides pills)...">
+          </div>
+        </div>
+        <div class="feed-meta" id="feed-meta">Click Scan to start</div>
+        <div class="feed-grid" id="feed-grid">
+          <div class="feed-empty">
+            <i class="fas fa-satellite-dish"></i>
+            <p>Pick a keyword + sources, then hit Scan</p>
           </div>
         </div>
       </div>

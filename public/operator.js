@@ -1244,11 +1244,57 @@ function scorePost(title, text, isComment = false) {
 }
 
 /* ── ANALYSIS ENGINE ── */
-function analyzePost(title, text, preScore) {
+// Extracts company name + website from free text (titles, post bodies).
+function extractCompany(title, text, hint) {
+  if (hint) return hint;
+  const raw = title + ' ' + text;
+  // "my business X" / "my company X" / "running X" patterns
+  const m = raw.match(/(?:my (?:business|company|agency|shop|site|brand) (?:is |called )?)([A-Z][A-Za-z0-9&'\- ]{2,30})/);
+  if (m) return m[1].trim();
+  // ALL-CAPS or TitleCase brand-ish word near start
+  const b = title.match(/\b([A-Z][a-zA-Z0-9]{3,}(?:\s[A-Z][a-zA-Z0-9]+)?)\b/);
+  if (b && !/\b(How|Why|What|When|Need|Help|Looking|Reddit)\b/.test(b[1])) return b[1];
+  return '';
+}
+
+function extractWebsite(title, text, hint) {
+  if (hint) return hint;
+  const raw = title + ' ' + text;
+  const m = raw.match(/\b((?:https?:\/\/)?(?:www\.)?[a-z0-9-]+\.(?:com|io|co|net|app|dev|ai|uk|org))\b/i);
+  return m ? (m[1].startsWith('http') ? m[1] : 'https://' + m[1]) : '';
+}
+
+// Spot the 1–2 sharpest weaknesses / outreach angles based on text cues.
+function spotWeaknesses(title, text) {
+  const t = (title + ' ' + text).toLowerCase();
+  const hits = [];
+  const cues = [
+    ['no website|bad website|old website|ugly site|basic site', 'Weak website — losing conversions before the pitch'],
+    ['no follow.?up|forgot to follow|lost track', 'No follow-up system — leads going cold'],
+    ['no crm|spreadsheet|post.?it', 'No CRM — pipeline invisible'],
+    ['no ads|stopped running ads|ads too expensive|ads don.?t work', 'Paid acquisition broken — need organic lane'],
+    ['no seo|can.?t rank|not showing up on google', 'Zero SEO — invisible on search'],
+    ['don.?t post|social media (is )?dead|no content', 'No content engine — authority not compounding'],
+    ['cold.? (email|dm)s? (not|don.?t)|no one (responds|replies)', 'Outreach copy weak — no replies'],
+    ['booking.?|no.?one books|empty calendar', 'Booking flow missing — no frictionless CTA'],
+    ['pricing|charge|undercharging|too cheap|too expensive', 'Pricing positioning unclear'],
+    ['referral|word of mouth only', 'Over-reliant on referrals — single point of failure'],
+    ['website traffic|no traffic|low traffic', 'No traffic engine — top of funnel dry'],
+    ['chatbot|after hours|missed calls|missed leads', 'No after-hours capture — leaking leads'],
+    ['reviews|testimonials|social proof', 'Thin social proof — trust gap'],
+    ['launched|just launched|new product', 'Pre-traction — needs first 10 customers fast']
+  ];
+  for (const [pat, label] of cues) {
+    if (new RegExp(pat).test(t)) hits.push(label);
+    if (hits.length >= 2) break;
+  }
+  return hits;
+}
+
+function analyzePost(title, text, preScore, platform) {
   const t = (title + ' ' + text).toLowerCase();
   const urgency = preScore !== undefined ? preScore : scorePost(title, text);
 
-  // Niche detection
   const niche = /plumb|pipe|boiler|heating|gas safe/.test(t)       ? 'Plumber'
     : /electrician|wiring|fuse|eicr|niceic/.test(t)                ? 'Electrician'
     : /builder|construction|renovation|extension|loft/.test(t)     ? 'Builder'
@@ -1256,27 +1302,29 @@ function analyzePost(title, text, preScore) {
     : /consultant|freelanc|strateg|advisor|coach|mentor/.test(t)   ? 'Consultant'
     : /marketing|agency|seo|ads|social media|lead gen/.test(t)     ? 'Marketing Agency'
     : /saas|software|app |platform|startup|founder/.test(t)        ? 'SaaS / Tech'
+    : platform === 'producthunt' || platform === 'indiehackers'    ? 'SaaS / Founder'
     : 'Business Owner';
 
-  // Approach
-  const approach = urgency >= 70 ? 'Direct offer — they need help now, lead with a result'
-    : urgency >= 40              ? 'Empathy first — acknowledge the problem, then offer'
-    :                              'Question first — qualify before pitching';
+  const weaknesses = spotWeaknesses(title, text);
+  if (!weaknesses.length) {
+    // fallback heuristic by urgency
+    weaknesses.push(urgency >= 70
+      ? 'Acute client-acquisition gap — no system running'
+      : 'Unclear offer or positioning — qualify before assuming');
+  }
 
-  // Opener
-  const opener = urgency >= 70
-    ? `Saw your post — I help ${niche.toLowerCase()} businesses fix exactly this. Built a quick preview for you. Worth a 15-min look?`
-    : `Saw this and it resonated — most ${niche.toLowerCase()} businesses I work with hit the same wall. Happy to show you what changed for them?`;
-
-  // Tip
-  const tip = urgency >= 70 ? 'Message within the hour — high-intent window closes fast'
-    : urgency >= 40          ? 'Start with empathy, not a pitch — ask one question first'
-    :                          'Low signal — qualify harder before investing time here';
+  // Outreach angle — the money bridge: problem → how to open
+  const primaryWeak = weaknesses[0];
+  const outreachAngle = urgency >= 70
+    ? `Lead with: "${primaryWeak.split(' — ')[0]}" — offer a 15-min audit, not a pitch.`
+    : urgency >= 40
+    ? `Open with empathy on "${primaryWeak.split(' — ')[0]}", ask a qualifying question, then offer a free teardown.`
+    : `Soft ask first — DM with "noticed X, curious how you're handling it?" before selling anything.`;
 
   const urgencyLabel = urgency >= 70 ? 'High' : urgency >= 40 ? 'Medium' : 'Low';
   const urgencyColor = urgency >= 70 ? '#22c55e' : urgency >= 40 ? '#f59e0b' : '#8888a0';
 
-  return { urgency, urgencyLabel, urgencyColor, niche, approach, opener, tip };
+  return { urgency, urgencyLabel, urgencyColor, niche, weaknesses, outreachAngle };
 }
 
 /* ── KEYWORD PILLS ── */
@@ -1296,85 +1344,78 @@ document.getElementById('btn-feed-refresh').addEventListener('click', () => {
   fetchFeed(kw);
 });
 
+/* ── LEADS CACHE (for batch copy) ── */
+let CURRENT_LEADS = {};   // id -> enriched lead
+const SELECTED = new Set();
+
+function selectedCount() { return SELECTED.size; }
+function updateBatchBtn() {
+  const el = document.getElementById('batch-count');
+  if (el) el.textContent = selectedCount();
+}
+
 /* ── FETCH + RENDER ── */
 async function fetchFeed(keyword) {
   const grid = document.getElementById('feed-grid');
   const meta = document.getElementById('feed-meta');
-  grid.innerHTML = '<div class="feed-loading"><i class="fas fa-circle-notch"></i>Scanning Reddit for leads...</div>';
+  const srcs = Array.from(document.querySelectorAll('.src:checked')).map(c => c.dataset.src);
+  if (!srcs.length) {
+    grid.innerHTML = '<div class="feed-empty"><i class="fas fa-triangle-exclamation"></i><p>Pick at least one source</p></div>';
+    return;
+  }
+  grid.innerHTML = `<div class="feed-loading"><i class="fas fa-circle-notch"></i>Scanning ${srcs.length} source${srcs.length>1?'s':''}…</div>`;
   meta.textContent = '';
+  CURRENT_LEADS = {};
+  SELECTED.clear();
+  updateBatchBtn();
+
   try {
-    const res  = await fetch(API.replace('/api','') + '/api/feed?q=' + encodeURIComponent(keyword));
+    const res  = await fetch(API.replace('/api','') + '/api/feed?q=' + encodeURIComponent(keyword) + '&sources=' + srcs.join(','));
     const data = await res.json();
     if (!data.ok || !data.posts.length) {
       grid.innerHTML = '<div class="feed-empty"><i class="fas fa-inbox"></i><p>No posts found — try a different keyword</p></div>';
       return;
     }
 
-    // Whitelist — only accept posts from target business subs
     const TARGET_SUBS = new Set([
       'smallbusiness','entrepreneur','sidehustle','freelance','sales',
       'startups','sweatystartup','entrepreneurridealong','forhire',
-      'entrepreneur_ride_along','businessowners','growmybusiness',
-      'digital_marketing','marketinghelp','agency'
+      'businessowners','growmybusiness','digital_marketing','marketinghelp','agency'
     ]);
-    const businessPosts = data.posts.filter(p => TARGET_SUBS.has(p.subreddit.toLowerCase()));
 
-    // Score posts
-    const scoredPosts = businessPosts
-      .map(p => ({ ...p, _score: scorePost(p.title, p.text), _source: 'post' }))
-      .filter(p => p._score >= 40);
-
-    // Extract high-signal comments as additional lead candidates
-    const commentLeads = [];
-    for (const post of businessPosts) {
-      if (!post.comments || !post.comments.length) continue;
-      for (const comment of post.comments) {
-        const cs = scorePost('', comment, true);
-        if (cs >= 40) {
-          commentLeads.push({
-            id:        post.id + '_c' + commentLeads.length,
-            title:     post.title,
-            text:      comment,
-            author:    post.author,
-            subreddit: post.subreddit,
-            url:       post.url,
-            permalink: post.permalink,
-            created:   post.created,
-            score:     post.score,
-            platform:  'reddit',
-            _score:    cs,
-            _source:   'comment'
-          });
-        }
+    const leads = [];
+    for (const p of data.posts) {
+      let score;
+      if (p.platform === 'reddit') {
+        if (!TARGET_SUBS.has((p.subreddit || '').toLowerCase())) continue;
+        score = scorePost(p.title, p.text);
+        if (score < 40) continue;
+      } else {
+        // PH / IH: softer floor — they're inspiration/pattern leads, not always pain leads
+        score = Math.max(25, scorePost(p.title, p.text) || 35);
       }
+      leads.push({ ...p, _score: score });
     }
 
-    // Merge, deduplicate by post id (keep highest scorer), sort desc
-    const seen = new Set();
-    const allLeads = [...scoredPosts, ...commentLeads]
-      .sort((a, b) => b._score - a._score)
-      .filter(l => {
-        const key = l.id.split('_c')[0];
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-
-    if (!allLeads.length) {
-      grid.innerHTML = '<div class="feed-empty"><i class="fas fa-filter"></i><p>No high-intent leads in this batch — try "no clients" or "need more bookings"</p></div>';
-      meta.textContent = `${data.posts.length} posts fetched · ${businessPosts.length} from target subs · 0 passed quality filter`;
+    if (!leads.length) {
+      grid.innerHTML = '<div class="feed-empty"><i class="fas fa-filter"></i><p>No quality leads — try "no clients", "no bookings", or a specific niche word</p></div>';
+      meta.textContent = `${data.posts.length} raw · 0 passed filter · "${keyword}"`;
       return;
     }
 
-    const commentCount = allLeads.filter(l => l._source === 'comment').length;
-    meta.textContent = `${allLeads.length} quality leads · ${businessPosts.length}/${data.posts.length} from target subs${commentCount ? ` · ${commentCount} from comments` : ''} · "${keyword}"`;
-    grid.innerHTML = allLeads.map(p => renderFeedCard(p)).join('');
+    leads.sort((a, b) => b._score - a._score);
+    leads.forEach(l => { CURRENT_LEADS[l.id] = l; });
+
+    const bySrc = leads.reduce((acc, l) => { acc[l.platform] = (acc[l.platform]||0)+1; return acc; }, {});
+    meta.textContent = `${leads.length} leads · ${Object.entries(bySrc).map(([k,v])=>`${v} ${k}`).join(' · ')} · "${keyword}"`;
+    grid.innerHTML = leads.map(p => renderFeedCard(p)).join('');
   } catch (e) {
     grid.innerHTML = '<div class="feed-empty"><i class="fas fa-triangle-exclamation"></i><p>Could not fetch — check server is running</p></div>';
   }
 }
 
 function timeAgo(utc) {
+  if (!utc) return '';
   const diff = Math.floor(Date.now() / 1000) - utc;
   if (diff < 3600)   return Math.floor(diff/60) + 'm ago';
   if (diff < 86400)  return Math.floor(diff/3600) + 'h ago';
@@ -1382,24 +1423,43 @@ function timeAgo(utc) {
 }
 
 function renderFeedCard(post) {
-  const isComment = post._source === 'comment';
-  const a   = analyzePost(post.title, post.text, post._score);
-  const ago = timeAgo(post.created);
-  const fillW = Math.max(4, a.urgency);
-  const sourceTag = isComment
-    ? `<span style="font-size:.65rem;background:rgba(255,42,42,.15);color:var(--accent);padding:2px 6px;border-radius:4px;margin-left:4px">comment</span>`
-    : '';
+  const a       = analyzePost(post.title, post.text, post._score, post.platform);
+  const ago     = timeAgo(post.created);
+  const fillW   = Math.max(4, a.urgency);
+  const company = extractCompany(post.title, post.text, post.companyHint);
+  const website = extractWebsite(post.title, post.text, post.websiteHint);
+  const platLbl = post.platform === 'reddit' ? ('r/' + esc(post.subreddit || '?'))
+               :  post.platform === 'producthunt' ? 'Product Hunt'
+               :  post.platform === 'indiehackers' ? 'Indie Hackers'
+               :  post.platform === 'crunchbase' ? 'Crunchbase'
+               :  esc(post.platform);
+
+  const companyBlock = (company || website) ? `
+    <div class="feed-company">
+      <div class="feed-company-name">
+        ${esc(company || 'Unknown company')}
+        ${website ? `<a href="${esc(website)}" target="_blank" rel="noopener">${esc(website.replace(/^https?:\/\//,''))}</a>` : ''}
+      </div>
+    </div>` : '';
+
+  const weakHTML = a.weaknesses.map(w => `<li>${esc(w)}</li>`).join('');
 
   return `<div class="feed-card" id="fc-${esc(post.id)}">
+    <input type="checkbox" class="feed-check" data-id="${esc(post.id)}" onchange="toggleBatch('${esc(post.id)}', this.checked)">
     <div class="feed-card-top">
-      <span class="feed-platform">r/${esc(post.subreddit)}</span>
-      <span class="feed-title">${esc(post.title)}${sourceTag}</span>
+      <span class="feed-platform ${esc(post.platform)}">${platLbl}</span>
       <span class="feed-time">${ago}</span>
     </div>
-    ${post.text && post.text !== post.title ? `<div class="feed-snippet">${isComment ? '<i class="fas fa-comment" style="color:var(--accent);margin-right:4px;font-size:.7rem"></i>' : ''}${esc(post.text)}</div>` : ''}
+    <div class="feed-title">${esc(post.title)}</div>
+    ${companyBlock}
+    ${post.text && post.text !== post.title ? `<div class="feed-snippet">${esc(post.text.substring(0, 240))}${post.text.length > 240 ? '…' : ''}</div>` : ''}
+    <div class="feed-section">
+      <span class="feed-section-label">Spotted Weaknesses</span>
+      <ul class="feed-weak-list">${weakHTML}</ul>
+    </div>
     <div class="feed-analysis">
       <div class="feed-analysis-row">
-        <span class="analysis-label">Urgency</span>
+        <span class="analysis-label">Score</span>
         <div class="urgency-bar"><div class="urgency-fill" style="width:${fillW}%;background:${a.urgencyColor}"></div></div>
         <span class="analysis-val" style="color:${a.urgencyColor};font-weight:700">${a.urgencyLabel} (${a.urgency})</span>
       </div>
@@ -1407,54 +1467,99 @@ function renderFeedCard(post) {
         <span class="analysis-label">Niche</span>
         <span class="analysis-val">${esc(a.niche)}</span>
       </div>
-      <div class="feed-analysis-row">
-        <span class="analysis-label">Approach</span>
-        <span class="analysis-val">${esc(a.approach)}</span>
-      </div>
-      <div class="feed-tip">💡 ${esc(a.tip)}</div>
     </div>
-    <div class="feed-analysis" style="margin-top:-4px;border-color:rgba(255,42,42,.15)">
-      <div class="feed-analysis-row" style="align-items:flex-start">
-        <span class="analysis-label" style="color:var(--accent)">Opener</span>
-        <span class="analysis-val" style="font-style:italic;color:var(--text)">"${esc(a.opener)}"</span>
-      </div>
-    </div>
+    <div class="feed-tip"><strong>Outreach angle:</strong> ${esc(a.outreachAngle)}</div>
     <div class="feed-actions">
-      <button class="btn btn-secondary btn-sm" onclick="saveFeedLead('${esc(post.id)}','${esc(post.author)}','${esc(a.niche)}','${esc(post.url)}','${esc(post.title).replace(/'/g,'')}',${a.urgency})">
+      <button class="btn btn-secondary btn-sm" onclick="saveFeedLead('${esc(post.id)}')">
         <i class="fas fa-user-plus"></i> Save Lead
       </button>
       <a class="btn btn-secondary btn-sm" href="${esc(post.url)}" target="_blank" rel="noopener">
-        <i class="fas fa-arrow-up-right-from-square"></i> Open Post
+        <i class="fas fa-arrow-up-right-from-square"></i> Open
       </a>
     </div>
   </div>`;
 }
 
-async function saveFeedLead(id, author, niche, url, title, score) {
+function toggleBatch(id, checked) {
+  if (checked) SELECTED.add(id); else SELECTED.delete(id);
+  const card = document.getElementById('fc-' + id);
+  if (card) card.classList.toggle('selected', checked);
+  updateBatchBtn();
+}
+
+// Copy selected leads as markdown block for pasting back for deeper analysis.
+function copyBatch() {
+  const picks = [...SELECTED].map(id => CURRENT_LEADS[id]).filter(Boolean);
+  if (!picks.length) { toast('No leads selected', 'err'); return; }
+  const md = picks.map((p, i) => {
+    const a = analyzePost(p.title, p.text, p._score, p.platform);
+    const company = extractCompany(p.title, p.text, p.companyHint) || '(unknown)';
+    const website = extractWebsite(p.title, p.text, p.websiteHint) || '(none)';
+    return [
+      `### Lead ${i+1} — ${company}`,
+      `- **Source:** ${p.platform}${p.subreddit ? ' / r/' + p.subreddit : ''}`,
+      `- **Website:** ${website}`,
+      `- **Title:** ${p.title}`,
+      `- **Snippet:** ${(p.text || '').substring(0, 300).replace(/\s+/g, ' ').trim()}`,
+      `- **Niche:** ${a.niche}`,
+      `- **Score:** ${a.urgency} (${a.urgencyLabel})`,
+      `- **Weaknesses:** ${a.weaknesses.join(' · ')}`,
+      `- **Outreach angle:** ${a.outreachAngle}`,
+      `- **URL:** ${p.url}`
+    ].join('\n');
+  }).join('\n\n---\n\n');
+
+  const header = `# ${picks.length} leads — batch export for deeper analysis\n\n`;
+  navigator.clipboard.writeText(header + md).then(
+    () => toast(`Copied ${picks.length} leads to clipboard`, 'ok'),
+    () => toast('Clipboard blocked — check browser permissions', 'err')
+  );
+}
+
+async function saveFeedLead(id) {
+  const post = CURRENT_LEADS[id];
+  if (!post) return;
+  const a = analyzePost(post.title, post.text, post._score, post.platform);
+  const company = extractCompany(post.title, post.text, post.companyHint);
+  const website = extractWebsite(post.title, post.text, post.websiteHint);
   try {
     await fetch(API + '/leads', {
       method: 'POST',
       body: JSON.stringify({
-        name:     'u/' + author,
-        business: niche + ' (Reddit)',
+        name:     post.author ? ('@' + post.author) : (company || 'Unknown'),
+        business: company || (a.niche + ' (' + post.platform + ')'),
+        website:  website,
         status:   'new',
-        score:    score,
-        source:   url,
-        notes:    title,
-        niche:    niche
+        score:    a.urgency,
+        source:   post.url,
+        notes:    post.title + '\n\nAngle: ' + a.outreachAngle,
+        niche:    a.niche,
+        weaknesses: a.weaknesses,
+        platform: post.platform
       })
     });
-    // Visual feedback — grey out the saved card
     const card = document.getElementById('fc-' + id);
     if (card) {
-      card.style.opacity = '0.45';
-      card.style.pointerEvents = 'none';
+      card.classList.add('saved');
       const btn = card.querySelector('.btn');
       if (btn) btn.innerHTML = '<i class="fas fa-check"></i> Saved';
     }
     toast('Lead saved to CRM', 'ok');
   } catch { toast('Could not save lead', 'err'); }
 }
+
+/* ── SOURCES + BATCH WIRING ── */
+document.querySelectorAll('.src').forEach(c => {
+  c.addEventListener('change', () => {
+    // re-scan on source toggle if we already have results
+    if (Object.keys(CURRENT_LEADS).length) {
+      const custom = document.getElementById('feed-custom-kw').value.trim();
+      fetchFeed(custom || activeFeedKw);
+    }
+  });
+});
+const batchBtn = document.getElementById('btn-copy-batch');
+if (batchBtn) batchBtn.addEventListener('click', copyBatch);
 
 /* ── INIT ── */
 loadClients();
