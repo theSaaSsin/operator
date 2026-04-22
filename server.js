@@ -32,6 +32,22 @@ function body(req) {
 // All return Promise<Array<NormalizedPost>>.
 // NormalizedPost: { id, platform, title, text, author, url, created, subreddit?, companyHint?, websiteHint? }
 
+// Simple in-memory cache — keyed by platform:url. 5-minute TTL.
+// Stops us hammering Reddit into a 429 ban during rapid dev/test cycles.
+const CACHE = new Map();
+const CACHE_TTL_MS = 5 * 60 * 1000;
+async function cachedFetch(url, opts) {
+  const key = (opts?.method || 'GET') + ' ' + url + (opts?.body || '');
+  const hit = CACHE.get(key);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.json;
+  const r = await fetch(url, opts);
+  if (r.status === 429) { CACHE.set(key, { at: Date.now(), json: { _rateLimited: true } }); return { _rateLimited: true }; }
+  if (!r.ok) return null;
+  const json = await r.json();
+  CACHE.set(key, { at: Date.now(), json });
+  return json;
+}
+
 async function fetchReddit(kw, H) {
   const SUBS = ['smallbusiness','Entrepreneur','freelance','sidehustle',
     'sweatystartup','EntrepreneurRideAlong','startups','sales'];
@@ -50,8 +66,8 @@ async function fetchReddit(kw, H) {
     const subResults = await Promise.all(SUBS.map(async sub => {
       try {
         const url = `https://www.reddit.com/r/${sub}/search.json?q=${encodeURIComponent(kw)}&restrict_sr=1&sort=new&t=month&limit=8`;
-        const r = await fetch(url, { headers: H });
-        const d = await r.json();
+        const d = await cachedFetch(url, { headers: H });
+        if (!d || d._rateLimited) return [];
         return (d.data?.children || []).map(c => parsePost(c.data));
       } catch { return []; }
     }));

@@ -1190,8 +1190,16 @@ const HARD_EXCLUDE = [
   'anxiety','depression','just got hired','got a job','i got a client',
   'landed a client','just closed','i closed','signed a client','won a client',
   'sharing my journey','my story','how i went from','here\'s what worked',
-  'i made it','6 figures','i earn','passive income','dropship','amazon fba',
-  'print on demand','crypto','nft','affiliate'
+  'here is what','i made it','6 figures','i earn','passive income','dropship',
+  'amazon fba','print on demand','crypto','nft','affiliate',
+  // research / aggregate / retrospective content — not leads
+  'mapped','analyzed','analysed','case study','teardown','breakdown of',
+  'deep dive','post mortem','post-mortem','retrospective','lessons learned',
+  'what i learned','ultimate guide','complete guide',
+  'distribution is the','a thread on'
+  // removed: 'i will not promote' (r/startups genuine-question marker, not spam)
+  // removed: 'month 1 report' (false-positive — real pain posts use this framing)
+  // removed: 'here is my' / 'here are my' (too broad; "here is my situation" is a legit lead)
 ];
 
 function hasBusinessContext(t) {
@@ -1244,16 +1252,38 @@ function scorePost(title, text, isComment = false) {
 }
 
 /* ── ANALYSIS ENGINE ── */
+// Words that look title-cased but are just sentence starters on Reddit — not companies.
+const TITLE_STOPWORDS = new Set([
+  'how','why','what','when','where','who','which','whether',
+  'need','help','looking','reddit','update','advice','question',
+  'should','could','would','might','must','best','worst','first','last',
+  'getting','spent','mapped','trying','running','starting','launched','just',
+  'does','did','didn','don','doing','done','made','making','seeing','saw',
+  'month','monthly','weekly','daily','year','years','distribution',
+  'struggling','working','dead','slow','quiet','honest','real','actual',
+  'pretty','really','very','quite','kind','sort','small','big','huge',
+  'thinking','thoughts','anyone','everyone','someone','nobody','noone',
+  'cannot','cant','isnt','wasnt','arent','wouldnt','couldnt','shouldnt',
+  'looking','wanted','wanting','trying','tried','saying','said','told',
+  'okay','ok','hey','hi','hello','thanks','thank'
+]);
+
 // Extracts company name + website from free text (titles, post bodies).
 function extractCompany(title, text, hint) {
   if (hint) return hint;
   const raw = title + ' ' + text;
-  // "my business X" / "my company X" / "running X" patterns
-  const m = raw.match(/(?:my (?:business|company|agency|shop|site|brand) (?:is |called )?)([A-Z][A-Za-z0-9&'\- ]{2,30})/);
-  if (m) return m[1].trim();
-  // ALL-CAPS or TitleCase brand-ish word near start
+  // Strong pattern: "my business X" / "my company X" / "running X"
+  const m = raw.match(/(?:my (?:business|company|agency|shop|site|brand) (?:is |called |named )?)([A-Z][A-Za-z0-9&'\- ]{2,30})/);
+  if (m && !TITLE_STOPWORDS.has(m[1].trim().toLowerCase().split(' ')[0])) return m[1].trim();
+  // "I run X" / "I started X" / "I own X"
+  const r = raw.match(/(?:I (?:run|started|own|founded|launched|manage) )([A-Z][A-Za-z0-9&'\-]{2,30})/);
+  if (r && !TITLE_STOPWORDS.has(r[1].trim().toLowerCase())) return r[1].trim();
+  // TitleCase word near start — reject if it's a stopword
   const b = title.match(/\b([A-Z][a-zA-Z0-9]{3,}(?:\s[A-Z][a-zA-Z0-9]+)?)\b/);
-  if (b && !/\b(How|Why|What|When|Need|Help|Looking|Reddit)\b/.test(b[1])) return b[1];
+  if (b) {
+    const firstWord = b[1].split(' ')[0].toLowerCase();
+    if (!TITLE_STOPWORDS.has(firstWord)) return b[1];
+  }
   return '';
 }
 
@@ -1269,20 +1299,40 @@ function spotWeaknesses(title, text) {
   const t = (title + ' ' + text).toLowerCase();
   const hits = [];
   const cues = [
-    ['no website|bad website|old website|ugly site|basic site', 'Weak website — losing conversions before the pitch'],
-    ['no follow.?up|forgot to follow|lost track', 'No follow-up system — leads going cold'],
-    ['no crm|spreadsheet|post.?it', 'No CRM — pipeline invisible'],
-    ['no ads|stopped running ads|ads too expensive|ads don.?t work', 'Paid acquisition broken — need organic lane'],
-    ['no seo|can.?t rank|not showing up on google', 'Zero SEO — invisible on search'],
-    ['don.?t post|social media (is )?dead|no content', 'No content engine — authority not compounding'],
-    ['cold.? (email|dm)s? (not|don.?t)|no one (responds|replies)', 'Outreach copy weak — no replies'],
-    ['booking.?|no.?one books|empty calendar', 'Booking flow missing — no frictionless CTA'],
-    ['pricing|charge|undercharging|too cheap|too expensive', 'Pricing positioning unclear'],
-    ['referral|word of mouth only', 'Over-reliant on referrals — single point of failure'],
-    ['website traffic|no traffic|low traffic', 'No traffic engine — top of funnel dry'],
-    ['chatbot|after hours|missed calls|missed leads', 'No after-hours capture — leaking leads'],
-    ['reviews|testimonials|social proof', 'Thin social proof — trust gap'],
-    ['launched|just launched|new product', 'Pre-traction — needs first 10 customers fast']
+    ['no website|bad website|old website|ugly site|basic site|website sucks|website looks', 'Weak website — losing conversions before the pitch'],
+    ['no follow.?up|forgot to follow|lost track|leads (go|going) cold', 'No follow-up system — leads going cold'],
+    ['no crm|spreadsheet|post.?it|excel|google sheets? for (clients|leads)', 'No CRM — pipeline invisible'],
+    ['no ads|stopped running ads|ads too expensive|ads don.?t work|ads failed|instagram ads (got|no|zero)|fb ads (got|no|zero)|facebook ads (got|no|zero)', 'Paid acquisition broken — need organic lane'],
+    ['no seo|can.?t rank|not showing up on google|not ranking|google (doesn|does not) show', 'Zero SEO — invisible on search'],
+    ['don.?t post|social media (is )?dead|no content|never post|haven.?t posted', 'No content engine — authority not compounding'],
+    ['cold.? (email|dm)s? (not|don.?t)|no one (responds|replies)|zero replies|no responses?|ghosted', 'Outreach copy weak — no replies'],
+    ['booking|no.?one books|empty calendar|calendar (is )?empty|appointments? dropped', 'Booking flow missing — no frictionless CTA'],
+    ['pricing|charge|undercharging|too cheap|too expensive|what (should|do) i charge|rate too', 'Pricing positioning unclear'],
+    ['referral|word of mouth only|only referrals', 'Over-reliant on referrals — single point of failure'],
+    ['website traffic|no traffic|low traffic|traffic but no sales|traffic not converting', 'Traffic not converting — CRO gap'],
+    ['chatbot|after hours|missed calls|missed leads|24\\/7', 'No after-hours capture — leaking leads'],
+    ['reviews|testimonials|social proof|no (reviews|testimonials)', 'Thin social proof — trust gap'],
+    ['launched|just launched|new product|first (few )?clients|first customer', 'Pre-traction — needs first 10 customers fast'],
+    ['connect (with|to) (clients|customers|buyers)|reach (clients|customers|decision)', 'Top-of-funnel connection gap — needs targeted outreach'],
+    ['offer (makes no|doesn.?t make) sense|positioning|nobody understands|can.?t explain', 'Offer / positioning unclear — prospects bounce'],
+    ['burnt out|burned out|exhausted|overwhelmed|can.?t keep up', 'Operator overload — needs delegation system'],
+    ['tried everything|nothing works|at a loss|running out of ideas', 'Exhausted options — ready for outside system'],
+    ['cold calling|cold calls? (not|don.?t)', 'Cold-call channel dead — need warm inbound'],
+    ['not qualified|wrong (leads|people)|time wasters', 'Lead qualification missing — talking to wrong people'],
+    // Cycle 2: match real Reddit language patterns
+    ['drop the (service|product)|should i drop|pivot (my|the) business|consolidate', 'At a crossroads — pivot/drop decision signals capacity problem'],
+    ['chaotic|chaos|all over the place|fire[- ]?fighting', 'Operational chaos — system-building opportunity'],
+    ['getting paid|payment (issues|problems)|chasing invoices|unpaid|late payment', 'Payment flow broken — revenue leaking'],
+    ['feel(ing)? (lost|stuck|overwhelmed|burnt)|lost on|stuck on', 'Stuck — founder needs external playbook'],
+    ['new to (business|this|entrepreneurship|freelanc)|beginning|just started', 'Pre-traction — needs first 10 customers fast'],
+    ['i.?m (a )?(freelanc|solo|solopreneur|consultant|coach)', 'Solo operator — classic agency-acquisition buyer'],
+    ['(marketing|ads|social) (doesn.?t|isn.?t|not) working|marketing (is )?(hard|broken|dead)', 'Marketing engine broken — needs a proven lane'],
+    ['don.?t know (how|what|where|who)|not sure (how|what|where)|no idea (how|what)', 'Clarity gap — needs step-by-step playbook'],
+    ['first (client|customer|sale|\\$)|zero revenue|haven.?t made', 'Zero revenue / first-10 problem'],
+    ['what (should|am) i (do|charge|offer|post|say)', 'Decision paralysis — needs concrete next action'],
+    ['connect with (clients|customers|buyers|decision)|reach (clients|prospects|decision)', 'Top-of-funnel connection gap — outbound channel needed'],
+    ['hair|beauty|salon|nail|esthet', 'Beauty service — book-flow + content engine gap typical'],
+    ['ecommerce|e-?com|shopify|store not converting', 'E-com conversion problem — CRO + ads alignment']
   ];
   for (const [pat, label] of cues) {
     if (new RegExp(pat).test(t)) hits.push(label);
@@ -1328,7 +1378,7 @@ function analyzePost(title, text, preScore, platform) {
 }
 
 /* ── KEYWORD PILLS ── */
-let activeFeedKw = 'need clients';
+let activeFeedKw = 'struggling to find';
 
 document.querySelectorAll('.kw-btn').forEach(btn => {
   btn.addEventListener('click', () => {
