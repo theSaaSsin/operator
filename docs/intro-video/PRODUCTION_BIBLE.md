@@ -236,38 +236,61 @@ Every renderable, named, sourced, and tracked. **If it isn't on this list, it do
 
 ## 6. SHOT LIST (master sheet)
 
-| Shot | TC | Description | Lens (virtual) | Camera move | Assets needed | Tool to render | Duration | Status |
+| Shot | TC | Description | Lens (virtual) | Camera move | Assets needed | v1.2 Pipeline | Duration | Status |
 |---|---|---|---|---|---|---|---|---|
-| 01 | 0:00 | Cursor + code on black | n/a | Locked | GFX-01 | CapCut text | 3s | not started |
-| 02 | 0:03 | Establishing wide of command room | 35mm equiv | Slow dolly in | CHR-01, ENV-01 | FLUX → Hunyuan → Blender | 5s | not started |
-| 03 | 0:08 | LinkedIn → lead card | macro 90mm | Locked | UI-01 | OBS screen rec | 1.75s | not started |
-| 04 | 0:09:75 | AI writing message | macro | Locked | UI-02 | OBS | 1.75s | not started |
-| 05 | 0:11:50 | Calendar lands | macro | Locked | UI-03 | OBS | 1.75s | not started |
-| 06 | 0:13:25 | Slack ping | macro | Locked | UI-04 | OBS | 1.75s | not started |
-| 07 | 0:15 | Cathedral terminal array | 24mm wide | Crane up + back | CHR-01, ENV-02 | Blender array + Hunyuan | 7s | not started |
-| 08 | 0:22 | Sleeping founder | 50mm | Locked, push-in | CHR-03, ENV-03 | FLUX still + CapCut Ken Burns | 8s | not started |
-| 09 | 0:30 | Walls erupting with data | 35mm | Crane back down | ENV-01 + UI-05 + motion gfx | Blender + CapCut overlays | 10s | not started |
-| 10 | 0:40 | Operator turns, hood off, mask reveal | 50mm | Push-in | CHR-02 | FLUX hero pose + push-in | 10s | not started |
-| 11 | 0:50 | Logotype card | n/a | Locked | GFX-03 | Figma → CapCut | 8s | not started |
-| 12 | 0:58 | URL card | n/a | Locked | GFX-04 | CapCut text | 2s | not started |
+| 01 | 0:00 | Cursor + code on black | n/a | Locked | GFX-01 | CapCut text (manual) | 3s | not started |
+| 02 | 0:03 | Establishing wide of command room | 35mm equiv | Slow dolly in | CHR-01, ENV-01 | FLUX (Chrome MCP) → Meshy/Hunyuan → **Blender MCP** scripted dolly | 5s | not started |
+| 03 | 0:08 | LinkedIn → lead card | macro 90mm | Locked | UI-01 | **Claude Preview MCP** (real Operator Panel capture) | 1.75s | not started |
+| 04 | 0:09:75 | AI writing message | macro | Locked | UI-02 | **Claude Preview MCP** | 1.75s | not started |
+| 05 | 0:11:50 | Calendar lands | macro | Locked | UI-03 | **Claude Preview MCP** | 1.75s | not started |
+| 06 | 0:13:25 | Slack ping | macro | Locked | UI-04 | **Claude Preview MCP** + Slack capture | 1.75s | not started |
+| 07 | 0:15 | Cathedral terminal array | 24mm wide | Crane up + back | CHR-01, ENV-02 | **Blender MCP** array modifier + scripted crane | 7s | not started |
+| 08 | 0:22 | Sleeping founder | 50mm | Locked, push-in | CHR-03, ENV-03 | FLUX (Chrome MCP) → CapCut Ken Burns | 8s | not started |
+| 09 | 0:30 | Walls erupting with data | 35mm | Crane back down | ENV-01 + UI-05 + motion gfx | **Blender MCP** crane down + CapCut motion overlays | 10s | not started |
+| 10 | 0:40 | Operator turns, hood off, mask reveal | 50mm | Push-in | CHR-02 | FLUX hero pose + (optional) **`voice-avatar` skill** for lipsync if speaking | 10s | not started |
+| 11 | 0:50 | Logotype card | n/a | Locked | GFX-03 | **Figma MCP** → SVG → CapCut | 8s | not started |
+| 12 | 0:58 | URL card | n/a | Locked | GFX-04 | **Figma MCP** → SVG → CapCut | 2s | not started |
 
 ---
 
 ## 7. TECH PIPELINE
 
-### 7.1 Tool stack (locked)
-| Stage | Tool | Why |
-|---|---|---|
-| Image gen | FLUX.1 Krea dev (HF Space) | Free, photoreal, prompt-faithful |
-| Image-to-3D | Meshy free tier (primary) / Hunyuan3D-2 (fallback) | One pays for clean topology, the other unlimited |
-| 3D scene assembly | Blender 5.1 (already installed) | Free, scriptable, free crane/dolly camera moves |
-| Voice | ElevenLabs (free 10k chars/mo) | Cleanest VO at zero cost |
-| Music | Pixabay Music | CC license, no attribution required |
-| SFX | Freesound (CC0 only) | Free, legal, no licensing later |
-| Screen capture | OBS Studio (free) | Lossless, multi-source |
-| Edit / colour / final | CapCut Web (free) | Has H.264 + H.265 + 4K export, no watermark |
-| Typography / sigil | Figma free | SVG export → After Effects glow |
-| Backup | Git LFS for source assets, Cloudflare R2 for masters | Out of scope of free tier? Check |
+### 7.1 Tool stack v1.2 — orchestrated (locked)
+
+**Upgrade:** every manual stage that has an Anthropic skill or MCP equivalent now runs through that — Claude orchestrates the asset pipeline instead of you clicking through 6 web UIs.
+
+| Stage | Primary tool | Driver | Manual fallback | Why this beats v1 |
+|---|---|---|---|---|
+| Brief → asset plan | `anthropic-skills:operator-pipeline` | Claude | Hand-write each prompt | Skill is purpose-built for ad-grade hero promos; encapsulates brand-hero + image-to-3d + voice-avatar + cutter/tweaker/enhancer/showcase as one orchestration |
+| Image gen | FLUX.1 Krea dev (HF Space) | Chrome MCP | Manual prompt iteration | Same model, but Claude can drive the prompt cycle through the HF Space UI |
+| Image-to-3D | Meshy free / Hunyuan3D-2 / TRELLIS | Chrome MCP + manual upload | Manual web upload | API call when token available; UI-driven via Chrome MCP otherwise |
+| 3D scene assembly | **Blender MCP** (drives Blender 5.1) | Claude writes Python | Manual Blender click-through | Replaces all manual scene setup. Camera moves, lights, array modifier, render queue — all scripted. Reproducible across shots. |
+| Voice + lipsync | `anthropic-skills:voice-avatar` | Claude | ElevenLabs alone | Adds lipsync option for F10 (operator speaking on camera). Backends: Hedra+ElevenLabs (closed) or LivePortrait+MegaTTS (open). |
+| Music | Pixabay Music | Manual | — | No skill replaces this; license + taste call |
+| SFX | Freesound (CC0 only) | Manual | — | Same |
+| Screen capture (real UI) | **Claude Preview MCP** | Claude | OBS Studio | Run Operator Panel dev server, capture clean shots programmatically. Repeatable, perfect resolution. |
+| Edit / colour / final | CapCut Web | Manual (Josh) | — | No skill replaces — taste call. CapCut still does picture-lock. |
+| Typography / sigil | **Figma MCP** | Claude | Figma manual | SVG generated and exported via MCP. Type cards (GFX-03/04) built same way. |
+| Static deliverables (press still, email banner) | `anthropic-skills:canvas-design` | Claude | Manual Figma | Skill is built for beautiful PNG/PDF artifacts — handles press still and email banner GIF source frame |
+| Theme consistency on derivatives | `anthropic-skills:theme-factory` | Claude | Manual | Storyboard PDF, pitch deck, press kit all use one theme — black + red, mono — locked once, applied everywhere |
+| Pitch deck companion | `anthropic-skills:pptx` | Claude | Manual Keynote | The bible becomes a client-facing deck on demand |
+| Storyboard / treatment PDF | `anthropic-skills:pdf` | Claude | Manual | Shareable PDF artifact of §3 + §4 + §5 for any external review |
+| Backup / source control | Git + Cloudflare R2 (post-v1) | Bash | Manual upload | Same as v1 |
+| (Future) one-shot render | `anthropic-skills:skill-creator` → custom skill | Claude (creates skill) | n/a | Bundles the full chain into a single project skill so episode 2 of the brand series ships from a one-line brief |
+
+### 7.1.1 What "Claude orchestrates" actually means in practice
+
+For each shot in §6, the v1.2 flow is:
+1. Claude opens the FLUX HF Space tab via Chrome MCP, types the locked prompt from `PROMPTS.md`, runs it, downloads the image.
+2. Claude calls Meshy / Hunyuan via API or drives the upload via Chrome MCP.
+3. Claude writes the Blender Python script (camera, lights, animation, render queue) and executes it via Blender MCP.
+4. Renders land in `assets/04_renders/`.
+5. UI captures: Claude runs Operator Panel via Preview MCP, captures the exact frames we need.
+6. Voice: Claude calls voice-avatar skill with the script + voice direction.
+7. Sigil + type cards: Claude builds them in Figma via Figma MCP, exports SVG.
+8. You assemble the rough cut in CapCut. Picture-lock by you. Music + grade by you.
+
+Result: ~70% of asset production becomes scripted and reproducible. You stay in CapCut for the parts that need taste — pacing, music selection, final grade.
 
 ### 7.2 File handoff conventions
 **Naming:** `[shotID]_[assetID]_[version]_[YYYYMMDD].[ext]`
@@ -418,3 +441,19 @@ Once I have D1–D8, I drive FLUX in Chrome and we land the hero plate before en
 | Version | Date | Change | Owner |
 |---|---|---|---|
 | v1.0 | 2026-05-02 | Initial bible — script, treatment, shot list, asset register, schedule, RACI, risks, decisions sheet | Claude (drafted), Josh (sign-off pending) |
+| v1.1 | 2026-05-02 | Palette locked to brand black + red (`#0a0a0f` / `#ff2a2a`) inherited from `public/operator.css`. PROMPTS.md updated. D1 closed. | Josh + Claude |
+| v1.2 | 2026-05-02 | Tool stack upgraded to MCP-orchestrated: Blender MCP, `operator-pipeline` skill, `voice-avatar` skill, `canvas-design`, `theme-factory`, `pptx`/`pdf`, Figma MCP, Claude Preview MCP. Shot list pipeline column rewritten. Manual fallbacks retained per row. | Josh + Claude |
+
+### D. Tool stack rationale
+**Why we layered the skills + MCPs on top instead of staying with v1's manual chain:**
+
+- v1 had 5–6 manual web tabs per shot. v1.2 has Claude driving most of them.
+- Reproducibility: every shot becomes a Python script (Blender) + a prompt (FLUX) + an asset ID. Episode 2 of the brand series re-runs the same chain with a new brief.
+- Brand discipline: `theme-factory` enforces the locked palette on every derivative artifact, so the storyboard PDF + pitch deck + email banner all read as one piece.
+- The `operator-pipeline` skill is on-the-nose for our use case — Anthropic literally shipped a skill called "operator-pipeline" that orchestrates ad-grade hero promos. Coincidence that aligns with our brand name, but we use it.
+
+### E. What still requires you (Josh) hands-on
+Even at v1.2, three things stay yours:
+1. **Final cut in CapCut** — pacing, music selection, grade. Taste call, not orchestratable.
+2. **Voice take selection** — Claude can generate 3 takes, you pick the one with the right energy.
+3. **Sign-off on every hero plate** before it propagates downstream into 3D and Blender. One bad operator face poisons every shot that reuses the asset.
