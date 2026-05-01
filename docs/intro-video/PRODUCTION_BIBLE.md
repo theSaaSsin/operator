@@ -52,6 +52,19 @@
 - **Quality bar:** Apple-event polish on a Pixabay-music budget. If it looks like a Fiverr explainer we tear it up and start over.
 - **Brand:** Deep-ink palette, mono type, no emoji, builder voice. **Ever.**
 
+### 1.7 Brand palette (locked — inherited from `public/operator.css`)
+| Role | Hex | Use |
+|---|---|---|
+| Ground | `#0a0a0f` | Base background, deepest shadows |
+| Surface | `#0f0f17` / `#121218` | Card / panel surfaces, mid-shadow |
+| **Accent** | **`#ff2a2a`** | **Single brand-red glow — the only saturated colour on screen** |
+| Accent dim | `rgba(255,42,42,0.12)` | Faint glows, secondary monitors in background |
+| Accent edge | `rgba(255,42,42,0.35)` | Sigil edge bloom, key-light rim |
+| Text | `#f0f0f5` | Logotype, near-white UI elements |
+| Muted | `#6b6b80` | Inactive UI, vignette transitions |
+
+**Discipline rule:** every shot must contain `#0a0a0f` and `#ff2a2a` and *nothing* warm or green. If a render comes back with cyan, blue, or any other hue we re-prompt. The brand reads black + red or it doesn't read.
+
 ---
 
 ## 2. CREATIVE TREATMENT
@@ -380,7 +393,7 @@ These block Day 1. None of them are "we'll figure it out later."
 
 | # | Decision | Options | My recommendation | Your call |
 |---|---|---|---|---|
-| D1 | Operator accent colour (the single glow) | Cyan / Amber / Acid Green / Sodium Orange | **Cyan** — coldest, most "system," contrasts hardest against deep ink | _____ |
+| D1 | Operator accent colour | **LOCKED — arterial red `#ff2a2a` on deep ink `#0a0a0f`** to match Operator Panel brand CSS | n/a — palette inherited from product | ✅ locked 2026-05-02 |
 | D2 | Operator face | Half-mask + sigil / full hood (no face) / human face (Josh-coded) | **Half-mask + sigil** — keeps mystery, makes the brand mark wearable | _____ |
 | D3 | Founder shown on screen at F08 | Generic figure / Josh's face / silhouette only | **Generic figure** — viewer projects themselves in. Avoid Josh's face for now. | _____ |
 | D4 | VO accent | British calm (Charlie) / American low (Liam) / Female alt | **Charlie** — adds class, distinguishes from every American startup VO | _____ |
