@@ -13,7 +13,28 @@ const BLENDER = process.env.BLENDER_PATH || 'C:/Program Files/Blender Foundation
 const WORKFLOWS = {
   'hero-render': {
     script: path.join(__dirname, 'modules/workflows/hero-render/render.py'),
-    output: () => `hero_${Date.now()}.png`
+    output: () => `hero_${Date.now()}.png`,
+    kind: 'image'
+  },
+  'tiktok-promo': {
+    script: path.join(__dirname, 'modules/workflows/tiktok-promo/render.py'),
+    output: () => `promo_${Date.now()}.mp4`,
+    kind: 'video'
+  },
+  'logo-mark': {
+    script: path.join(__dirname, 'modules/workflows/logo-mark/render.py'),
+    output: () => `logo_${Date.now()}.mp4`,
+    kind: 'video'
+  },
+  'square-card': {
+    script: path.join(__dirname, 'modules/workflows/square-card/render.py'),
+    output: () => `square_${Date.now()}.png`,
+    kind: 'image'
+  },
+  'mood-pack': {
+    script: path.join(__dirname, 'modules/workflows/mood-pack/render.py'),
+    output: () => `moodpack_${Date.now()}.png`,
+    kind: 'image'
   }
 };
 
@@ -218,6 +239,7 @@ const ROUTES = {
         ok: true,
         outputUrl: `/renders/${filename}`,
         filename,
+        kind: wf.kind || 'image',
         durationMs,
         log: stdout.split('\n').slice(-12).join('\n')
       }));

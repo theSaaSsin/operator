@@ -63,30 +63,50 @@ wb.inputs[2].default_value = 0.7
 wall.data.materials.append(wmat)
 
 
-# --- THE HERO — black-glass torus + glowing red core sphere -------------
-# Torus = "operator wheel" feel
+# --- THE HERO — black-glass shell + small red core ----------------------
+# Outer shell: shiny black sphere (the operator's mark)
+bpy.ops.mesh.primitive_uv_sphere_add(
+    radius=0.85, location=(0, -1.2, 1.6), segments=64, ring_count=32
+)
+shell = bpy.context.active_object
+shell.name = "HeroShell"
+smat = bpy.data.materials.new("ShellMat")
+smat.use_nodes = True
+sb = smat.node_tree.nodes.get("Principled BSDF")
+sb.inputs[0].default_value = srgb(12, 12, 18)
+sb.inputs[2].default_value = 0.1  # mirror finish
+sb.inputs[12].default_value = 0.95  # specular
+shell.data.materials.append(smat)
+for p in shell.data.polygons:
+    p.use_smooth = True
+
+# Outer torus (thin) — single accent ring
 bpy.ops.mesh.primitive_torus_add(
     location=(0, -1.2, 1.6),
-    major_radius=0.95,
-    minor_radius=0.18,
-    rotation=(math.radians(70), 0, math.radians(20)),
+    major_radius=1.05,
+    minor_radius=0.025,
+    rotation=(math.radians(15), 0, 0),
 )
 torus = bpy.context.active_object
 torus.name = "HeroTorus"
 tmat = bpy.data.materials.new("HeroTorusMat")
 tmat.use_nodes = True
-tb = tmat.node_tree.nodes.get("Principled BSDF")
-tb.inputs[0].default_value = srgb(15, 15, 20)  # black glass
-tb.inputs[2].default_value = 0.08  # very low roughness — mirror finish
-tb.inputs[12].default_value = 0.95  # specular
+tnodes = tmat.node_tree.nodes
+tlinks = tmat.node_tree.links
+for n in list(tnodes):
+    tnodes.remove(n)
+to = tnodes.new("ShaderNodeOutputMaterial")
+te = tnodes.new("ShaderNodeEmission")
+te.inputs[0].default_value = srgb(240, 240, 245)
+te.inputs[1].default_value = 1.5
+tlinks.new(te.outputs[0], to.inputs[0])
 torus.data.materials.append(tmat)
-# Smooth shading
 for p in torus.data.polygons:
     p.use_smooth = True
 
-# Red core sphere — emissive
+# Small red core — sigil glow, NOT a planet
 bpy.ops.mesh.primitive_uv_sphere_add(
-    radius=0.36, location=(0, -1.2, 1.6), segments=64, ring_count=32
+    radius=0.14, location=(0, -1.2, 1.6), segments=32, ring_count=16
 )
 core = bpy.context.active_object
 core.name = "HeroCore"
@@ -99,39 +119,15 @@ for n in list(nodes):
 out_node = nodes.new("ShaderNodeOutputMaterial")
 em = nodes.new("ShaderNodeEmission")
 em.inputs[0].default_value = srgb(255, 42, 42)  # arterial red
-em.inputs[1].default_value = 8.0
+em.inputs[1].default_value = 2.5  # dropped from 8.0 — no more pink wash
 links.new(em.outputs[0], out_node.inputs[0])
 core.data.materials.append(cmat)
 for p in core.data.polygons:
     p.use_smooth = True
 
-# Floating ring around the core — subtle accent
-bpy.ops.mesh.primitive_torus_add(
-    location=(0, -1.2, 1.6),
-    major_radius=0.55,
-    minor_radius=0.025,
-    rotation=(0, 0, 0),
-)
-ring = bpy.context.active_object
-ring.name = "HeroRing"
-rmat = bpy.data.materials.new("HeroRingMat")
-rmat.use_nodes = True
-rnodes = rmat.node_tree.nodes
-rlinks = rmat.node_tree.links
-for n in list(rnodes):
-    rnodes.remove(n)
-ro = rnodes.new("ShaderNodeOutputMaterial")
-re = rnodes.new("ShaderNodeEmission")
-re.inputs[0].default_value = srgb(240, 240, 245)  # near-white
-re.inputs[1].default_value = 2.0
-rlinks.new(re.outputs[0], ro.inputs[0])
-ring.data.materials.append(rmat)
-for p in ring.data.polygons:
-    p.use_smooth = True
-
 # Pedestal — black glass cylinder under the hero
 bpy.ops.mesh.primitive_cylinder_add(
-    radius=0.55, depth=1.0, location=(0, -1.2, 0.5), vertices=64
+    radius=1.0, depth=1.0, location=(0, -1.2, 0.5), vertices=64
 )
 ped = bpy.context.active_object
 ped.name = "Pedestal"
@@ -139,7 +135,7 @@ pmat = bpy.data.materials.new("PedestalMat")
 pmat.use_nodes = True
 pb = pmat.node_tree.nodes.get("Principled BSDF")
 pb.inputs[0].default_value = srgb(10, 10, 15)
-pb.inputs[2].default_value = 0.15
+pb.inputs[2].default_value = 0.18
 pb.inputs[12].default_value = 0.85
 ped.data.materials.append(pmat)
 for p in ped.data.polygons:
@@ -162,12 +158,12 @@ fill.data.energy = 80
 fill.data.color = (0.85, 0.9, 1.0)
 fill.rotation_euler = (math.radians(75), 0, math.radians(-20))
 
-# Red rim from behind, picks the back of the torus
+# Red rim from behind — small + low energy, only catches edges
 bpy.ops.object.light_add(type="AREA", location=(0, -3.5, 2.0))
 rim = bpy.context.active_object
 rim.name = "RedRim"
-rim.data.size = 1.6
-rim.data.energy = 65
+rim.data.size = 1.0
+rim.data.energy = 22
 rim.data.color = (1.0, 0.165, 0.165)
 rim.rotation_euler = (math.radians(85), 0, 0)
 
@@ -195,6 +191,11 @@ scene.render.resolution_y = 720
 scene.render.image_settings.file_format = "PNG"
 scene.render.film_transparent = False
 scene.eevee.taa_render_samples = 64
+
+# Filmic tone-mapping — proper highlight rolloff so emission doesn't wash out
+scene.view_settings.view_transform = "Filmic"
+scene.view_settings.look = "Medium Contrast"
+scene.view_settings.exposure = -0.3
 
 scene.render.filepath = OUTPUT_PATH
 bpy.ops.render.render(write_still=True)

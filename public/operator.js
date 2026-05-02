@@ -1467,9 +1467,12 @@ document.querySelectorAll('.wf-run').forEach(btn => {
     const out  = document.getElementById('wf-output');
     const body = document.getElementById('wf-output-body');
     const title = document.getElementById('wf-output-title');
+    const wfLabel = btn.closest('.wf-card')?.querySelector('.wf-name')?.textContent || wf;
     out.style.display = 'flex';
-    title.textContent = wf === 'hero-render' ? '3D Hero Render — running' : wf;
-    body.innerHTML = '<div class="wf-status running"><i class="fas fa-circle-notch fa-spin"></i> Spawning Blender, rendering frames... this may take ~30–90s</div>';
+    title.textContent = `${wfLabel} — running`;
+    const isVideo = wf === 'tiktok-promo';
+    const eta = isVideo ? '~2–4 minutes (90 frames at 30fps)' : '~30–90s';
+    body.innerHTML = `<div class="wf-status running"><i class="fas fa-circle-notch fa-spin"></i> Spawning Blender, rendering... ${eta}</div>`;
 
     try {
       const res = await fetch(API.replace('/api','') + '/api/workflow/run', {
@@ -1480,23 +1483,28 @@ document.querySelectorAll('.wf-run').forEach(btn => {
       const data = await res.json();
       if (!data.ok) {
         body.innerHTML = `<div class="wf-status error"><i class="fas fa-triangle-exclamation"></i> ${esc(data.error || 'Render failed')}</div>${data.stderr ? `<pre>${esc(data.stderr)}</pre>` : ''}`;
-        title.textContent = '3D Hero Render — failed';
+        title.textContent = `${wfLabel} — failed`;
         return;
       }
-      title.textContent = '3D Hero Render — done';
+      title.textContent = `${wfLabel} — done`;
+      const isVid = data.kind === 'video';
+      const mediaTag = isVid
+        ? `<video src="${data.outputUrl}?t=${Date.now()}" controls autoplay loop muted style="max-width:100%;border-radius:6px;border:1px solid var(--border);"></video>`
+        : `<img src="${data.outputUrl}?t=${Date.now()}" alt="Render output">`;
+      const downloadLabel = isVid ? 'Download MP4' : 'Download PNG';
       body.innerHTML = `
-        <div class="wf-status done"><i class="fas fa-check"></i> Rendered in ${data.durationMs}ms</div>
-        <img src="${data.outputUrl}?t=${Date.now()}" alt="Hero render output">
+        <div class="wf-status done"><i class="fas fa-check"></i> Rendered in ${(data.durationMs/1000).toFixed(1)}s</div>
+        ${mediaTag}
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <a class="btn btn-primary btn-sm" href="${data.outputUrl}" download><i class="fas fa-download"></i> Download PNG</a>
-          <button class="btn btn-secondary btn-sm" onclick="document.querySelector('.wf-run[data-workflow=hero-render]').click()">
+          <a class="btn btn-primary btn-sm" href="${data.outputUrl}" download><i class="fas fa-download"></i> ${downloadLabel}</a>
+          <button class="btn btn-secondary btn-sm" onclick="document.querySelector('.wf-run[data-workflow=&quot;${wf}&quot;]').click()">
             <i class="fas fa-rotate"></i> Re-render
           </button>
         </div>
         <pre>${esc(data.log || '')}</pre>`;
     } catch (e) {
       body.innerHTML = `<div class="wf-status error"><i class="fas fa-triangle-exclamation"></i> ${esc(e.message)}</div>`;
-      title.textContent = '3D Hero Render — error';
+      title.textContent = `${wfLabel} — error`;
     }
   });
 });
