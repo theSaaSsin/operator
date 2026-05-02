@@ -2,10 +2,20 @@
 const http = require('http');
 const fs   = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
 
-const PORT    = 4000;
+const PORT    = process.env.PORT || 4000;
 const PUBLIC  = path.join(__dirname, 'public');
 const DATA    = path.join(__dirname, 'data');
+const RENDERS = path.join(PUBLIC, 'renders');
+const BLENDER = process.env.BLENDER_PATH || 'C:/Program Files/Blender Foundation/Blender 5.1/blender.exe';
+
+const WORKFLOWS = {
+  'hero-render': {
+    script: path.join(__dirname, 'modules/workflows/hero-render/render.py'),
+    output: () => `hero_${Date.now()}.png`
+  }
+};
 
 const MIME = {
   '.html': 'text/html', '.css': 'text/css',
@@ -166,6 +176,56 @@ const ROUTES = {
     db.queue   = db.queue.map(q => q.id === data.id ? { ...q, status: data.status } : q);
     writeJSON('outreach_queue.json', db);
     res.end(JSON.stringify({ ok: true }));
+  },
+
+  'POST /api/workflow/run': async (req, res) => {
+    const data = await body(req);
+    const wf = WORKFLOWS[data.workflow];
+    if (!wf) return res.end(JSON.stringify({ ok: false, error: `Unknown workflow: ${data.workflow}` }));
+
+    if (!fs.existsSync(BLENDER)) {
+      return res.end(JSON.stringify({ ok: false, error: `Blender not found at ${BLENDER}. Set BLENDER_PATH env var.` }));
+    }
+    if (!fs.existsSync(wf.script)) {
+      return res.end(JSON.stringify({ ok: false, error: `Workflow script missing: ${wf.script}` }));
+    }
+    if (!fs.existsSync(RENDERS)) fs.mkdirSync(RENDERS, { recursive: true });
+
+    const filename = wf.output();
+    const outputPath = path.join(RENDERS, filename);
+    const startedAt = Date.now();
+
+    const child = spawn(BLENDER, ['--background', '--python', wf.script], {
+      env: { ...process.env, OUTPUT_PATH: outputPath }
+    });
+
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', d => { stdout += d.toString(); });
+    child.stderr.on('data', d => { stderr += d.toString(); });
+
+    child.on('close', code => {
+      const durationMs = Date.now() - startedAt;
+      if (code !== 0 || !fs.existsSync(outputPath)) {
+        return res.end(JSON.stringify({
+          ok: false,
+          error: `Render failed (exit ${code})`,
+          stderr: stderr.split('\n').slice(-20).join('\n'),
+          durationMs
+        }));
+      }
+      res.end(JSON.stringify({
+        ok: true,
+        outputUrl: `/renders/${filename}`,
+        filename,
+        durationMs,
+        log: stdout.split('\n').slice(-12).join('\n')
+      }));
+    });
+
+    child.on('error', err => {
+      res.end(JSON.stringify({ ok: false, error: err.message }));
+    });
   }
 };
 

@@ -28,3 +28,4 @@ Videos/
 data/clients.json
 data/leads.json
 data/outreach_queue.json
+public/renders/*.png

@@ -22,6 +22,13 @@
       <div class="nav-item active" data-panel="client">
         <i class="fas fa-user-plus"></i> Client Creator
       </div>
+      <div class="nav-item" data-panel="workflows">
+        <i class="fas fa-bolt"></i> Workflows
+      </div>
+      <div class="nav-section">Discover</div>
+      <div class="nav-item" data-panel="feed">
+        <i class="fas fa-satellite-dish"></i> Lead Feed
+      </div>
       <div class="nav-section">Manage</div>
       <div class="nav-item" data-panel="crm">
         <i class="fas fa-chart-line"></i> CRM / Leads
@@ -193,6 +200,213 @@
             </div>
             <iframe id="preview-frame" style="display:none"></iframe>
           </div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: LEAD FEED ── -->
+      <div class="panel" id="panel-feed">
+        <div class="feed-topbar">
+          <h2>Lead Feed</h2>
+          <div class="feed-sources">
+            <label class="src-chk"><input type="checkbox" class="src" data-src="reddit" checked><span>Reddit</span></label>
+            <label class="src-chk"><input type="checkbox" class="src" data-src="producthunt"><span>Product Hunt</span></label>
+            <label class="src-chk"><input type="checkbox" class="src" data-src="indiehackers"><span>Indie Hackers</span></label>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn btn-secondary btn-sm" id="btn-copy-batch">
+            <i class="fas fa-copy"></i> Copy Selected (<span id="batch-count">0</span>)
+          </button>
+          <button class="btn btn-primary btn-sm" id="btn-feed-refresh" style="margin-left:8px">
+            <i class="fas fa-arrows-rotate"></i> Scan
+          </button>
+        </div>
+        <div class="feed-kwbar">
+          <div class="kw-row">
+            <div class="kw-btn active" data-kw="roast my landing page">Roast My LP</div>
+            <div class="kw-btn" data-kw="feedback">Feedback</div>
+            <div class="kw-btn" data-kw="no conversions">No Conversions</div>
+            <div class="kw-btn" data-kw="not getting users">No Users</div>
+            <div class="kw-btn" data-kw="just launched">Just Launched</div>
+            <div class="kw-btn" data-kw="what am i doing wrong">Doing Wrong</div>
+            <div class="kw-btn" data-kw="struggling to find">Struggling</div>
+          </div>
+          <div class="kw-custom">
+            <input type="text" id="feed-custom-kw" placeholder="Custom keyword (overrides pills)...">
+          </div>
+        </div>
+        <div class="paste-bar">
+          <details>
+            <summary><i class="fas fa-paste"></i> Paste posts from X / LinkedIn (no API — manual)</summary>
+            <div class="paste-body">
+              <div class="paste-hint">Paste 1 post per line. Format: <code>PLATFORM | AUTHOR | URL | TEXT</code> — or just raw text.</div>
+              <textarea id="paste-posts" placeholder="X | @founder_joe | https://x.com/... | Launched my SaaS today — no sign-ups."></textarea>
+              <div class="paste-actions">
+                <button class="btn btn-primary btn-sm" id="btn-paste-score">
+                  <i class="fas fa-wand-magic-sparkles"></i> Score Pasted
+                </button>
+                <button class="btn btn-secondary btn-sm" id="btn-paste-clear">Clear</button>
+              </div>
+            </div>
+          </details>
+        </div>
+        <div class="feed-meta" id="feed-meta">Click Scan to start</div>
+        <div class="feed-grid" id="feed-grid">
+          <div class="feed-empty">
+            <i class="fas fa-satellite-dish"></i>
+            <p>Pick a keyword + sources, then hit Scan</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: WORKFLOWS — n8n-style tool launchpad ── -->
+      <div class="panel" id="panel-workflows">
+        <div class="wf-topbar">
+          <h2>Workflows</h2>
+          <div class="spacer"></div>
+          <span class="wf-hint">Click a card to open the tool. Cards marked <i class="fas fa-bolt" style="color:var(--accent)"></i> run inside the panel.</span>
+        </div>
+        <div class="wf-grid" id="wf-grid">
+
+          <!-- INTERNAL — runs in the panel via Blender -->
+          <div class="wf-card wf-internal" data-workflow="hero-render">
+            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
+            <div class="wf-name">3D Hero Render</div>
+            <div class="wf-desc">Render a brand-palette 3D hero clip (1280×720, ~30s) via headless Blender.</div>
+            <button class="btn btn-primary btn-sm wf-run" data-workflow="hero-render">
+              <i class="fas fa-play"></i> Run
+            </button>
+          </div>
+
+          <!-- IMAGE GEN -->
+          <div class="wf-card" data-tool="meshy">
+            <div class="wf-icon"><i class="fas fa-cube"></i></div>
+            <div class="wf-name">Meshy AI</div>
+            <div class="wf-desc">Image-to-3D, free tier ~200 credits/mo. Upload hero plate → GLB.</div>
+            <a class="btn btn-secondary btn-sm" href="https://www.meshy.ai/workspace" target="_blank" rel="noopener">
+              <i class="fas fa-external-link-alt"></i> Open
+            </a>
+          </div>
+
+          <div class="wf-card" data-tool="hunyuan">
+            <div class="wf-icon"><i class="fas fa-shapes"></i></div>
+            <div class="wf-name">Hunyuan3D-2</div>
+            <div class="wf-desc">Tencent's image-to-3D, unlimited free on HF Space.</div>
+            <a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/tencent/Hunyuan3D-2" target="_blank" rel="noopener">
+              <i class="fas fa-external-link-alt"></i> Open
+            </a>
+          </div>
+
+          <div class="wf-card" data-tool="trellis">
+            <div class="wf-icon"><i class="fas fa-cubes"></i></div>
+            <div class="wf-name">TRELLIS</div>
+            <div class="wf-desc">Microsoft's image-to-3D fallback, free on HF Space.</div>
+            <a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/trellis-community/TRELLIS" target="_blank" rel="noopener">
+              <i class="fas fa-external-link-alt"></i> Open
+            </a>
+          </div>
+
+          <div class="wf-card" data-tool="flux">
+            <div class="wf-icon"><i class="fas fa-image"></i></div>
+            <div class="wf-name">FLUX.1 Krea Dev</div>
+            <div class="wf-desc">Photoreal image gen on HF Space. Hero plates + scene plates.</div>
+            <a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/black-forest-labs/FLUX.1-Krea-dev" target="_blank" rel="noopener">
+              <i class="fas fa-external-link-alt"></i> Open
+            </a>
+          </div>
+
+          <div class="wf-card" data-tool="firefly">
+            <div class="wf-icon"><i class="fas fa-fire"></i></div>
+            <div class="wf-name">Adobe Firefly</div>
+            <div class="wf-desc">Commercial-licensed image gen. Free tier ~25 credits/mo.</div>
+            <a class="btn btn-secondary btn-sm" href="https://firefly.adobe.com/" target="_blank" rel="noopener">
+              <i class="fas fa-external-link-alt"></i> Open
+            </a>
+          </div>
+
+          <!-- VIDEO + AUDIO -->
+          <div class="wf-card" data-tool="capcut">
+            <div class="wf-icon"><i class="fas fa-film"></i></div>
+            <div class="wf-name">CapCut</div>
+            <div class="wf-desc">Free web NLE. Trend-format edits, vertical cuts.</div>
+            <a class="btn btn-secondary btn-sm" href="https://www.capcut.com/" target="_blank" rel="noopener">
+              <i class="fas fa-external-link-alt"></i> Open
+            </a>
+          </div>
+
+          <div class="wf-card" data-tool="davinci">
+            <div class="wf-icon"><i class="fas fa-video"></i></div>
+            <div class="wf-name">DaVinci Resolve</div>
+            <div class="wf-desc">Free Hollywood-grade NLE for the master cut. Download &amp; install.</div>
+            <a class="btn btn-secondary btn-sm" href="https://www.blackmagicdesign.com/products/davinciresolve" target="_blank" rel="noopener">
+              <i class="fas fa-external-link-alt"></i> Get
+            </a>
+          </div>
+
+          <div class="wf-card" data-tool="elevenlabs">
+            <div class="wf-icon"><i class="fas fa-microphone"></i></div>
+            <div class="wf-name">ElevenLabs</div>
+            <div class="wf-desc">Free 10k chars/mo. Voiceover for promo + scenes.</div>
+            <a class="btn btn-secondary btn-sm" href="https://elevenlabs.io/" target="_blank" rel="noopener">
+              <i class="fas fa-external-link-alt"></i> Open
+            </a>
+          </div>
+
+          <!-- 3D / DESIGN -->
+          <div class="wf-card" data-tool="blender">
+            <div class="wf-icon"><i class="fab fa-blender-phone"></i></div>
+            <div class="wf-name">Blender</div>
+            <div class="wf-desc">Local 3D — already installed (5.1.1). Drives the Hero Render workflow.</div>
+            <a class="btn btn-secondary btn-sm" href="https://www.blender.org/" target="_blank" rel="noopener">
+              <i class="fas fa-external-link-alt"></i> Docs
+            </a>
+          </div>
+
+          <div class="wf-card" data-tool="canva">
+            <div class="wf-icon"><i class="fas fa-palette"></i></div>
+            <div class="wf-name">Canva</div>
+            <div class="wf-desc">Free design + whiteboard. Mood boards, social variants.</div>
+            <a class="btn btn-secondary btn-sm" href="https://www.canva.com/" target="_blank" rel="noopener">
+              <i class="fas fa-external-link-alt"></i> Open
+            </a>
+          </div>
+
+          <div class="wf-card" data-tool="figma">
+            <div class="wf-icon"><i class="fab fa-figma"></i></div>
+            <div class="wf-name">Figma</div>
+            <div class="wf-desc">Free design tool. Sigil + type cards + brand kit.</div>
+            <a class="btn btn-secondary btn-sm" href="https://www.figma.com/" target="_blank" rel="noopener">
+              <i class="fas fa-external-link-alt"></i> Open
+            </a>
+          </div>
+
+          <!-- AUTOMATIONS -->
+          <div class="wf-card" data-tool="n8n">
+            <div class="wf-icon"><i class="fas fa-project-diagram"></i></div>
+            <div class="wf-name">n8n</div>
+            <div class="wf-desc">Free self-hosted automations. Wire CRM, Ads, email.</div>
+            <a class="btn btn-secondary btn-sm" href="https://n8n.io/" target="_blank" rel="noopener">
+              <i class="fas fa-external-link-alt"></i> Open
+            </a>
+          </div>
+
+          <div class="wf-card" data-tool="make">
+            <div class="wf-icon"><i class="fas fa-network-wired"></i></div>
+            <div class="wf-name">Make</div>
+            <div class="wf-desc">Free tier automations. Visual workflow alternative to n8n.</div>
+            <a class="btn btn-secondary btn-sm" href="https://www.make.com/" target="_blank" rel="noopener">
+              <i class="fas fa-external-link-alt"></i> Open
+            </a>
+          </div>
+
+        </div>
+
+        <!-- Output viewer for internal workflows -->
+        <div class="wf-output" id="wf-output" style="display:none">
+          <div class="wf-output-header">
+            <span id="wf-output-title">Output</span>
+            <button class="btn btn-secondary btn-sm" id="btn-wf-close-output">Close</button>
+          </div>
+          <div class="wf-output-body" id="wf-output-body"></div>
         </div>
       </div>
 

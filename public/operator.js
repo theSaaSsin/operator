@@ -1,7 +1,9 @@
 /* ── TheSaaSsin Operator Panel — operator.js ── */
 'use strict';
 
-const API = 'http://localhost:4000/api';
+const API = (typeof window !== 'undefined' && window.location?.origin)
+  ? window.location.origin + '/api'
+  : 'http://localhost:4000/api';
 
 /* ── CLOCK ── */
 (function clock() {
@@ -25,7 +27,7 @@ function toast(msg, type) {
 const panels = document.querySelectorAll('.panel');
 const navItems = document.querySelectorAll('.nav-item');
 const topbarTitle = document.getElementById('topbar-title');
-const TITLES = { client: 'Client Creator', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue' };
+const TITLES = { client: 'Client Creator', workflows: 'Workflows', feed: 'Lead Feed', crm: 'CRM / Lead Pipeline', outreach: 'Outreach Queue' };
 
 navItems.forEach(item => {
   item.addEventListener('click', () => {
@@ -1455,6 +1457,53 @@ async function saveFeedLead(id, author, niche, url, title, score) {
     toast('Lead saved to CRM', 'ok');
   } catch { toast('Could not save lead', 'err'); }
 }
+
+/* ══════════════════════════════════
+   WORKFLOWS LAUNCHPAD
+══════════════════════════════════ */
+document.querySelectorAll('.wf-run').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const wf = btn.dataset.workflow;
+    const out  = document.getElementById('wf-output');
+    const body = document.getElementById('wf-output-body');
+    const title = document.getElementById('wf-output-title');
+    out.style.display = 'flex';
+    title.textContent = wf === 'hero-render' ? '3D Hero Render — running' : wf;
+    body.innerHTML = '<div class="wf-status running"><i class="fas fa-circle-notch fa-spin"></i> Spawning Blender, rendering frames... this may take ~30–90s</div>';
+
+    try {
+      const res = await fetch(API.replace('/api','') + '/api/workflow/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workflow: wf })
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        body.innerHTML = `<div class="wf-status error"><i class="fas fa-triangle-exclamation"></i> ${esc(data.error || 'Render failed')}</div>${data.stderr ? `<pre>${esc(data.stderr)}</pre>` : ''}`;
+        title.textContent = '3D Hero Render — failed';
+        return;
+      }
+      title.textContent = '3D Hero Render — done';
+      body.innerHTML = `
+        <div class="wf-status done"><i class="fas fa-check"></i> Rendered in ${data.durationMs}ms</div>
+        <img src="${data.outputUrl}?t=${Date.now()}" alt="Hero render output">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a class="btn btn-primary btn-sm" href="${data.outputUrl}" download><i class="fas fa-download"></i> Download PNG</a>
+          <button class="btn btn-secondary btn-sm" onclick="document.querySelector('.wf-run[data-workflow=hero-render]').click()">
+            <i class="fas fa-rotate"></i> Re-render
+          </button>
+        </div>
+        <pre>${esc(data.log || '')}</pre>`;
+    } catch (e) {
+      body.innerHTML = `<div class="wf-status error"><i class="fas fa-triangle-exclamation"></i> ${esc(e.message)}</div>`;
+      title.textContent = '3D Hero Render — error';
+    }
+  });
+});
+
+document.getElementById('btn-wf-close-output')?.addEventListener('click', () => {
+  document.getElementById('wf-output').style.display = 'none';
+});
 
 /* ── INIT ── */
 loadClients();
