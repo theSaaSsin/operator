@@ -2823,7 +2823,13 @@ const server = http.createServer(async (req, res) => {
 
   // Static files
   let filePath = req.url === '/' ? '/operator.html' : req.url;
-  filePath = path.join(PUBLIC, filePath);
+  // Serve top-level /landing/ from project-root /landing/ (separate artifact for thesaassin.com)
+  if (filePath === '/landing' || filePath === '/landing/') filePath = '/landing/index.html';
+  if (filePath.startsWith('/landing/')) {
+    filePath = path.join(__dirname, filePath);
+  } else {
+    filePath = path.join(PUBLIC, filePath);
+  }
   const ext = path.extname(filePath);
   res.setHeader('Content-Type', MIME[ext] || 'text/plain');
   fs.readFile(filePath, (err, data) => {
