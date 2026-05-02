@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="operator.css">
 <link rel="stylesheet" href="workflows-runner.css">
 <link rel="stylesheet" href="operator-agent.css">
+<link rel="stylesheet" href="studio-canvas.css">
 </head>
 <body>
 <div id="app">
@@ -26,6 +27,7 @@
       <div class="nav-item" data-panel="execute"><i class="fas fa-bolt"></i> Execute</div>
       <div class="nav-item" data-panel="workflows" onclick="switchPanel('panel-workflows')"><i class="fas fa-bolt"></i> Workflows</div>
       <div class="nav-item" data-panel="operator-agent" onclick="switchPanel('panel-operator-agent')" style="color:#ff2a2a"><i class="fas fa-comments"></i> Operator Agent <span style="font-size:.55rem;background:rgba(255,42,42,.14);color:var(--accent);padding:1px 5px;border-radius:3px;margin-left:4px;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;font-weight:700">BETA</span></div>
+      <div class="nav-item" data-panel="studio-canvas" onclick="switchPanel('panel-studio-canvas')" style="color:#ff2a2a"><i class="fas fa-pen-ruler"></i> Studio Canvas <span style="font-size:.55rem;background:rgba(255,42,42,.14);color:var(--accent);padding:1px 5px;border-radius:3px;margin-left:4px;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;font-weight:700">BETA</span></div>
 
       <!-- ── DYNAMIC MODULE NAV (built by buildNav() in operator.js) ── -->
       <div id="nav-modules"></div>
@@ -1450,6 +1452,7 @@ gr.Interface(fn=generate,
 <script src="operator.js"></script>
 <script src="workflows-runner.js"></script>
 <script src="operator-agent.js"></script>
+<script src="studio-canvas.js"></script>
 
 <!-- ═══ B.O.S.S JARVIS CHAT ═══ -->
 <button id="boss-fab" onclick="bossToggle()" title="Chat with B.O.S.S (⌘K)">B.O.S.S</button>
@@ -1501,6 +1504,51 @@ gr.Interface(fn=generate,
   #boss-input:focus{border-color:#ff2a2a}
   #boss-mic-btn.listening{background:#ff2a2a !important;color:#0a0a0a !important}
 </style>
+
+      <!-- ══ STUDIO CANVAS (beta) — infinite canvas + timeline + beat-match + 3D + animation ══ -->
+      <div class="panel" id="panel-studio-canvas">
+        <div class="sc-topbar">
+          <h2>Studio Canvas</h2>
+          <span class="sc-badge">BETA</span>
+          <div class="sc-toolbar">
+            <button class="sc-btn" id="sc-add-img"><i class="fas fa-image"></i> Image</button>
+            <button class="sc-btn" id="sc-add-vid"><i class="fas fa-film"></i> Video</button>
+            <button class="sc-btn" id="sc-add-text"><i class="fas fa-font"></i> Text</button>
+            <button class="sc-btn" id="sc-add-kanji"><i class="fas fa-bolt"></i> Kanji</button>
+            <button class="sc-btn" id="sc-add-audio"><i class="fas fa-music"></i> Audio + Beats</button>
+            <button class="sc-btn" id="sc-zoom-fit"><i class="fas fa-compress"></i> Fit</button>
+            <button class="sc-btn" id="sc-clear"><i class="fas fa-trash"></i> Clear</button>
+          </div>
+        </div>
+        <div class="sc-body">
+          <div class="sc-left">
+            <div class="sc-left-title">Layers</div>
+            <div id="sc-layer-list"><div class="sc-empty">No layers yet — add one from the toolbar.</div></div>
+          </div>
+          <div class="sc-centre">
+            <div id="sc-canvas">
+              <div id="sc-world"></div>
+            </div>
+            <div class="sc-canvas-hint">Pan: hold SPACE + drag &nbsp;·&nbsp; Zoom: mouse wheel &nbsp;·&nbsp; Drag layers to move &nbsp;·&nbsp; Z = depth (3D)</div>
+          </div>
+          <div class="sc-right">
+            <div class="sc-right-title">Properties</div>
+            <div id="sc-props"><div class="sc-empty">Select a layer.</div></div>
+          </div>
+        </div>
+        <div class="sc-timeline-bar">
+          <div class="sc-tl-controls">
+            <button class="sc-tl-btn sc-tl-btn-secondary" id="sc-rewind" title="Rewind"><i class="fas fa-backward-step"></i></button>
+            <button class="sc-tl-btn" id="sc-play" title="Play/Pause"><i class="fas fa-play"></i></button>
+          </div>
+          <div id="sc-timeline">
+            <div id="sc-beat-track"></div>
+            <div id="sc-playhead"></div>
+          </div>
+          <div id="sc-time-readout">0.00 / 12.0s</div>
+          <audio id="sc-audio"></audio>
+        </div>
+      </div>
 
       <!-- ══ OPERATOR AGENT (beta) — Grok-style chat driven by Claude Max ══ -->
       <div class="panel" id="panel-operator-agent">
