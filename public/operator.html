@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="operator.css">
 <link rel="stylesheet" href="workflows-runner.css">
+<link rel="stylesheet" href="operator-agent.css">
 </head>
 <body>
 <div id="app">
@@ -24,6 +25,7 @@
       <div class="nav-item active" data-panel="dashboard"><i class="fas fa-th-large"></i> Dashboard</div>
       <div class="nav-item" data-panel="execute"><i class="fas fa-bolt"></i> Execute</div>
       <div class="nav-item" data-panel="workflows" onclick="switchPanel('panel-workflows')"><i class="fas fa-bolt"></i> Workflows</div>
+      <div class="nav-item" data-panel="operator-agent" onclick="switchPanel('panel-operator-agent')" style="color:#ff2a2a"><i class="fas fa-comments"></i> Operator Agent <span style="font-size:.55rem;background:rgba(255,42,42,.14);color:var(--accent);padding:1px 5px;border-radius:3px;margin-left:4px;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;font-weight:700">BETA</span></div>
 
       <!-- ── DYNAMIC MODULE NAV (built by buildNav() in operator.js) ── -->
       <div id="nav-modules"></div>
@@ -1447,6 +1449,7 @@ gr.Interface(fn=generate,
 
 <script src="operator.js"></script>
 <script src="workflows-runner.js"></script>
+<script src="operator-agent.js"></script>
 
 <!-- ═══ B.O.S.S JARVIS CHAT ═══ -->
 <button id="boss-fab" onclick="bossToggle()" title="Chat with B.O.S.S (⌘K)">B.O.S.S</button>
@@ -1498,6 +1501,28 @@ gr.Interface(fn=generate,
   #boss-input:focus{border-color:#ff2a2a}
   #boss-mic-btn.listening{background:#ff2a2a !important;color:#0a0a0a !important}
 </style>
+
+      <!-- ══ OPERATOR AGENT (beta) — Grok-style chat driven by Claude Max ══ -->
+      <div class="panel" id="panel-operator-agent">
+        <div class="agent-topbar">
+          <h2>Operator Agent</h2>
+          <span class="agent-badge">BETA</span>
+          <div class="spacer"></div>
+          <button class="btn btn-secondary btn-sm" id="agent-clear"><i class="fas fa-trash"></i> Clear</button>
+        </div>
+        <div id="agent-log"></div>
+        <div class="agent-quickbar">
+          <div class="agent-quick" data-prompt="Operator online: design a full 3D parallax sales page workflow for a struggling SaaS founder using my 16 systems.">3D parallax page</div>
+          <div class="agent-quick" data-prompt="Plan a CRO audit for a SaaS landing page where bounce rate is 78% and signup conversion is 1.2%. Identify root causes and a 5-step fix plan.">CRO audit</div>
+          <div class="agent-quick" data-prompt="Draft a 5-email cold-outreach sequence for a local trade business (plumbing, UK) targeting homeowners. Builder voice, no fluff.">Cold outreach (5 emails)</div>
+          <div class="agent-quick" data-prompt="Write the storyboard, copy, timing, and Meshy prompts for a 60s TikTok promo where the operator (me) ships 10 client systems while a competitor manually struggles with one.">TikTok storyboard</div>
+          <div class="agent-quick" data-prompt="What system from my 16-systems library would I use for a SaaS founder who has paying users but 6% monthly churn? Output the system + the workflow to fix it.">Churn fix system</div>
+        </div>
+        <div class="agent-input-wrap">
+          <textarea id="agent-input" placeholder="Ask the operator anything — system design, copy, workflows, client briefs..." rows="1"></textarea>
+          <button id="agent-send"><i class="fas fa-paper-plane"></i> Send</button>
+        </div>
+      </div>
 
       <!-- ══ WORKFLOWS LAUNCHPAD (n8n-style tools dashboard) ══ -->
       <div class="panel" id="panel-workflows">

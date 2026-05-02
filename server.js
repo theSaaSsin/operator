@@ -1539,6 +1539,16 @@ const ROUTES = {
     res.end(JSON.stringify(result));
   },
 
+  'POST /api/agent/chat': async (req, res) => {
+    const data = await body(req);
+    const messages = Array.isArray(data.messages) ? data.messages : [];
+    if (!messages.length) return res.end(JSON.stringify({ ok: false, error: 'No messages' }));
+    const result = await claude.chat({
+      messages, system: data.system, model: data.model, maxTokens: data.maxTokens || 4096
+    });
+    res.end(JSON.stringify(result));
+  },
+
   'GET /api/claude/status': (_, res) => {
     res.end(JSON.stringify({ ok: true, configured: !!process.env.ANTHROPIC_API_KEY, model: 'claude-opus-4-7' }));
   },
