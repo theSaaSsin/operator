@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheSaaSsin — Brand Identity Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  /* ── TheSaaSsin Brand Palette ── */
+  --void:    #0a0a0f;
+  --op:      #0f0f17;
+  --surface: #121218;
+  --lift:    #1a1a24;
+  --border:  rgba(255,255,255,0.07);
+  --red:     #ff2a2a;
+  --red-h:   #ff4444;
+  --red-d:   #cc1818;
+  --white:   #f0f0f5;
+  --grey:    #6b6b80;
+  --ghost:   rgba(255,255,255,0.06);
+  --green:   #22c55e;
+  --amber:   #f59e0b;
+}
+
+html, body {
+  background: var(--void);
+  color: var(--white);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.board {
+  width: 1600px;
+  min-height: 1060px;
+  margin: 0 auto;
+  padding: 64px;
+  position: relative;
+}
+
+/* ── HEADER ── */
+.board-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-bottom: 40px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 56px;
+}
+
+.wordmark {
+  font-size: 72px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--white);
+}
+.wordmark .saas { color: var(--red); }
+.wordmark .sin  { color: var(--white); }
+
+.board-meta {
+  text-align: right;
+}
+.board-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--grey);
+  margin-bottom: 6px;
+}
+.board-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--white);
+}
+.board-version {
+  font-size: 11px;
+  color: var(--grey);
+  margin-top: 4px;
+  font-family: 'Space Mono', monospace;
+}
+
+/* ── SECTION LABEL ── */
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 20px;
+}
+
+/* ── GRID ── */
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 32px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 24px; }
+
+.row { margin-bottom: 48px; }
+
+/* ── COLOUR SWATCHES ── */
+.swatch-group { display: flex; flex-direction: column; gap: 10px; }
+.swatch { border-radius: 10px; overflow: hidden; }
+.swatch-fill { height: 72px; width: 100%; position: relative; }
+.swatch-fill .check { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 20px; height: 20px; border-radius: 50%; opacity: 0; }
+.swatch-info { padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-top: none; border-radius: 0 0 10px 10px; }
+.swatch-name { font-size: 12px; font-weight: 700; color: var(--white); margin-bottom: 3px; }
+.swatch-hex  { font-size: 11px; color: var(--grey); font-family: 'Space Mono', monospace; }
+.swatch-use  { font-size: 10px; color: var(--grey); margin-top: 4px; opacity: 0.7; }
+
+/* ── TYPOGRAPHY ── */
+.type-row {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.type-row:first-child { padding-top: 0; }
+.type-row:last-child  { border-bottom: none; }
+.type-meta {
+  width: 160px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.type-meta-name { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--red); }
+.type-meta-spec { font-size: 10px; color: var(--grey); font-family: 'Space Mono', monospace; }
+.type-sample { flex: 1; }
+
+/* ── LOGO VARIANTS ── */
+.logo-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+}
+.logo-card.dark-bg  { background: var(--void); }
+.logo-card.light-bg { background: var(--white); }
+.logo-card.red-bg   { background: var(--red); }
+
+.logo-sm  { font-size: 28px; font-weight: 900; letter-spacing: -0.03em; }
+.logo-md  { font-size: 36px; font-weight: 900; letter-spacing: -0.03em; }
+.logo-lg  { font-size: 48px; font-weight: 900; letter-spacing: -0.04em; }
+
+.light-bg .logo-sm .saas,
+.light-bg .logo-md .saas,
+.light-bg .logo-lg .saas { color: var(--red); }
+.light-bg .logo-sm,
+.light-bg .logo-md,
+.light-bg .logo-lg { color: #0a0a0f; }
+
+.red-bg .logo-sm,
+.red-bg .logo-md,
+.red-bg .logo-lg { color: #fff; }
+.red-bg .logo-sm .saas,
+.red-bg .logo-md .saas,
+.red-bg .logo-lg .saas { color: rgba(0,0,0,0.5); }
+
+/* ── TAGLINE ── */
+.tagline-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px 40px;
+}
+.tagline-main {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 8px;
+}
+.tagline-sub {
+  font-size: 14px;
+  color: var(--grey);
+  line-height: 1.6;
+}
+.tagline-accent { color: var(--red); font-weight: 600; }
+
+/* ── BRAND VOICE ── */
+.voice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.voice-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+}
+.voice-card.is  { border-left: 3px solid var(--green); }
+.voice-card.not { border-left: 3px solid var(--red); }
+.voice-card-label { font-size: 9px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 10px; }
+.voice-card.is  .voice-card-label { color: var(--green); }
+.voice-card.not .voice-card-label { color: var(--red); }
+.voice-word {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 3px 3px 3px 0;
+}
+.voice-card.is  .voice-word { background: rgba(34,197,94,0.12); color: var(--green); }
+.voice-card.not .voice-word { background: rgba(255,42,42,0.12); color: #ff6666; }
+
+/* ── FOOTER ── */
+.board-footer {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.footer-mark {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--grey);
+  opacity: 0.5;
+}
+.footer-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 8px rgba(255,42,42,0.6);
+}
+</style>
+</head>
+<body>
+
+<div class="board">
+
+  <!-- ── HEADER ── -->
+  <div class="board-header">
+    <div>
+      <div class="wordmark">The<span class="saas">SaaS</span>sin</div>
+      <div style="font-size:13px;color:var(--grey);margin-top:10px;font-weight:500;letter-spacing:0.04em;">
+        AI-Powered Client Acquisition Operator
+      </div>
+    </div>
+    <div class="board-meta">
+      <div class="board-label">Brand Identity</div>
+      <div class="board-title">Colour & Identity System</div>
+      <div class="board-version">Board 01 / v1.0 / 2026</div>
+    </div>
+  </div>
+
+  <!-- ── ROW 1: COLOURS + LOGO ── -->
+  <div class="row">
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:48px;align-items:start;">
+
+      <!-- COLOUR PALETTE -->
+      <div>
+        <div class="section-label">01 — Colour Palette</div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px;">
+
+          <div class="swatch">
+            <div class="swatch-fill" style="background:#0a0a0f;border:1px solid rgba(255,255,255,0.1);border-radius:10px 10px 0 0;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Void Black</div>
+              <div class="swatch-hex">#0A0A0F</div>
+              <div class="swatch-use">Page background</div>
+            </div>
+          </div>
+
+          <div class="swatch">
+            <div class="swatch-fill" style="background:#0f0f17;border-radius:10px 10px 0 0;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Operator</div>
+              <div class="swatch-hex">#0F0F17</div>
+              <div class="swatch-use">Sidebar, topbar</div>
+            </div>
+          </div>
+
+          <div class="swatch">
+            <div class="swatch-fill" style="background:#121218;border-radius:10px 10px 0 0;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Surface</div>
+              <div class="swatch-hex">#121218</div>
+              <div class="swatch-use">Cards, panels</div>
+            </div>
+          </div>
+
+          <div class="swatch">
+            <div class="swatch-fill" style="background:#ff2a2a;border-radius:10px 10px 0 0;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Strike Red</div>
+              <div class="swatch-hex">#FF2A2A</div>
+              <div class="swatch-use">Primary accent</div>
+            </div>
+          </div>
+
+          <div class="swatch">
+            <div class="swatch-fill" style="background:#f0f0f5;border-radius:10px 10px 0 0;"></div>
+            <div class="swatch-info" style="background:#1a1a24;">
+              <div class="swatch-name">Operator White</div>
+              <div class="swatch-hex">#F0F0F5</div>
+              <div class="swatch-use">Body text</div>
+            </div>
+          </div>
+
+          <div class="swatch">
+            <div class="swatch-fill" style="background:#6b6b80;border-radius:10px 10px 0 0;"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Ghost Grey</div>
+              <div class="swatch-hex">#6B6B80</div>
+              <div class="swatch-use">Muted labels</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Secondary palette row -->
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:14px;">
+          <div class="swatch">
+            <div class="swatch-fill" style="background:#ff4444;height:40px;border-radius:6px 6px 0 0;"></div>
+            <div class="swatch-info" style="padding:8px 12px;">
+              <div class="swatch-hex">#FF4444</div>
+              <div class="swatch-use">Red hover</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-fill" style="background:#cc1818;height:40px;border-radius:6px 6px 0 0;"></div>
+            <div class="swatch-info" style="padding:8px 12px;">
+              <div class="swatch-hex">#CC1818</div>
+              <div class="swatch-use">Red active</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-fill" style="background:rgba(255,42,42,0.12);border:1px solid rgba(255,42,42,0.2);height:40px;border-radius:6px 6px 0 0;"></div>
+            <div class="swatch-info" style="padding:8px 12px;">
+              <div class="swatch-hex">Red / 12%</div>
+              <div class="swatch-use">Active bg</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-fill" style="background:#22c55e;height:40px;border-radius:6px 6px 0 0;"></div>
+            <div class="swatch-info" style="padding:8px 12px;">
+              <div class="swatch-hex">#22C55E</div>
+              <div class="swatch-use">Success</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-fill" style="background:#f59e0b;height:40px;border-radius:6px 6px 0 0;"></div>
+            <div class="swatch-info" style="padding:8px 12px;">
+              <div class="swatch-hex">#F59E0B</div>
+              <div class="swatch-use">Warning</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-fill" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);height:40px;border-radius:6px 6px 0 0;"></div>
+            <div class="swatch-info" style="padding:8px 12px;">
+              <div class="swatch-hex">White / 6%</div>
+              <div class="swatch-use">Borders</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOGO VARIANTS -->
+      <div>
+        <div class="section-label">02 — Wordmark Variants</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="logo-card dark-bg">
+            <div class="logo-lg">The<span class="saas" style="color:#ff2a2a;">SaaS</span>sin</div>
+          </div>
+          <div class="logo-card" style="background:#141420;">
+            <div class="logo-md">The<span class="saas" style="color:#ff2a2a;">SaaS</span>sin</div>
+          </div>
+          <div class="logo-card light-bg">
+            <div class="logo-md" style="color:#0a0a0f;">The<span style="color:#ff2a2a;">SaaS</span>sin</div>
+          </div>
+          <div class="logo-card red-bg">
+            <div class="logo-md" style="color:#fff;">The<span style="color:rgba(0,0,0,0.35);">SaaS</span>sin</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── ROW 2: TYPOGRAPHY ── -->
+  <div class="row" style="display:grid;grid-template-columns:1.4fr 1fr;gap:48px;">
+    <div>
+      <div class="section-label">03 — Typography</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px 32px;">
+
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-meta-name">Display</div>
+            <div class="type-meta-spec">Inter 900 · 48–72px</div>
+          </div>
+          <div class="type-sample" style="font-size:48px;font-weight:900;letter-spacing:-0.04em;line-height:1;">Operator</div>
+        </div>
+
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-meta-name">Heading 1</div>
+            <div class="type-meta-spec">Inter 800 · 32px</div>
+          </div>
+          <div class="type-sample" style="font-size:32px;font-weight:800;letter-spacing:-0.03em;">Build. Acquire. Close.</div>
+        </div>
+
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-meta-name">Heading 2</div>
+            <div class="type-meta-spec">Inter 700 · 22px</div>
+          </div>
+          <div class="type-sample" style="font-size:22px;font-weight:700;letter-spacing:-0.02em;">Lead Feed Engine — Live</div>
+        </div>
+
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-meta-name">Body</div>
+            <div class="type-meta-spec">Inter 400 · 14px</div>
+          </div>
+          <div class="type-sample" style="font-size:14px;font-weight:400;line-height:1.6;color:#c0c0cc;">AI-powered client acquisition system for SaaS founders. Find, pitch, and close clients while you sleep.</div>
+        </div>
+
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-meta-name">Label / UI</div>
+            <div class="type-meta-spec">Inter 600 · 11px · caps</div>
+          </div>
+          <div class="type-sample" style="font-size:11px;font-weight:600;letter-spacing:0.15em;text-transform:uppercase;color:var(--grey);">Lead Score · Acquisition · B.O.S.S Core</div>
+        </div>
+
+        <div class="type-row">
+          <div class="type-meta">
+            <div class="type-meta-name">Code / Data</div>
+            <div class="type-meta-spec">Space Mono · 12–13px</div>
+          </div>
+          <div class="type-sample" style="font-family:'Space Mono',monospace;font-size:12px;color:#ff2a2a;">sk-ant-api03-*** · 94% · 2026-04-19</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAGLINE + BRAND VOICE -->
+    <div>
+      <div class="section-label">04 — Brand Voice</div>
+      <div class="tagline-box" style="margin-bottom:16px;">
+        <div class="tagline-main">"The operator that <span class="tagline-accent">finds, pitches,</span> and <span class="tagline-accent">closes</span> clients while you sleep."</div>
+        <div class="tagline-sub" style="margin-top:12px;">Positioning: AI-first client acquisition for solo SaaS founders. Fast, honest, specific. No fluff.</div>
+      </div>
+
+      <div class="voice-grid">
+        <div class="voice-card is">
+          <div class="voice-card-label">✓ TheSaaSsin Is</div>
+          <span class="voice-word">Direct</span>
+          <span class="voice-word">Specific</span>
+          <span class="voice-word">Operator</span>
+          <span class="voice-word">Confident</span>
+          <span class="voice-word">Honest</span>
+          <span class="voice-word">Fast</span>
+          <span class="voice-word">British</span>
+          <span class="voice-word">Technical</span>
+        </div>
+        <div class="voice-card not">
+          <div class="voice-card-label">✕ TheSaaSsin Isn't</div>
+          <span class="voice-word">Vague</span>
+          <span class="voice-word">Fluffy</span>
+          <span class="voice-word">Hype</span>
+          <span class="voice-word">Corporate</span>
+          <span class="voice-word">Verbose</span>
+          <span class="voice-word">Generic</span>
+          <span class="voice-word">Apologetic</span>
+          <span class="voice-word">Slow</span>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;">
+        <div class="section-label" style="margin-bottom:10px;">05 — Icon Grid / Supporting Marks</div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <div style="width:44px;height:44px;background:rgba(255,42,42,0.12);border:1px solid rgba(255,42,42,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">⚡</div>
+          <div style="width:44px;height:44px;background:rgba(255,42,42,0.12);border:1px solid rgba(255,42,42,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">🎯</div>
+          <div style="width:44px;height:44px;background:rgba(255,42,42,0.12);border:1px solid rgba(255,42,42,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">📊</div>
+          <div style="width:44px;height:44px;background:rgba(255,42,42,0.12);border:1px solid rgba(255,42,42,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">🔍</div>
+          <div style="width:44px;height:44px;background:rgba(255,42,42,0.12);border:1px solid rgba(255,42,42,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">✉️</div>
+          <div style="width:44px;height:44px;background:rgba(255,42,42,0.12);border:1px solid rgba(255,42,42,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">🚀</div>
+          <div style="width:44px;height:44px;background:rgba(255,42,42,0.12);border:1px solid rgba(255,42,42,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">💰</div>
+          <div style="width:44px;height:44px;background:rgba(255,42,42,0.12);border:1px solid rgba(255,42,42,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">🏆</div>
+          <div style="margin-left:8px;">
+            <div style="font-size:10px;color:var(--grey);font-weight:600;text-transform:uppercase;letter-spacing:0.12em;">B.O.S.S Mark</div>
+            <div style="font-size:22px;font-weight:900;color:#ff2a2a;letter-spacing:0.04em;margin-top:2px;">B.O.S.S</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <div class="board-footer">
+    <div class="footer-mark">TheSaaSsin · Brand Identity System · Board 01 · v1.0</div>
+    <div class="footer-dot"></div>
+    <div class="footer-mark">thesaasguy101@gmail.com · Confidential</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -183,27 +183,25 @@ cam.keyframe_insert(data_path="location", frame=1)
 cam.location = (-0.2, 1.6, 2.2)
 cam.keyframe_insert(data_path="location", frame=90)
 
-# --- Render settings: vertical 9:16, MP4 H264 -----------------------------
+# --- Render settings: vertical 9:16 PNG (midpoint frame).
+# Animation MP4 comes once ffmpeg is wired (Blender 5.1 removed FFMPEG
+# from image_settings.file_format enum).
 scene.render.resolution_x = 720
 scene.render.resolution_y = 1280
 scene.render.fps = 30
 scene.frame_start = 1
 scene.frame_end = 90
 
-scene.render.image_settings.file_format = "FFMPEG"
-scene.render.ffmpeg.format = "MPEG4"
-scene.render.ffmpeg.codec = "H264"
-scene.render.ffmpeg.constant_rate_factor = "MEDIUM"
-scene.render.ffmpeg.audio_codec = "NONE"
-
-scene.eevee.taa_render_samples = 16  # lower for animation, faster
+scene.render.image_settings.file_format = "PNG"
+scene.eevee.taa_render_samples = 32
 
 # Filmic tone-mapping
 scene.view_settings.view_transform = "Filmic"
 scene.view_settings.look = "Medium Contrast"
 scene.view_settings.exposure = -0.3
 
+scene.frame_set(45)  # midpoint, peak emission pulse
 scene.render.filepath = OUTPUT_PATH
-bpy.ops.render.render(animation=True)
+bpy.ops.render.render(write_still=True)
 
 print(f"DONE: {OUTPUT_PATH}")

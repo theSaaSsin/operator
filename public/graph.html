@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B.O.S.S Knowledge Graph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --red: #ff2a2a;
+    --white: #f0f0f5;
+    --grey: #6b6b80;
+    --surface: #121218;
+    --surface2: #1a1a24;
+    --border: #2a2a38;
+    --header-h: 56px;
+    --status-h: 28px;
+    --detail-w: 300px;
+  }
+
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+  }
+
+  /* ── HEADER ────────────────────────────────────────── */
+  #header {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: var(--header-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 16px; gap: 12px;
+    z-index: 100;
+  }
+  .logo-mark {
+    font-family: 'Space Mono', monospace;
+    font-size: 15px; font-weight: 700;
+    color: var(--red); letter-spacing: .06em;
+    flex-shrink: 0;
+  }
+  .logo-sep { width: 1px; height: 24px; background: var(--border); }
+  .graph-title {
+    font-size: 13px; font-weight: 500; color: var(--white);
+    flex-shrink: 0;
+  }
+
+  .filter-pills {
+    display: flex; gap: 6px; margin-left: 8px;
+  }
+  .pill {
+    padding: 3px 10px; border-radius: 999px;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--grey);
+    font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500;
+    cursor: pointer; transition: all .15s;
+    white-space: nowrap;
+  }
+  .pill:hover { border-color: var(--red); color: var(--white); }
+  .pill.active { background: var(--red); border-color: var(--red); color: #fff; }
+
+  .header-spacer { flex: 1; }
+
+  .hbtn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--white);
+    font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
+    cursor: pointer; transition: all .15s; flex-shrink: 0;
+  }
+  .hbtn:hover { background: var(--surface2); border-color: var(--grey); }
+  .hbtn.primary { background: var(--red); border-color: var(--red); }
+  .hbtn.primary:hover { background: #e02020; }
+  .hbtn .icon { font-size: 14px; line-height: 1; }
+
+  /* ── MAIN LAYOUT ───────────────────────────────────── */
+  #layout {
+    position: fixed;
+    top: var(--header-h); bottom: var(--status-h); left: 0; right: 0;
+    display: flex;
+  }
+
+  /* ── CANVAS AREA ────────────────────────────────────── */
+  #canvas-wrap {
+    flex: 1; position: relative; overflow: hidden;
+    cursor: grab;
+  }
+  #canvas-wrap.dragging { cursor: grabbing; }
+  #three-canvas {
+    display: block; width: 100%; height: 100%;
+  }
+
+  /* ── LABELS OVERLAY ─────────────────────────────────── */
+  #labels-layer {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; overflow: hidden;
+  }
+  .node-label {
+    position: absolute; transform: translate(-50%, -140%);
+    font-family: 'Inter', sans-serif; font-size: 11px;
+    font-weight: 500; color: var(--white);
+    white-space: nowrap; pointer-events: none;
+    text-shadow: 0 1px 4px rgba(0,0,0,.8), 0 0 8px rgba(0,0,0,.6);
+    transition: opacity .2s;
+  }
+
+  /* ── TOOLTIP ────────────────────────────────────────── */
+  #tooltip {
+    position: fixed; pointer-events: none; z-index: 200;
+    display: none;
+    background: rgba(18,18,24,.96); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 12px;
+    font-size: 12px; color: var(--white);
+    backdrop-filter: blur(8px);
+    gap: 6px; align-items: center;
+  }
+  #tooltip.visible { display: flex; }
+  .tt-badge {
+    padding: 2px 7px; border-radius: 4px;
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    font-weight: 700; text-transform: uppercase;
+  }
+
+  /* ── DETAIL PANEL ───────────────────────────────────── */
+  #detail-panel {
+    width: var(--detail-w); background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden; flex-shrink: 0;
+  }
+  #detail-header {
+    padding: 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .detail-icon {
+    width: 38px; height: 38px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .detail-meta { flex: 1; min-width: 0; }
+  .detail-badge {
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    font-weight: 700; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 4px;
+    display: inline-block; margin-bottom: 4px;
+  }
+  .detail-name {
+    font-size: 15px; font-weight: 700; color: var(--white);
+    word-break: break-word; line-height: 1.3;
+  }
+  #detail-body {
+    flex: 1; overflow-y: auto; padding: 14px 16px;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  #detail-body::-webkit-scrollbar { width: 4px; }
+  #detail-body::-webkit-scrollbar-track { background: transparent; }
+  #detail-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .detail-section { margin-bottom: 16px; }
+  .detail-section-title {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--grey); margin-bottom: 8px;
+  }
+  .detail-field { margin-bottom: 6px; }
+  .detail-field-label { font-size: 11px; color: var(--grey); margin-bottom: 2px; }
+  .detail-field-value { font-size: 12px; color: var(--white); }
+
+  .conn-node {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 8px; border-radius: 6px; margin-bottom: 4px;
+    background: var(--surface2); cursor: pointer;
+    transition: background .15s;
+  }
+  .conn-node:hover { background: var(--border); }
+  .conn-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .conn-label { font-size: 11px; color: var(--white); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .conn-type { font-size: 10px; color: var(--grey); font-family: 'Space Mono', monospace; }
+
+  #boss-ask-btn {
+    margin: 0 16px 16px;
+    padding: 10px;
+    background: linear-gradient(135deg, var(--red), #c41e1e);
+    border: none; border-radius: 8px; cursor: pointer;
+    color: #fff; font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 600;
+    width: calc(100% - 32px);
+    transition: opacity .15s;
+  }
+  #boss-ask-btn:hover { opacity: .85; }
+  #boss-response {
+    margin: 0 16px 16px;
+    padding: 10px 12px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; font-size: 11px; color: var(--white);
+    line-height: 1.6; display: none;
+    font-family: 'Inter', sans-serif;
+  }
+
+  #detail-empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px; text-align: center;
+    color: var(--grey);
+  }
+  .detail-empty-icon { font-size: 32px; margin-bottom: 10px; opacity: .4; }
+  .detail-empty-text { font-size: 12px; line-height: 1.5; }
+
+  /* ── LEGEND ─────────────────────────────────────────── */
+  #legend {
+    position: absolute; bottom: 8px; left: 12px;
+    background: rgba(18,18,24,.9); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px;
+    pointer-events: none; min-width: 160px;
+    backdrop-filter: blur(8px);
+  }
+  .legend-title {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--grey); margin-bottom: 8px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 5px;
+  }
+  .legend-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .legend-label { font-size: 11px; color: var(--white); }
+
+  /* ── STATUS BAR ─────────────────────────────────────── */
+  #statusbar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: var(--status-h);
+    background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 16px;
+    gap: 16px; font-family: 'Space Mono', monospace;
+    font-size: 11px; color: var(--grey); z-index: 100;
+  }
+  .status-item { white-space: nowrap; }
+  .status-val { color: var(--white); }
+
+  /* ── ADD NODE MODAL ─────────────────────────────────── */
+  #modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7);
+    z-index: 300; display: none; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  #modal-overlay.open { display: flex; }
+  #modal-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; width: 360px;
+    box-shadow: 0 24px 64px rgba(0,0,0,.6);
+  }
+  .modal-title {
+    font-size: 15px; font-weight: 700; color: var(--white);
+    margin-bottom: 16px;
+  }
+  .form-group { margin-bottom: 12px; }
+  .form-label {
+    display: block; font-size: 11px; font-weight: 600;
+    color: var(--grey); text-transform: uppercase;
+    letter-spacing: .06em; margin-bottom: 5px;
+  }
+  .form-input, .form-select {
+    width: 100%; padding: 8px 10px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--white);
+    font-family: 'Inter', sans-serif; font-size: 13px;
+    outline: none; transition: border-color .15s;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--red); }
+  .form-select option { background: var(--surface2); }
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+  .btn-cancel {
+    padding: 8px 16px; border-radius: 6px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--grey); font-family: 'Inter', sans-serif;
+    font-size: 12px; cursor: pointer;
+  }
+  .btn-cancel:hover { color: var(--white); }
+  .btn-create {
+    padding: 8px 16px; border-radius: 6px;
+    background: var(--red); border: none;
+    color: #fff; font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .btn-create:hover { background: #e02020; }
+
+  /* ── EMPTY STATE ─────────────────────────────────────── */
+  #empty-state {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    pointer-events: none; z-index: 10;
+    color: var(--grey); text-align: center;
+    display: none;
+  }
+  #empty-state .es-icon { font-size: 48px; margin-bottom: 16px; opacity: .3; }
+  #empty-state .es-title { font-size: 16px; font-weight: 600; color: var(--white); margin-bottom: 8px; opacity: .5; }
+  #empty-state .es-text { font-size: 13px; opacity: .4; max-width: 300px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header id="header">
+  <div class="logo-mark">B.O.S.S</div>
+  <div class="logo-sep"></div>
+  <div class="graph-title">Knowledge Graph</div>
+
+  <div class="filter-pills">
+    <button class="pill active" data-filter="ALL">ALL</button>
+    <button class="pill" data-filter="lead">LEADS</button>
+    <button class="pill" data-filter="client">CLIENTS</button>
+    <button class="pill" data-filter="agent">AGENTS</button>
+    <button class="pill" data-filter="goal">GOALS</button>
+  </div>
+
+  <div class="header-spacer"></div>
+
+  <button class="hbtn primary" id="btn-add-node"><span class="icon">+</span> Add Node</button>
+  <button class="hbtn" id="btn-refresh"><span class="icon">↺</span> Refresh</button>
+  <button class="hbtn" id="btn-reset"><span class="icon">⊙</span> Reset View</button>
+  <a href="/operator.html" class="hbtn"><span class="icon">←</span> Operator</a>
+</header>
+
+<!-- ═══════════════════ LAYOUT ═══════════════════ -->
+<div id="layout">
+
+  <!-- Canvas -->
+  <div id="canvas-wrap">
+    <canvas id="three-canvas"></canvas>
+    <div id="labels-layer"></div>
+    <div id="legend">
+      <div class="legend-title">Node Types</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff2a2a"></div><span class="legend-label">Lead</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div><span class="legend-label">Client</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f0f0f5"></div><span class="legend-label">Company</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div><span class="legend-label">Pitch</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#7f5af0"></div><span class="legend-label">Goal</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff2a2a; border-radius:0;width:10px;height:10px;clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%)"></div><span class="legend-label">Agent</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#6b6b80"></div><span class="legend-label">Tag</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#4a4a5a"></div><span class="legend-label">Conversation</span></div>
+    </div>
+    <div id="empty-state">
+      <div class="es-icon">⬡</div>
+      <div class="es-title">Graph is empty</div>
+      <div class="es-text">B.O.S.S will populate the knowledge graph as you work. Add your first node to get started.</div>
+    </div>
+  </div>
+
+  <!-- Detail Panel -->
+  <div id="detail-panel">
+    <div id="detail-empty">
+      <div class="detail-empty-icon">◎</div>
+      <div class="detail-empty-text">Click a node to inspect it</div>
+    </div>
+    <div id="detail-content" style="display:none;flex-direction:column;height:100%;overflow:hidden">
+      <div id="detail-header">
+        <div class="detail-icon" id="d-icon"></div>
+        <div class="detail-meta">
+          <div class="detail-badge" id="d-badge"></div>
+          <div class="detail-name" id="d-name"></div>
+        </div>
+      </div>
+      <div id="detail-body">
+        <div class="detail-section" id="d-fields-section">
+          <div class="detail-section-title">Properties</div>
+          <div id="d-fields"></div>
+        </div>
+        <div class="detail-section" id="d-conn-section">
+          <div class="detail-section-title">Connections</div>
+          <div id="d-connections"></div>
+        </div>
+      </div>
+      <button id="boss-ask-btn">⚡ Ask B.O.S.S about this</button>
+      <div id="boss-response"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════ STATUS BAR ═══════════════════ -->
+<div id="statusbar">
+  <span class="status-item">Nodes: <span class="status-val" id="s-nodes">0</span></span>
+  <span class="status-item">·</span>
+  <span class="status-item">Edges: <span class="status-val" id="s-edges">0</span></span>
+  <span class="status-item">·</span>
+  <span class="status-item"><span class="status-val" id="s-fps">0</span> FPS</span>
+  <span class="status-item">·</span>
+  <span class="status-item">Last updated: <span class="status-val" id="s-time">—</span></span>
+</div>
+
+<!-- ═══════════════════ TOOLTIP ═══════════════════ -->
+<div id="tooltip">
+  <span id="tt-label"></span>
+  <span class="tt-badge" id="tt-badge"></span>
+</div>
+
+<!-- ═══════════════════ ADD NODE MODAL ═══════════════════ -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <div class="modal-title">Add Node</div>
+    <div class="form-group">
+      <label class="form-label">Label</label>
+      <input class="form-input" id="m-label" type="text" placeholder="e.g. Acme Corp">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Type</label>
+      <select class="form-select" id="m-type">
+        <option value="lead">Lead</option>
+        <option value="client">Client</option>
+        <option value="company">Company</option>
+        <option value="pitch">Pitch</option>
+        <option value="goal">Goal</option>
+        <option value="agent">Agent</option>
+        <option value="tag">Tag</option>
+        <option value="conversation">Conversation</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Link to Node (optional ID)</label>
+      <input class="form-input" id="m-link" type="text" placeholder="node-id to connect">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="m-cancel">Cancel</button>
+      <button class="btn-create" id="m-create">Create Node</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════
+   GLOBAL STATE
+═══════════════════════════════════════════════════ */
+window.GRAPH = {
+  nodes: [],
+  edges: [],
+  meshes: {},   // id → THREE.Mesh
+  lines: {},    // edgeKey → THREE.Line
+  rings: {},    // id → THREE.Mesh (selection ring)
+  lights: {},   // id → THREE.PointLight (agent lights)
+  labels: {},   // id → HTMLElement
+  velocities: {},   // id → {x,y,z}
+  positions: {},    // id → {x,y,z}
+  settled: false,
+  iteration: 0,
+  selectedId: null,
+  hoveredId: null,
+  activeFilter: 'ALL',
+  hidden: new Set(),
+};
+
+/* ═══════════════════════════════════════════════════
+   NODE CONFIG
+═══════════════════════════════════════════════════ */
+const NODE_CONFIG = {
+  lead:         { color: 0xff2a2a, r: 8,  shape: 'sphere', emoji: '🎯' },
+  client:       { color: 0x22c55e, r: 10, shape: 'sphere', emoji: '✅' },
+  company:      { color: 0xf0f0f5, r: 7,  shape: 'sphere', emoji: '🏢' },
+  pitch:        { color: 0xf59e0b, r: 6,  shape: 'sphere', emoji: '📊' },
+  goal:         { color: 0x7f5af0, r: 9,  shape: 'sphere', emoji: '🎯' },
+  agent:        { color: 0xff2a2a, r: 12, shape: 'octa',   emoji: '🤖' },
+  tag:          { color: 0x6b6b80, r: 5,  shape: 'sphere', emoji: '🏷' },
+  conversation: { color: 0x4a4a5a, r: 5,  shape: 'sphere', emoji: '💬' },
+};
+const EDGE_COLORS = {
+  directs:  0xff2a2a,
+  targets:  0x7f5af0,
+  monitors: 0xf59e0b,
+  works_at: 0xf0f0f5,
+  pitched:  0xf59e0b,
+  converted:0x22c55e,
+  default:  0x3a3a4a,
+};
+
+/* ═══════════════════════════════════════════════════
+   THREE.JS SETUP
+═══════════════════════════════════════════════════ */
+const canvas = document.getElementById('three-canvas');
+const wrap   = document.getElementById('canvas-wrap');
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x0a0a0f, 1);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 2000);
+camera.position.set(0, 0, 400);
+
+// Lighting
+const ambientLight = new THREE.AmbientLight(0x0a0a1a, 0.6);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.3);
+dirLight.position.set(100, 200, 100);
+scene.add(dirLight);
+
+const orbitLight = new THREE.PointLight(0xff2a2a, 0.8, 400);
+scene.add(orbitLight);
+
+// Starfield
+(function buildStars() {
+  const count = 800;
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const phi   = Math.random() * Math.PI * 2;
+    const theta = Math.acos(2 * Math.random() - 1);
+    const r     = 800 + Math.random() * 700;
+    positions[i*3]   = r * Math.sin(theta) * Math.cos(phi);
+    positions[i*3+1] = r * Math.sin(theta) * Math.sin(phi);
+    positions[i*3+2] = r * Math.cos(theta);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.2, sizeAttenuation: true });
+  scene.add(new THREE.Points(geo, mat));
+})();
+
+/* ═══════════════════════════════════════════════════
+   CAMERA ORBIT (pure vanilla)
+═══════════════════════════════════════════════════ */
+const cam = {
+  theta: 0, phi: Math.PI / 2,
+  radius: 400,
+  target: new THREE.Vector3(0, 0, 0),
+  panOffset: new THREE.Vector3(0, 0, 0),
+  dragging: false,
+  panning: false,
+  lastX: 0, lastY: 0,
+  autoRotate: true,
+  idleTimer: 0,
+};
+
+function applyCamPos() {
+  const s = Math.sin(cam.phi), c = Math.cos(cam.phi);
+  const st = Math.sin(cam.theta), ct = Math.cos(cam.theta);
+  camera.position.set(
+    cam.target.x + cam.panOffset.x + cam.radius * s * st,
+    cam.target.y + cam.panOffset.y + cam.radius * c,
+    cam.target.z + cam.panOffset.z + cam.radius * s * ct
+  );
+  camera.lookAt(
+    cam.target.x + cam.panOffset.x,
+    cam.target.y + cam.panOffset.y,
+    cam.target.z + cam.panOffset.z
+  );
+}
+
+wrap.addEventListener('mousedown', e => {
+  if (e.button === 0) { cam.dragging = true; }
+  if (e.button === 1 || e.button === 2) { cam.panning = true; }
+  cam.lastX = e.clientX; cam.lastY = e.clientY;
+  cam.autoRotate = false; cam.idleTimer = 0;
+  if (!GRAPH.dragNode) wrap.classList.add('dragging');
+  e.preventDefault();
+});
+
+window.addEventListener('mousemove', e => {
+  if (!cam.dragging && !cam.panning) return;
+  const dx = e.clientX - cam.lastX;
+  const dy = e.clientY - cam.lastY;
+  cam.lastX = e.clientX; cam.lastY = e.clientY;
+
+  if (cam.dragging && !GRAPH.dragNode) {
+    cam.theta -= dx * 0.004;
+    cam.phi   -= dy * 0.004;
+    cam.phi    = Math.max(0.05, Math.min(Math.PI - 0.05, cam.phi));
+  }
+  if (cam.panning) {
+    const scale = cam.radius * 0.001;
+    cam.panOffset.x -= dx * scale;
+    cam.panOffset.y += dy * scale;
+  }
+});
+
+window.addEventListener('mouseup', () => {
+  cam.dragging = false; cam.panning = false;
+  wrap.classList.remove('dragging');
+});
+
+wrap.addEventListener('contextmenu', e => e.preventDefault());
+
+wrap.addEventListener('wheel', e => {
+  cam.radius += e.deltaY * 0.4;
+  cam.radius  = Math.max(50, Math.min(1200, cam.radius));
+  cam.autoRotate = false; cam.idleTimer = 0;
+  e.preventDefault();
+}, { passive: false });
+
+function resetCamera() {
+  cam.theta = 0; cam.phi = Math.PI / 2;
+  cam.radius = 400; cam.panOffset.set(0, 0, 0);
+  cam.autoRotate = true;
+}
+
+function fitAll() {
+  const G = window.GRAPH;
+  if (!G.nodes.length) return;
+  let maxDist = 0;
+  G.nodes.forEach(n => {
+    const p = G.positions[n.id];
+    if (p) maxDist = Math.max(maxDist, Math.sqrt(p.x*p.x + p.y*p.y + p.z*p.z));
+  });
+  cam.radius = maxDist * 2.2 + 100;
+  cam.panOffset.set(0, 0, 0);
+}
+
+/* ═══════════════════════════════════════════════════
+   FORCE SIMULATION
+═══════════════════════════════════════════════════ */
+const SIM = { k_repel: 8000, k_spring: 0.01, rest_length: 100, k_gravity: 0.002, damping: 0.85 };
+
+function simulateStep() {
+  const G = window.GRAPH;
+  const ids = G.nodes.map(n => n.id);
+
+  // Repulsion between all pairs
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) {
+      const a = G.positions[ids[i]];
+      const b = G.positions[ids[j]];
+      if (!a || !b) continue;
+      let dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+      let dist2 = dx*dx + dy*dy + dz*dz;
+      if (dist2 < 1) dist2 = 1;
+      const dist = Math.sqrt(dist2);
+      const f = SIM.k_repel / dist2;
+      const fx = (dx / dist) * f, fy = (dy / dist) * f, fz = (dz / dist) * f;
+      const va = G.velocities[ids[i]], vb = G.velocities[ids[j]];
+      va.x -= fx; va.y -= fy; va.z -= fz;
+      vb.x += fx; vb.y += fy; vb.z += fz;
+    }
+  }
+
+  // Spring attraction along edges
+  G.edges.forEach(edge => {
+    const a = G.positions[edge.source];
+    const b = G.positions[edge.target];
+    if (!a || !b) return;
+    let dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+    const dist = Math.max(Math.sqrt(dx*dx + dy*dy + dz*dz), 0.01);
+    const f = SIM.k_spring * (dist - SIM.rest_length);
+    const fx = (dx / dist) * f, fy = (dy / dist) * f, fz = (dz / dist) * f;
+    G.velocities[edge.source].x += fx;
+    G.velocities[edge.source].y += fy;
+    G.velocities[edge.source].z += fz;
+    G.velocities[edge.target].x -= fx;
+    G.velocities[edge.target].y -= fy;
+    G.velocities[edge.target].z -= fz;
+  });
+
+  // Gravity + damping + integrate
+  ids.forEach(id => {
+    if (G.dragNode === id) return;
+    const p = G.positions[id];
+    const v = G.velocities[id];
+    if (!p || !v) return;
+    v.x += -p.x * SIM.k_gravity;
+    v.y += -p.y * SIM.k_gravity;
+    v.z += -p.z * SIM.k_gravity;
+    v.x *= SIM.damping; v.y *= SIM.damping; v.z *= SIM.damping;
+    p.x += v.x; p.y += v.y; p.z += v.z;
+  });
+
+  G.iteration++;
+  if (G.iteration > 150) G.settled = true;
+}
+
+/* ═══════════════════════════════════════════════════
+   NODE / EDGE CREATION
+═══════════════════════════════════════════════════ */
+function createNodeMesh(node) {
+  const G = window.GRAPH;
+  const cfg = NODE_CONFIG[node.type] || NODE_CONFIG.lead;
+
+  let geo;
+  if (cfg.shape === 'octa') {
+    geo = new THREE.OctahedronGeometry(cfg.r, 0);
+  } else {
+    geo = new THREE.SphereGeometry(cfg.r, 16, 16);
+  }
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: cfg.color,
+    emissive: cfg.color,
+    emissiveIntensity: 0.4,
+    roughness: 0.3,
+    metalness: 0.5,
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.userData.nodeId = node.id;
+  mesh.userData.nodeType = node.type;
+
+  // Initial position from stored pos or random
+  const pos = G.positions[node.id] || {
+    x: (Math.random() - 0.5) * 4,
+    y: (Math.random() - 0.5) * 4,
+    z: (Math.random() - 0.5) * 4,
+  };
+  mesh.position.set(pos.x, pos.y, pos.z);
+  G.positions[node.id] = { x: pos.x, y: pos.y, z: pos.z };
+
+  // Initial explosive velocity
+  const speed = 50;
+  G.velocities[node.id] = {
+    x: (Math.random() - 0.5) * speed,
+    y: (Math.random() - 0.5) * speed,
+    z: (Math.random() - 0.5) * speed,
+  };
+
+  scene.add(mesh);
+  G.meshes[node.id] = mesh;
+
+  // Agent point light
+  if (node.type === 'agent') {
+    const pl = new THREE.PointLight(cfg.color, 0.4, 80);
+    mesh.add(pl);
+    G.lights[node.id] = pl;
+  }
+
+  // HTML label
+  createLabel(node);
+}
+
+function createLabel(node) {
+  const G = window.GRAPH;
+  const el = document.createElement('div');
+  el.className = 'node-label';
+  el.dataset.id = node.id;
+  el.textContent = node.label;
+  document.getElementById('labels-layer').appendChild(el);
+  G.labels[node.id] = el;
+}
+
+function removeNodeMesh(id) {
+  const G = window.GRAPH;
+  if (G.meshes[id]) { scene.remove(G.meshes[id]); G.meshes[id].geometry.dispose(); delete G.meshes[id]; }
+  if (G.rings[id])  { scene.remove(G.rings[id]);  G.rings[id].geometry.dispose();  delete G.rings[id]; }
+  if (G.labels[id]) { G.labels[id].remove(); delete G.labels[id]; }
+  delete G.positions[id];
+  delete G.velocities[id];
+}
+
+function createEdgeLine(edge) {
+  const G = window.GRAPH;
+  const key = edge.source + '__' + edge.target + '__' + (edge.type || 'default');
+  if (G.lines[key]) return;
+
+  const edgeColor = EDGE_COLORS[edge.type] || EDGE_COLORS.default;
+  const weight = edge.weight || 1;
+
+  const points = [
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(1, 0, 0),
+  ];
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const mat = new THREE.LineBasicMaterial({
+    color: edgeColor,
+    transparent: true,
+    opacity: weight * 0.5,
+  });
+  const line = new THREE.Line(geo, mat);
+  line.userData.edgeKey = key;
+  line.userData.source = edge.source;
+  line.userData.target = edge.target;
+  scene.add(line);
+  G.lines[key] = line;
+}
+
+function updateEdgePositions() {
+  const G = window.GRAPH;
+  Object.values(G.lines).forEach(line => {
+    const pa = G.positions[line.userData.source];
+    const pb = G.positions[line.userData.target];
+    if (!pa || !pb) return;
+    const positions = line.geometry.attributes.position;
+    positions.setXYZ(0, pa.x, pa.y, pa.z);
+    positions.setXYZ(1, pb.x, pb.y, pb.z);
+    positions.needsUpdate = true;
+    line.geometry.computeBoundingSphere();
+  });
+}
+
+function updateMeshPositions() {
+  const G = window.GRAPH;
+  Object.entries(G.meshes).forEach(([id, mesh]) => {
+    const p = G.positions[id];
+    if (p) mesh.position.set(p.x, p.y, p.z);
+  });
+  Object.entries(G.rings).forEach(([id, ring]) => {
+    const p = G.positions[id];
+    if (p) ring.position.set(p.x, p.y, p.z);
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   SELECTION RING
+═══════════════════════════════════════════════════ */
+function addSelectionRing(id) {
+  const G = window.GRAPH;
+  removeSelectionRing(id);
+  const cfg = NODE_CONFIG[G.meshes[id]?.userData.nodeType] || NODE_CONFIG.lead;
+  const geo = new THREE.TorusGeometry(cfg.r * 1.7, 1.2, 8, 32);
+  const mat = new THREE.MeshBasicMaterial({ color: cfg.color, transparent: true, opacity: 0.8 });
+  const ring = new THREE.Mesh(geo, mat);
+  const p = G.positions[id];
+  if (p) ring.position.set(p.x, p.y, p.z);
+  scene.add(ring);
+  G.rings[id] = ring;
+}
+
+function removeSelectionRing(id) {
+  const G = window.GRAPH;
+  if (G.rings[id]) {
+    scene.remove(G.rings[id]);
+    G.rings[id].geometry.dispose();
+    delete G.rings[id];
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   GRAPH INIT / MERGE
+═══════════════════════════════════════════════════ */
+function initGraph(nodes, edges) {
+  const G = window.GRAPH;
+
+  // Remove old
+  G.nodes.forEach(n => removeNodeMesh(n.id));
+  Object.values(G.lines).forEach(l => { scene.remove(l); l.geometry.dispose(); });
+  G.lines = {};
+  G.nodes = []; G.edges = [];
+  G.settled = false; G.iteration = 0;
+
+  G.nodes = nodes || [];
+  G.edges = edges || [];
+
+  G.nodes.forEach(n => createNodeMesh(n));
+  G.edges.forEach(e => createEdgeLine(e));
+
+  updateStatusBar();
+  applyFilter(G.activeFilter);
+
+  const el = document.getElementById('empty-state');
+  el.style.display = G.nodes.length === 0 ? 'flex' : 'none';
+
+  document.getElementById('s-time').textContent = new Date().toLocaleTimeString();
+}
+
+function mergeGraph(nodes, edges) {
+  const G = window.GRAPH;
+  const existingIds = new Set(G.nodes.map(n => n.id));
+
+  // Add new nodes
+  (nodes || []).forEach(n => {
+    if (!existingIds.has(n.id)) {
+      G.nodes.push(n);
+      // Fly in from top
+      G.positions[n.id] = { x: (Math.random()-0.5)*20, y: 300, z: (Math.random()-0.5)*20 };
+      G.velocities[n.id] = { x: 0, y: -10, z: 0 };
+      createNodeMesh(n);
+    }
+  });
+
+  const existingEdgeKeys = new Set(G.edges.map(e => e.source+'_'+e.target));
+  (edges || []).forEach(e => {
+    const k = e.source + '_' + e.target;
+    if (!existingEdgeKeys.has(k)) {
+      G.edges.push(e);
+      createEdgeLine(e);
+    }
+  });
+
+  G.settled = false;
+  updateStatusBar();
+  applyFilter(G.activeFilter);
+  document.getElementById('s-time').textContent = new Date().toLocaleTimeString();
+}
+
+/* ═══════════════════════════════════════════════════
+   DATA FETCH
+═══════════════════════════════════════════════════ */
+function loadGraph() {
+  fetch('/api/graph')
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.ok !== false) {
+        initGraph(data.nodes || [], data.edges || []);
+      }
+    })
+    .catch(() => {
+      // Show demo data if no API
+      initGraph(DEMO_NODES, DEMO_EDGES);
+    });
+}
+
+function refreshGraph() {
+  fetch('/api/graph')
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.ok !== false) mergeGraph(data.nodes, data.edges);
+    })
+    .catch(() => {
+      // silent fail
+    });
+}
+
+/* ═══════════════════════════════════════════════════
+   DEMO DATA (fallback when no API)
+═══════════════════════════════════════════════════ */
+const DEMO_NODES = [
+  { id: 'boss-1',    type: 'agent',        label: 'B.O.S.S Core',      data: { role: 'Orchestrator', status: 'active' } },
+  { id: 'goal-1',   type: 'goal',          label: 'Revenue $10k MRR',  data: { target: 10000, current: 3200 } },
+  { id: 'goal-2',   type: 'goal',          label: 'Land 5 Clients',    data: { target: 5, current: 2 } },
+  { id: 'lead-1',   type: 'lead',          label: 'Acme Corp',         data: { status: 'hot', source: 'LinkedIn' } },
+  { id: 'lead-2',   type: 'lead',          label: 'TechStart Inc',     data: { status: 'warm', source: 'Referral' } },
+  { id: 'lead-3',   type: 'lead',          label: 'NovaSys',           data: { status: 'cold', source: 'Cold email' } },
+  { id: 'client-1', type: 'client',        label: 'DataDriven LLC',    data: { mrr: 1200, since: '2025-01' } },
+  { id: 'client-2', type: 'client',        label: 'Velocity SaaS',     data: { mrr: 2000, since: '2025-02' } },
+  { id: 'pitch-1',  type: 'pitch',         label: 'Acme Pitch v2',     data: { status: 'sent', value: 4500 } },
+  { id: 'pitch-2',  type: 'pitch',         label: 'TechStart Deck',    data: { status: 'draft', value: 2800 } },
+  { id: 'co-1',     type: 'company',       label: 'Acme Corp',         data: { industry: 'SaaS', size: '50-100' } },
+  { id: 'tag-1',    type: 'tag',           label: '#saas',             data: {} },
+  { id: 'tag-2',    type: 'tag',           label: '#b2b',              data: {} },
+  { id: 'conv-1',   type: 'conversation',  label: 'Acme intro call',   data: { date: '2025-03-10' } },
+];
+
+const DEMO_EDGES = [
+  { source: 'boss-1',  target: 'goal-1',   type: 'targets',   weight: 1 },
+  { source: 'boss-1',  target: 'goal-2',   type: 'targets',   weight: 1 },
+  { source: 'boss-1',  target: 'lead-1',   type: 'monitors',  weight: 0.8 },
+  { source: 'boss-1',  target: 'lead-2',   type: 'monitors',  weight: 0.6 },
+  { source: 'boss-1',  target: 'lead-3',   type: 'monitors',  weight: 0.4 },
+  { source: 'lead-1',  target: 'co-1',     type: 'works_at',  weight: 1 },
+  { source: 'lead-1',  target: 'pitch-1',  type: 'pitched',   weight: 1 },
+  { source: 'lead-2',  target: 'pitch-2',  type: 'pitched',   weight: 0.7 },
+  { source: 'pitch-1', target: 'client-1', type: 'converted', weight: 0.9 },
+  { source: 'goal-2',  target: 'client-1', type: 'directs',   weight: 0.6 },
+  { source: 'goal-2',  target: 'client-2', type: 'directs',   weight: 0.6 },
+  { source: 'lead-1',  target: 'tag-1',    type: 'default',   weight: 0.4 },
+  { source: 'lead-1',  target: 'tag-2',    type: 'default',   weight: 0.4 },
+  { source: 'client-1',target: 'tag-1',    type: 'default',   weight: 0.3 },
+  { source: 'conv-1',  target: 'lead-1',   type: 'default',   weight: 0.5 },
+  { source: 'boss-1',  target: 'conv-1',   type: 'monitors',  weight: 0.5 },
+];
+
+/* ═══════════════════════════════════════════════════
+   RAYCASTER / INTERACTION
+═══════════════════════════════════════════════════ */
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2(-9999, -9999);
+let mouseScreen = { x: 0, y: 0 };
+
+function getMouseNDC(e) {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+  mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+  mouseScreen.x = e.clientX;
+  mouseScreen.y = e.clientY;
+}
+
+function getIntersectedNode() {
+  const G = window.GRAPH;
+  const meshList = Object.values(G.meshes).filter(m => !m.userData.hidden);
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(meshList, false);
+  return hits.length > 0 ? hits[0].object : null;
+}
+
+// Hover
+wrap.addEventListener('mousemove', e => {
+  getMouseNDC(e);
+
+  if (GRAPH.dragNode) {
+    // Move dragged node
+    const G = window.GRAPH;
+    const p = G.positions[G.dragNode];
+    if (p) {
+      raycaster.setFromCamera(mouse, camera);
+      const dist = camera.position.distanceTo(new THREE.Vector3(p.x, p.y, p.z));
+      const dir = raycaster.ray.direction.clone().multiplyScalar(dist);
+      const newPos = camera.position.clone().add(dir);
+      G.positions[G.dragNode] = { x: newPos.x, y: newPos.y, z: newPos.z };
+      G.velocities[G.dragNode] = { x: 0, y: 0, z: 0 };
+    }
+    return;
+  }
+
+  const hit = getIntersectedNode();
+  const G   = window.GRAPH;
+
+  if (hit) {
+    const id   = hit.userData.nodeId;
+    const type = hit.userData.nodeType;
+    const node = G.nodes.find(n => n.id === id);
+    if (!node) return;
+
+    G.hoveredId = id;
+
+    // Tooltip
+    const tt = document.getElementById('tooltip');
+    const tl = document.getElementById('tt-label');
+    const tb = document.getElementById('tt-badge');
+    tl.textContent = node.label;
+    tb.textContent = type;
+    const cfg = NODE_CONFIG[type] || NODE_CONFIG.lead;
+    tb.style.background = '#' + cfg.color.toString(16).padStart(6,'0') + '33';
+    tb.style.color = '#' + cfg.color.toString(16).padStart(6,'0');
+    tt.style.left  = (mouseScreen.x + 12) + 'px';
+    tt.style.top   = (mouseScreen.y - 20) + 'px';
+    tt.classList.add('visible');
+
+    // Hover glow
+    if (G.meshes[id]) {
+      G.meshes[id].material.emissiveIntensity = 1.0;
+    }
+    wrap.style.cursor = 'pointer';
+  } else {
+    if (G.hoveredId && G.hoveredId !== G.selectedId) {
+      const m = G.meshes[G.hoveredId];
+      if (m) m.material.emissiveIntensity = 0.4;
+    }
+    G.hoveredId = null;
+    document.getElementById('tooltip').classList.remove('visible');
+    wrap.style.cursor = '';
+  }
+});
+
+let dragStartPos = null;
+wrap.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  dragStartPos = { x: e.clientX, y: e.clientY };
+  const hit = getIntersectedNode();
+  if (hit) {
+    GRAPH.dragNode = hit.userData.nodeId;
+    GRAPH.settled = false;
+    e.stopPropagation();
+  }
+});
+
+window.addEventListener('mouseup', e => {
+  if (GRAPH.dragNode) {
+    GRAPH.dragNode = null;
+    e.stopPropagation();
+  }
+});
+
+// Click — select
+wrap.addEventListener('click', e => {
+  if (!dragStartPos) return;
+  const moved = Math.abs(e.clientX - dragStartPos.x) + Math.abs(e.clientY - dragStartPos.y);
+  dragStartPos = null;
+  if (moved > 5) return; // was a drag
+
+  getMouseNDC(e);
+  const hit = getIntersectedNode();
+  const G = window.GRAPH;
+
+  if (hit) {
+    const id = hit.userData.nodeId;
+    if (G.selectedId !== id) {
+      if (G.selectedId) {
+        removeSelectionRing(G.selectedId);
+        const m = G.meshes[G.selectedId];
+        if (m) { m.material.emissiveIntensity = 0.4; m.scale.set(1,1,1); }
+      }
+      G.selectedId = id;
+      addSelectionRing(id);
+      hit.scale.set(1.25, 1.25, 1.25);
+      hit.material.emissiveIntensity = 1.0;
+      openDetailPanel(id);
+    }
+  } else {
+    if (G.selectedId) {
+      removeSelectionRing(G.selectedId);
+      const m = G.meshes[G.selectedId];
+      if (m) { m.material.emissiveIntensity = 0.4; m.scale.set(1,1,1); }
+    }
+    G.selectedId = null;
+    closeDetailPanel();
+  }
+});
+
+// Double click — expand / highlight connected
+wrap.addEventListener('dblclick', e => {
+  getMouseNDC(e);
+  const hit = getIntersectedNode();
+  if (!hit) return;
+  const id = hit.userData.nodeId;
+  const G = window.GRAPH;
+
+  // Highlight connected edges
+  const connectedEdgeKeys = new Set();
+  G.edges.forEach(edge => {
+    if (edge.source === id || edge.target === id) {
+      const key = edge.source + '__' + edge.target + '__' + (edge.type || 'default');
+      connectedEdgeKeys.add(key);
+    }
+  });
+  Object.entries(G.lines).forEach(([key, line]) => {
+    line.material.opacity = connectedEdgeKeys.has(key) ? 0.9 : 0.1;
+  });
+
+  setTimeout(() => {
+    Object.values(G.lines).forEach(line => {
+      const edge = G.edges.find(e => e.source === line.userData.source && e.target === line.userData.target);
+      line.material.opacity = (edge?.weight || 1) * 0.5;
+    });
+  }, 2000);
+});
+
+// Keyboard
+window.addEventListener('keydown', e => {
+  const G = window.GRAPH;
+  if (e.key === 'r' || e.key === 'R') { resetCamera(); }
+  if (e.key === 'f' || e.key === 'F') { fitAll(); }
+  if (e.key === 'Escape') {
+    if (G.selectedId) {
+      removeSelectionRing(G.selectedId);
+      const m = G.meshes[G.selectedId];
+      if (m) { m.material.emissiveIntensity = 0.4; m.scale.set(1,1,1); }
+      G.selectedId = null;
+      closeDetailPanel();
+    }
+  }
+});
+
+/* ═══════════════════════════════════════════════════
+   LABELS UPDATE
+═══════════════════════════════════════════════════ */
+const tmpVec = new THREE.Vector3();
+function updateLabels() {
+  const G = window.GRAPH;
+  const rect = canvas.getBoundingClientRect();
+  const showTypes = new Set(['agent', 'goal', 'client']);
+
+  G.nodes.forEach(node => {
+    const el = G.labels[node.id];
+    if (!el) return;
+
+    const shouldShow = showTypes.has(node.type) || G.hoveredId === node.id || G.selectedId === node.id;
+    if (!shouldShow || G.hidden.has(node.id)) {
+      el.style.display = 'none';
+      return;
+    }
+
+    const p = G.positions[node.id];
+    if (!p) { el.style.display = 'none'; return; }
+
+    tmpVec.set(p.x, p.y, p.z);
+    tmpVec.project(camera);
+
+    const sx = (tmpVec.x *  0.5 + 0.5) * rect.width;
+    const sy = (tmpVec.y * -0.5 + 0.5) * rect.height;
+
+    if (tmpVec.z > 1) { el.style.display = 'none'; return; } // behind camera
+
+    // Fade with distance
+    const dist = camera.position.distanceTo(new THREE.Vector3(p.x, p.y, p.z));
+    const opacity = Math.max(0, Math.min(1, 1 - (dist - 200) / 600));
+
+    el.style.display = 'block';
+    el.style.left = sx + 'px';
+    el.style.top  = sy + 'px';
+    el.style.opacity = opacity;
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   DETAIL PANEL
+═══════════════════════════════════════════════════ */
+function openDetailPanel(id) {
+  const G = window.GRAPH;
+  const node = G.nodes.find(n => n.id === id);
+  if (!node) return;
+
+  const cfg  = NODE_CONFIG[node.type] || NODE_CONFIG.lead;
+  const colorHex = '#' + cfg.color.toString(16).padStart(6,'0');
+
+  document.getElementById('detail-empty').style.display = 'none';
+  const content = document.getElementById('detail-content');
+  content.style.display = 'flex';
+
+  // Icon
+  const iconEl = document.getElementById('d-icon');
+  iconEl.textContent = cfg.emoji;
+  iconEl.style.background = colorHex + '22';
+  iconEl.style.border = '1px solid ' + colorHex + '55';
+
+  // Badge
+  const badge = document.getElementById('d-badge');
+  badge.textContent = node.type.toUpperCase();
+  badge.style.background = colorHex + '22';
+  badge.style.color = colorHex;
+
+  document.getElementById('d-name').textContent = node.label;
+
+  // Fields
+  const fieldsEl = document.getElementById('d-fields');
+  const fieldsSection = document.getElementById('d-fields-section');
+  fieldsEl.innerHTML = '';
+  if (node.data && Object.keys(node.data).length > 0) {
+    fieldsSection.style.display = 'block';
+    Object.entries(node.data).forEach(([k, v]) => {
+      fieldsEl.innerHTML += `
+        <div class="detail-field">
+          <div class="detail-field-label">${k}</div>
+          <div class="detail-field-value">${v !== null && v !== undefined ? v : '—'}</div>
+        </div>`;
+    });
+  } else {
+    fieldsSection.style.display = 'none';
+  }
+
+  // Connections
+  const connEl = document.getElementById('d-connections');
+  connEl.innerHTML = '';
+  const connSection = document.getElementById('d-conn-section');
+
+  const connected = [];
+  G.edges.forEach(edge => {
+    let otherId = null, dir = null;
+    if (edge.source === id) { otherId = edge.target; dir = '→'; }
+    else if (edge.target === id) { otherId = edge.source; dir = '←'; }
+    if (otherId) {
+      const other = G.nodes.find(n => n.id === otherId);
+      if (other) connected.push({ node: other, edge, dir });
+    }
+  });
+
+  if (connected.length > 0) {
+    connSection.style.display = 'block';
+    connected.forEach(({ node: cn, edge, dir }) => {
+      const ccfg = NODE_CONFIG[cn.type] || NODE_CONFIG.lead;
+      const ccHex = '#' + ccfg.color.toString(16).padStart(6,'0');
+      const item = document.createElement('div');
+      item.className = 'conn-node';
+      item.innerHTML = `
+        <div class="conn-dot" style="background:${ccHex}"></div>
+        <span class="conn-label">${cn.label}</span>
+        <span class="conn-type">${dir} ${edge.type || ''}</span>`;
+      item.addEventListener('click', () => {
+        // Select the connected node
+        if (G.selectedId) {
+          removeSelectionRing(G.selectedId);
+          const m = G.meshes[G.selectedId];
+          if (m) { m.material.emissiveIntensity = 0.4; m.scale.set(1,1,1); }
+        }
+        G.selectedId = cn.id;
+        addSelectionRing(cn.id);
+        const cm = G.meshes[cn.id];
+        if (cm) { cm.scale.set(1.25,1.25,1.25); cm.material.emissiveIntensity = 1.0; }
+        openDetailPanel(cn.id);
+      });
+      connEl.appendChild(item);
+    });
+  } else {
+    connSection.style.display = 'none';
+  }
+
+  // Reset B.O.S.S response
+  document.getElementById('boss-response').style.display = 'none';
+  document.getElementById('boss-response').textContent = '';
+}
+
+function closeDetailPanel() {
+  document.getElementById('detail-empty').style.display = 'flex';
+  document.getElementById('detail-content').style.display = 'none';
+  document.getElementById('boss-response').style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════════════
+   BOSS ASK
+═══════════════════════════════════════════════════ */
+document.getElementById('boss-ask-btn').addEventListener('click', () => {
+  const G = window.GRAPH;
+  const id = G.selectedId;
+  if (!id) return;
+  const node = G.nodes.find(n => n.id === id);
+  if (!node) return;
+
+  const btn = document.getElementById('boss-ask-btn');
+  btn.textContent = '⌛ Thinking...';
+  btn.disabled = true;
+
+  fetch('/api/boss/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: `Tell me about this node: ${node.label} (type: ${node.type})`,
+      context: node,
+    }),
+  })
+    .then(r => r.json())
+    .then(data => {
+      const resp = document.getElementById('boss-response');
+      resp.textContent = data.reply || data.message || 'No response.';
+      resp.style.display = 'block';
+    })
+    .catch(() => {
+      const resp = document.getElementById('boss-response');
+      resp.textContent = `B.O.S.S analysis for "${node.label}": This ${node.type} node is part of your knowledge graph. Connect to the API to get live insights.`;
+      resp.style.display = 'block';
+    })
+    .finally(() => {
+      btn.textContent = '⚡ Ask B.O.S.S about this';
+      btn.disabled = false;
+    });
+});
+
+/* ═══════════════════════════════════════════════════
+   FILTER
+═══════════════════════════════════════════════════ */
+function applyFilter(filter) {
+  const G = window.GRAPH;
+  G.activeFilter = filter;
+  G.hidden.clear();
+
+  document.querySelectorAll('.pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.filter === filter);
+  });
+
+  G.nodes.forEach(node => {
+    const hide = filter !== 'ALL' && node.type !== filter;
+    const mesh = G.meshes[node.id];
+    if (mesh) {
+      mesh.visible = !hide;
+      mesh.userData.hidden = hide;
+    }
+    const ring = G.rings[node.id];
+    if (ring) ring.visible = !hide;
+    const label = G.labels[node.id];
+    if (label) label.style.display = hide ? 'none' : '';
+    if (hide) G.hidden.add(node.id);
+  });
+
+  // Hide edges where either endpoint is hidden
+  Object.values(G.lines).forEach(line => {
+    const srcHidden = G.hidden.has(line.userData.source);
+    const tgtHidden = G.hidden.has(line.userData.target);
+    line.visible = !srcHidden && !tgtHidden;
+  });
+}
+
+document.querySelectorAll('.pill').forEach(p => {
+  p.addEventListener('click', () => applyFilter(p.dataset.filter));
+});
+
+/* ═══════════════════════════════════════════════════
+   STATUS BAR
+═══════════════════════════════════════════════════ */
+function updateStatusBar() {
+  const G = window.GRAPH;
+  document.getElementById('s-nodes').textContent = G.nodes.length;
+  document.getElementById('s-edges').textContent = G.edges.length;
+}
+
+/* ═══════════════════════════════════════════════════
+   FPS COUNTER
+═══════════════════════════════════════════════════ */
+const fpsBuffer = new Float32Array(60);
+let fpsIdx = 0, lastTime = performance.now();
+
+function updateFPS(now) {
+  const delta = now - lastTime;
+  lastTime = now;
+  fpsBuffer[fpsIdx++ % 60] = delta > 0 ? 1000 / delta : 0;
+  if (fpsIdx % 15 === 0) {
+    const avg = fpsBuffer.reduce((a,b) => a+b, 0) / 60;
+    document.getElementById('s-fps').textContent = Math.round(avg);
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   RESIZE
+═══════════════════════════════════════════════════ */
+function onResize() {
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+window.addEventListener('resize', onResize);
+onResize();
+
+/* ═══════════════════════════════════════════════════
+   MAIN RENDER LOOP
+═══════════════════════════════════════════════════ */
+let frame = 0;
+let orbitAngle = 0;
+
+function animate(now) {
+  requestAnimationFrame(animate);
+  updateFPS(now);
+  frame++;
+
+  const G = window.GRAPH;
+
+  // Orbit light animation
+  orbitAngle += 0.005;
+  orbitLight.position.set(
+    Math.cos(orbitAngle) * 200,
+    100,
+    Math.sin(orbitAngle) * 200
+  );
+
+  // Auto-rotate camera
+  if (cam.autoRotate) {
+    cam.theta += 0.001;
+    cam.idleTimer = 0;
+  } else {
+    cam.idleTimer++;
+    if (cam.idleTimer > 300) cam.autoRotate = true;
+  }
+
+  // Force simulation
+  if (!G.settled || frame % 10 === 0) {
+    simulateStep();
+  }
+
+  // Pulsing ring
+  if (G.selectedId && G.rings[G.selectedId]) {
+    const s = 1 + 0.15 * Math.sin(now * 0.003);
+    G.rings[G.selectedId].scale.set(s, s, s);
+    G.rings[G.selectedId].rotation.z += 0.01;
+    G.rings[G.selectedId].rotation.x += 0.005;
+  }
+
+  updateMeshPositions();
+  updateEdgePositions();
+  applyCamPos();
+  updateLabels();
+
+  renderer.render(scene, camera);
+}
+
+/* ═══════════════════════════════════════════════════
+   CONTROLS
+═══════════════════════════════════════════════════ */
+document.getElementById('btn-reset').addEventListener('click', resetCamera);
+document.getElementById('btn-refresh').addEventListener('click', refreshGraph);
+
+/* ═══════════════════════════════════════════════════
+   ADD NODE MODAL
+═══════════════════════════════════════════════════ */
+document.getElementById('btn-add-node').addEventListener('click', () => {
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('m-label').focus();
+});
+document.getElementById('m-cancel').addEventListener('click', () => {
+  document.getElementById('modal-overlay').classList.remove('open');
+});
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay'))
+    document.getElementById('modal-overlay').classList.remove('open');
+});
+
+document.getElementById('m-create').addEventListener('click', () => {
+  const label = document.getElementById('m-label').value.trim();
+  const type  = document.getElementById('m-type').value;
+  const link  = document.getElementById('m-link').value.trim();
+  if (!label) { document.getElementById('m-label').focus(); return; }
+
+  const newNode = {
+    id:    type + '-' + Date.now(),
+    type,
+    label,
+    data:  {},
+  };
+
+  // Try API, fall back to local
+  fetch('/api/graph/node', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ node: newNode, linkTo: link || null }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    const n = data.node || newNode;
+    const edges = data.edges || (link ? [{ source: n.id, target: link, type: 'default', weight: 0.5 }] : []);
+    mergeGraph([n], edges);
+  })
+  .catch(() => {
+    const edges = link ? [{ source: newNode.id, target: link, type: 'default', weight: 0.5 }] : [];
+    mergeGraph([newNode], edges);
+  });
+
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('m-label').value = '';
+  document.getElementById('m-link').value = '';
+});
+
+// Enter key in modal
+document.getElementById('m-label').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('m-create').click();
+});
+
+/* ═══════════════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════════════ */
+loadGraph();
+animate(performance.now());
+
+</script>
+</body>
+</html>

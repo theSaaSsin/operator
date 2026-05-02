@@ -1,12 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/x-icon" href="favicon.ico">
-<title>TheSaaSsin — Operator Panel</title>
+<title>B.O.S.S — Business Optimization System Service</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="operator.css">
+<link rel="stylesheet" href="workflows-runner.css">
 </head>
 <body>
 <div id="app">
@@ -14,31 +15,35 @@
   <!-- SIDEBAR -->
   <div id="sidebar">
     <div class="sidebar-logo">
-      <div class="s-logo">The<span>SaaS</span>sin</div>
-      <div class="s-tag">Operator Panel</div>
+      <div class="s-logo" style="font-size:20px;letter-spacing:.08em"><span style="color:#ff2a2a">B.O.S.S</span></div>
+      <div class="s-tag">Business Operating System</div>
     </div>
     <nav>
-      <div class="nav-section">Build</div>
-      <div class="nav-item active" data-panel="client">
-        <i class="fas fa-user-plus"></i> Client Creator
-      </div>
-      <div class="nav-item" data-panel="workflows">
-        <i class="fas fa-bolt"></i> Workflows
-      </div>
-      <div class="nav-section">Discover</div>
-      <div class="nav-item" data-panel="feed">
-        <i class="fas fa-satellite-dish"></i> Lead Feed
-      </div>
-      <div class="nav-section">Manage</div>
-      <div class="nav-item" data-panel="crm">
-        <i class="fas fa-chart-line"></i> CRM / Leads
-      </div>
-      <div class="nav-item" data-panel="outreach">
-        <i class="fas fa-paper-plane"></i> Outreach Queue
-      </div>
+
+      <!-- ── PINNED ─────────────────────────── -->
+      <div class="nav-item active" data-panel="dashboard"><i class="fas fa-th-large"></i> Dashboard</div>
+      <div class="nav-item" data-panel="execute"><i class="fas fa-bolt"></i> Execute</div>
+      <div class="nav-item" data-panel="workflows" onclick="switchPanel('panel-workflows')"><i class="fas fa-bolt"></i> Workflows</div>
+
+      <!-- ── DYNAMIC MODULE NAV (built by buildNav() in operator.js) ── -->
+      <div id="nav-modules"></div>
+
+      <!-- ── B.O.S.S BRAIN ─────────────────── -->
+      <div class="nav-section" style="color:#ff2a2a;margin-top:6px">B.O.S.S BRAIN</div>
+      <div class="nav-item" data-panel="boss-creative" onclick="bossLoadCreative()" style="color:#a855f7"><i class="fas fa-film"></i> Creative Studio</div>
+      <div class="nav-item" onclick="window.open('/offaxis.html','_blank')" style="color:#3b82f6"><i class="fas fa-cube"></i> 3D Viewer</div>
+      <div class="nav-item" data-panel="panel-graph" onclick="switchPanel('panel-graph')" style="color:#22c55e"><i class="fas fa-project-diagram"></i> Knowledge Graph</div>
+      <div class="nav-item" data-panel="panel-design" onclick="switchPanel('panel-design')" style="color:#f59e0b"><i class="fas fa-palette"></i> Brand Assets</div>
+      <div class="nav-item" data-panel="boss-config" onclick="bossLoadConfig()" style="color:#ff2a2a"><i class="fas fa-key"></i> API Keys</div>
+      <div class="nav-item" data-panel="panel-ai-tools" onclick="bossLoadAITools()" style="color:#ff2a2a"><i class="fas fa-robot"></i> AI Models</div>
+      <div class="nav-item" data-panel="panel-gpu" onclick="bossLoadGPU()" style="color:#ff2a2a"><i class="fas fa-microchip"></i> Free GPU</div>
+      <div class="nav-item" data-panel="boss-channels" onclick="bossLoadChannels()" style="color:#ff2a2a"><i class="fas fa-satellite-dish"></i> Channels</div>
+      <div class="nav-item" data-panel="boss-agents" onclick="bossLoadAgents()" style="color:#ff2a2a"><i class="fas fa-robot"></i> Agents</div>
+
     </nav>
     <div class="sidebar-footer">
-      <span class="status-dot"></span>System Online
+      <span class="status-dot" style="background:#2cb67d;box-shadow:0 0 8px rgba(44,182,125,.5)"></span>B.O.S.S Online
+      <span class="sidebar-version" id="sidebar-version">v0.3</span>
     </div>
   </div>
 
@@ -46,13 +51,123 @@
   <div id="main">
     <div id="topbar">
       <div id="topbar-title">Client Creator</div>
-      <div id="topbar-meta" id="topbar-meta">TheSaaSsin Operator &nbsp;·&nbsp; <span id="clock"></span></div>
+      <div id="topbar-meta"><span style="color:#ff2a2a;font-weight:700;letter-spacing:.06em">B.O.S.S</span> &nbsp;·&nbsp; <span id="clock"></span></div>
+      <button id="btn-ai-status" onclick="showAISetup()" title="AI Assist — click to configure" style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:.75rem;cursor:pointer;font-family:inherit;font-weight:600;letter-spacing:.03em;transition:all .18s;">⚡ AI Off</button>
+      <button id="btn-mobile-link" onclick="showMobileLink()" title="Open on phone">
+        <i class="fas fa-mobile-screen"></i>
+      </button>
+    </div>
+
+    <!-- MOBILE LINK MODAL -->
+    <div id="mobile-modal" onclick="if(event.target===this)closeMobileModal()">
+      <div id="mobile-modal-box">
+        <div id="mobile-modal-title"><i class="fas fa-mobile-screen"></i> Open on iPhone</div>
+        <div id="mobile-modal-status">Fetching tunnel URL...</div>
+        <div id="mobile-qr-wrap"></div>
+        <div id="mobile-url-row">
+          <input id="mobile-url-input" type="text" readonly onclick="this.select()">
+          <button onclick="copyMobileUrl()"><i class="fas fa-copy"></i></button>
+        </div>
+        <div id="mobile-modal-tip">Scan with iPhone camera · or tap Copy and open in Safari</div>
+        <button id="mobile-modal-close" onclick="closeMobileModal()">Close</button>
+      </div>
+    </div>
+
+    <!-- MOBILE BOTTOM NAV -->
+    <div id="mobile-nav-bar">
+      <button class="mob-nav-btn active" data-panel="dashboard">
+        <i class="fas fa-th-large"></i>Home
+      </button>
+      <button class="mob-nav-btn" data-panel="client">
+        <i class="fas fa-user-plus"></i>Build
+      </button>
+      <button class="mob-nav-btn" data-panel="feed">
+        <i class="fas fa-satellite-dish"></i>Leads
+      </button>
+      <button class="mob-nav-btn" data-panel="crm">
+        <i class="fas fa-chart-line"></i>CRM
+      </button>
+      <button class="mob-nav-btn" data-panel="outreach">
+        <i class="fas fa-paper-plane"></i>Out
+      </button>
+      <button class="mob-nav-btn" data-panel="analytics" onclick="loadAnalytics()">
+        <i class="fas fa-chart-bar"></i>Stats
+      </button>
     </div>
 
     <div id="content">
 
+      <!-- ── PANEL: EXECUTE (Decision-Execution Engine) ── -->
+      <div class="panel" id="panel-execute">
+        <div class="exec-wrap">
+          <div class="exec-header">
+            <h2><i class="fas fa-bolt" style="color:var(--accent);margin-right:8px"></i>Execution Engine</h2>
+            <p class="exec-sub">Paste messy input. Get diagnosis → opportunity → action → output message → next stage.</p>
+          </div>
+          <div class="exec-input-row">
+            <textarea id="exec-input" class="exec-textarea" placeholder="Paste a lead idea, problem statement, customer friction, competitor threat, or revenue gap. Raw is fine — the engine strips the noise."></textarea>
+            <div class="exec-controls">
+              <select id="exec-type" class="exec-select">
+                <option value="lead">Lead / Prospect</option>
+                <option value="problem">Problem Statement</option>
+                <option value="friction">Customer Friction</option>
+                <option value="competitor">Competitor Threat</option>
+                <option value="revenue">Revenue Gap</option>
+              </select>
+              <button class="btn btn-secondary" id="btn-exec-fill-lead" title="Pre-fill from active Lead Feed context">
+                <i class="fas fa-satellite-dish"></i> From Active Lead
+              </button>
+              <button class="btn btn-primary" id="btn-exec-run" style="margin-left:auto">
+                <i class="fas fa-bolt"></i> Execute
+              </button>
+            </div>
+          </div>
+          <div class="exec-loading" id="exec-loading" style="display:none">
+            <i class="fas fa-circle-notch fa-spin"></i> Running diagnosis…
+          </div>
+          <div class="exec-output" id="exec-output" style="display:none">
+            <div class="exec-section" data-sec="diagnosis">
+              <div class="exec-section-head"><span>DIAGNOSIS</span><button class="exec-copy-btn" data-copy="diagnosis">copy</button></div>
+              <div class="exec-section-body" id="exec-diagnosis"></div>
+            </div>
+            <div class="exec-section" data-sec="opportunity">
+              <div class="exec-section-head"><span>OPPORTUNITY</span><button class="exec-copy-btn" data-copy="opportunity">copy</button></div>
+              <div class="exec-section-body" id="exec-opportunity"></div>
+            </div>
+            <div class="exec-section" data-sec="actions">
+              <div class="exec-section-head"><span>ACTION PLAN</span><button class="exec-copy-btn" data-copy="actions">copy</button></div>
+              <div class="exec-section-body" id="exec-actions"></div>
+            </div>
+            <div class="exec-section exec-message" data-sec="message">
+              <div class="exec-section-head"><span>OUTPUT MESSAGE</span><button class="exec-copy-btn" data-copy="message">copy</button></div>
+              <div class="exec-section-body" id="exec-message"></div>
+            </div>
+            <div class="exec-section" data-sec="next">
+              <div class="exec-section-head"><span>NEXT STAGE</span><button class="exec-copy-btn" data-copy="next">copy</button></div>
+              <div class="exec-section-body" id="exec-next"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PANEL: DASHBOARD ── -->
+      <div class="panel active" id="panel-dashboard">
+        <div class="dash-scroll">
+          <div class="dash-hero">
+            <div class="dash-hero-left">
+              <h1 class="dash-title">The<span>SaaS</span>sin</h1>
+              <p class="dash-subtitle">Full Module System — Operator Command Center</p>
+            </div>
+            <div class="dash-hero-stats" id="dash-hero-stats"></div>
+          </div>
+          <div class="dash-grid" id="dash-grid">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+
       <!-- ── PANEL: CLIENT CREATOR ── -->
-      <div class="panel active" id="panel-client">
+      <div class="panel" id="panel-client">
 
         <!-- LEFT: form + client list -->
         <div class="client-left">
@@ -66,12 +181,36 @@
               <input type="text" id="f-name" placeholder="e.g. Apex Plumbing">
             </div>
             <div class="field">
-              <label>Niche</label>
-              <input type="text" id="f-niche" placeholder="e.g. Local Trade, SaaS, Consulting">
+              <label>Niche / Industry</label>
+              <input type="text" id="f-niche" placeholder="e.g. Plumber, SaaS, Personal Trainer, Solicitor">
             </div>
             <div class="field">
-              <label>Core Offer</label>
-              <input type="text" id="f-offer" placeholder="e.g. Emergency plumbing 24/7">
+              <label>Specific Service / Core Offer</label>
+              <input type="text" id="f-offer" placeholder="e.g. Emergency boiler repairs, 24/7 call-out">
+            </div>
+            <div class="field">
+              <label>Target Customer <span class="opt-label">who do they serve?</span></label>
+              <input type="text" id="f-target" placeholder="e.g. Homeowners in Manchester, B2B startups, Busy mums">
+            </div>
+            <div class="field">
+              <label>Key Result / USP <span class="opt-label">what sets them apart?</span></label>
+              <input type="text" id="f-usp" placeholder="e.g. Fixed in 24hrs, No hidden fees, 10-year guarantee">
+            </div>
+            <div class="field">
+              <label>Price Point</label>
+              <div class="tone-btns">
+                <button class="tone-btn" data-price="budget">Budget</button>
+                <button class="tone-btn active" data-price="mid">Professional</button>
+                <button class="tone-btn" data-price="premium">Premium</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Business Stage</label>
+              <div class="tone-btns">
+                <button class="tone-btn" data-stage="new">Just Starting</button>
+                <button class="tone-btn active" data-stage="growing">Growing</button>
+                <button class="tone-btn" data-stage="established">Established</button>
+              </div>
             </div>
             <div class="field">
               <label>Primary Goal</label>
@@ -96,7 +235,7 @@
             </div>
             <div class="field">
               <label>Notes (optional)</label>
-              <textarea id="f-notes" placeholder="Any extra context for system generation..."></textarea>
+              <textarea id="f-notes" placeholder="Anything extra — competitors, previous results, specific angles..."></textarea>
             </div>
             <div class="field">
               <label>System Components</label>
@@ -183,7 +322,10 @@
         <div class="client-right">
           <div class="panel-header">
             <h2>Live Preview</h2>
-            <div style="display:flex;gap:8px" id="preview-actions" style="display:none">
+            <div style="display:flex;gap:8px" id="preview-actions">
+              <button class="btn btn-secondary btn-sm" id="btn-toggle-analytics" onclick="toggleAnalyticsDrawer()">
+                <i class="fas fa-chart-bar"></i> Analytics <i class="fas fa-chevron-down" style="font-size:.65rem;margin-left:2px"></i>
+              </button>
               <button class="btn btn-secondary btn-sm" id="btn-download" style="display:none">
                 <i class="fas fa-download"></i> Download HTML
               </button>
@@ -192,13 +334,68 @@
               </button>
             </div>
           </div>
+          <div class="an-drawer" id="an-drawer">
+            <div class="an-drawer-head">
+              <h3><i class="fas fa-chart-bar" style="color:var(--accent);margin-right:6px"></i>Outreach Analytics</h3>
+              <button class="btn btn-secondary btn-sm" onclick="toggleAnalyticsDrawer()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="an-drawer-body" id="an-drawer-body">
+              <div class="an-empty"><i class="fas fa-chart-bar"></i><p>Copy a DM from the Lead Feed to start tracking</p></div>
+            </div>
+          </div>
           <div class="pkg-bar" id="pkg-bar"></div>
           <div class="preview-wrap">
             <div class="preview-placeholder" id="preview-placeholder">
               <i class="fas fa-eye-slash"></i>
               <p>Fill in the form and click Generate System</p>
             </div>
-            <iframe id="preview-frame" style="display:none"></iframe>
+            <div class="variant-shell" id="variant-shell" style="display:none">
+              <div class="variant-tabs" id="variant-tabs">
+                <button class="variant-tab active" onclick="setActiveVariant(0)">
+                  <span class="vt-label">V1</span><span class="vt-name">Bold</span>
+                </button>
+                <button class="variant-tab" onclick="setActiveVariant(1)">
+                  <span class="vt-label">V2</span><span class="vt-name">Clean</span>
+                </button>
+                <button class="variant-tab" onclick="setActiveVariant(2)">
+                  <span class="vt-label">V3</span><span class="vt-name">Light</span>
+                </button>
+                <button class="vt-edit-toggle" id="btn-variant-edit" onclick="toggleVariantEdit()">✏ Edit</button>
+                <button class="vt-use-btn" id="btn-use-variant" onclick="useActiveVariant()">
+                  ✓ Use This
+                </button>
+              </div>
+              <div class="variant-edit-panel" id="variant-edit-panel" style="display:none">
+                <div class="vep-row">
+                  <span class="vep-label">Shape</span>
+                  <div class="vep-btns" id="vep-shape-btns">
+                    <button class="vep-btn active" onclick="applyBtnShape('pill',this)">Pill</button>
+                    <button class="vep-btn" onclick="applyBtnShape('rounded',this)">Rounded</button>
+                    <button class="vep-btn" onclick="applyBtnShape('sharp',this)">Sharp</button>
+                    <button class="vep-btn" onclick="applyBtnShape('square',this)">Square</button>
+                  </div>
+                </div>
+                <div class="vep-row">
+                  <span class="vep-label">Style</span>
+                  <div class="vep-btns" id="vep-style-btns">
+                    <button class="vep-btn active" onclick="applyBtnStyle('filled',this)">Filled</button>
+                    <button class="vep-btn" onclick="applyBtnStyle('outline',this)">Outline</button>
+                    <button class="vep-btn" onclick="applyBtnStyle('ghost',this)">Ghost</button>
+                  </div>
+                </div>
+                <div class="vep-row vep-replace-row">
+                  <span class="vep-label">Replace</span>
+                  <input class="vep-input" id="vep-find" placeholder="Text to find…" />
+                  <input class="vep-input" id="vep-replace-val" placeholder="Replace with…" />
+                  <button class="vep-apply" onclick="applyTextReplace()">Apply</button>
+                </div>
+              </div>
+              <div class="variant-frames">
+                <div class="variant-frame-wrap active-frame" id="vfw-0"><iframe id="variant-frame-0" class="variant-frame"></iframe></div>
+                <div class="variant-frame-wrap" id="vfw-1"><iframe id="variant-frame-1" class="variant-frame"></iframe></div>
+                <div class="variant-frame-wrap" id="vfw-2"><iframe id="variant-frame-2" class="variant-frame"></iframe></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -206,252 +403,34 @@
       <!-- ── PANEL: LEAD FEED ── -->
       <div class="panel" id="panel-feed">
         <div class="feed-topbar">
-          <h2>Lead Feed</h2>
-          <div class="feed-sources">
-            <label class="src-chk"><input type="checkbox" class="src" data-src="reddit" checked><span>Reddit</span></label>
-            <label class="src-chk"><input type="checkbox" class="src" data-src="producthunt"><span>Product Hunt</span></label>
-            <label class="src-chk"><input type="checkbox" class="src" data-src="indiehackers"><span>Indie Hackers</span></label>
-          </div>
-          <div class="spacer"></div>
-          <button class="btn btn-secondary btn-sm" id="btn-copy-batch">
-            <i class="fas fa-copy"></i> Copy Selected (<span id="batch-count">0</span>)
-          </button>
-          <button class="btn btn-primary btn-sm" id="btn-feed-refresh" style="margin-left:8px">
-            <i class="fas fa-arrows-rotate"></i> Scan
-          </button>
-        </div>
-        <div class="feed-kwbar">
-          <div class="kw-row">
-            <div class="kw-btn active" data-kw="roast my landing page">Roast My LP</div>
-            <div class="kw-btn" data-kw="feedback">Feedback</div>
-            <div class="kw-btn" data-kw="no conversions">No Conversions</div>
-            <div class="kw-btn" data-kw="not getting users">No Users</div>
-            <div class="kw-btn" data-kw="just launched">Just Launched</div>
-            <div class="kw-btn" data-kw="what am i doing wrong">Doing Wrong</div>
-            <div class="kw-btn" data-kw="struggling to find">Struggling</div>
-          </div>
-          <div class="kw-custom">
-            <input type="text" id="feed-custom-kw" placeholder="Custom keyword (overrides pills)...">
-          </div>
-        </div>
-        <div class="paste-bar">
-          <details>
-            <summary><i class="fas fa-paste"></i> Paste posts from X / LinkedIn (no API — manual)</summary>
-            <div class="paste-body">
-              <div class="paste-hint">Paste 1 post per line. Format: <code>PLATFORM | AUTHOR | URL | TEXT</code> — or just raw text.</div>
-              <textarea id="paste-posts" placeholder="X | @founder_joe | https://x.com/... | Launched my SaaS today — no sign-ups."></textarea>
-              <div class="paste-actions">
-                <button class="btn btn-primary btn-sm" id="btn-paste-score">
-                  <i class="fas fa-wand-magic-sparkles"></i> Score Pasted
-                </button>
-                <button class="btn btn-secondary btn-sm" id="btn-paste-clear">Clear</button>
-              </div>
+          <div class="feed-topbar-row">
+            <div class="feed-keywords" id="feed-keywords">
+              <!-- Pills injected by JS from KW_POOL on load + shuffle -->
+              <button class="kw-btn kw-refresh" id="btn-feed-shuffle" title="Shuffle keyword suggestions"><i class="fas fa-rotate-right"></i></button>
             </div>
-          </details>
+          </div>
+          <div class="feed-topbar-row">
+            <input type="text" id="feed-custom-kw" placeholder="Custom keyword..." style="padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.8rem;flex:1;font-family:inherit;outline:none;">
+            <button class="btn btn-secondary btn-sm" id="btn-enrichment-settings" style="flex-shrink:0" title="Enrichment providers">
+              <i class="fas fa-sliders"></i> Providers
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-feed-refresh" style="flex-shrink:0">
+              <i class="fas fa-rotate-right"></i> Fetch Leads
+            </button>
+          </div>
         </div>
-        <div class="feed-meta" id="feed-meta">Click Scan to start</div>
+        <div class="feed-meta" id="feed-meta"></div>
+        <div class="lead-type-filters" id="lead-type-filters" style="display:none">
+          <button class="ltf-btn active" data-type="all"    onclick="filterLeadType('all')">All</button>
+          <button class="ltf-btn" data-type="direct"   onclick="filterLeadType('direct')">💰 Direct</button>
+          <button class="ltf-btn" data-type="operator" onclick="filterLeadType('operator')">⚡ Operator</button>
+          <button class="ltf-btn" data-type="partner"  onclick="filterLeadType('partner')">🚀 Big Play</button>
+        </div>
         <div class="feed-grid" id="feed-grid">
           <div class="feed-empty">
             <i class="fas fa-satellite-dish"></i>
-            <p>Pick a keyword + sources, then hit Scan</p>
+            <p>Select a keyword and click Fetch Leads</p>
           </div>
-        </div>
-      </div>
-
-      <!-- ── PANEL: WORKFLOWS — n8n-style tool launchpad ── -->
-      <div class="panel" id="panel-workflows">
-        <div class="wf-topbar">
-          <h2>Workflows</h2>
-          <div class="spacer"></div>
-          <span class="wf-hint">Click a card to open the tool. Cards marked <i class="fas fa-bolt" style="color:var(--accent)"></i> run inside the panel.</span>
-        </div>
-        <div class="wf-grid" id="wf-grid">
-
-          <!-- INTERNAL — runs in the panel via Blender -->
-          <div class="wf-card wf-internal" data-workflow="hero-render">
-            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
-            <div class="wf-name">3D Hero Render</div>
-            <div class="wf-desc">Render a brand-palette 3D hero still (1280×720) via headless Blender.</div>
-            <button class="btn btn-primary btn-sm wf-run" data-workflow="hero-render">
-              <i class="fas fa-play"></i> Run
-            </button>
-          </div>
-
-          <div class="wf-card wf-internal" data-workflow="tiktok-promo">
-            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
-            <div class="wf-name">TikTok Promo</div>
-            <div class="wf-desc">Vertical 9:16 MP4, 3s, brand-palette hero with orbiting ring + pulsing core. Drops to your feed/Reels-ready.</div>
-            <button class="btn btn-primary btn-sm wf-run" data-workflow="tiktok-promo">
-              <i class="fas fa-play"></i> Run
-            </button>
-          </div>
-
-          <div class="wf-card wf-internal" data-workflow="logo-mark">
-            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
-            <div class="wf-name">Logo Mark</div>
-            <div class="wf-desc">3D rotating sigil plinth, 1:1 1080×1080 MP4 loop. Stamps into client decks + about pages.</div>
-            <button class="btn btn-primary btn-sm wf-run" data-workflow="logo-mark">
-              <i class="fas fa-play"></i> Run
-            </button>
-          </div>
-
-          <div class="wf-card wf-internal" data-workflow="square-card">
-            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
-            <div class="wf-name">Square Card</div>
-            <div class="wf-desc">1080×1080 PNG of the brand hero. Drops into IG / LinkedIn / X feed posts.</div>
-            <button class="btn btn-primary btn-sm wf-run" data-workflow="square-card">
-              <i class="fas fa-play"></i> Run
-            </button>
-          </div>
-
-          <div class="wf-card wf-internal" data-workflow="mood-pack">
-            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
-            <div class="wf-name">Mood Pack</div>
-            <div class="wf-desc">2×2 contact sheet PNG, 4 angles of the brand hero. Pitch sheet / press kit / asset library starter.</div>
-            <button class="btn btn-primary btn-sm wf-run" data-workflow="mood-pack">
-              <i class="fas fa-play"></i> Run
-            </button>
-          </div>
-
-          <!-- IMAGE GEN -->
-          <div class="wf-card" data-tool="meshy">
-            <div class="wf-icon"><i class="fas fa-cube"></i></div>
-            <div class="wf-name">Meshy AI</div>
-            <div class="wf-desc">Image-to-3D, free tier ~200 credits/mo. Upload hero plate → GLB.</div>
-            <a class="btn btn-secondary btn-sm" href="https://www.meshy.ai/workspace" target="_blank" rel="noopener">
-              <i class="fas fa-external-link-alt"></i> Open
-            </a>
-          </div>
-
-          <div class="wf-card" data-tool="hunyuan">
-            <div class="wf-icon"><i class="fas fa-shapes"></i></div>
-            <div class="wf-name">Hunyuan3D-2</div>
-            <div class="wf-desc">Tencent's image-to-3D, unlimited free on HF Space.</div>
-            <a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/tencent/Hunyuan3D-2" target="_blank" rel="noopener">
-              <i class="fas fa-external-link-alt"></i> Open
-            </a>
-          </div>
-
-          <div class="wf-card" data-tool="trellis">
-            <div class="wf-icon"><i class="fas fa-cubes"></i></div>
-            <div class="wf-name">TRELLIS</div>
-            <div class="wf-desc">Microsoft's image-to-3D fallback, free on HF Space.</div>
-            <a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/trellis-community/TRELLIS" target="_blank" rel="noopener">
-              <i class="fas fa-external-link-alt"></i> Open
-            </a>
-          </div>
-
-          <div class="wf-card" data-tool="flux">
-            <div class="wf-icon"><i class="fas fa-image"></i></div>
-            <div class="wf-name">FLUX.1 Krea Dev</div>
-            <div class="wf-desc">Photoreal image gen on HF Space. Hero plates + scene plates.</div>
-            <a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/black-forest-labs/FLUX.1-Krea-dev" target="_blank" rel="noopener">
-              <i class="fas fa-external-link-alt"></i> Open
-            </a>
-          </div>
-
-          <div class="wf-card" data-tool="firefly">
-            <div class="wf-icon"><i class="fas fa-fire"></i></div>
-            <div class="wf-name">Adobe Firefly</div>
-            <div class="wf-desc">Commercial-licensed image gen. Free tier ~25 credits/mo.</div>
-            <a class="btn btn-secondary btn-sm" href="https://firefly.adobe.com/" target="_blank" rel="noopener">
-              <i class="fas fa-external-link-alt"></i> Open
-            </a>
-          </div>
-
-          <div class="wf-card" data-tool="grok-imagine">
-            <div class="wf-icon"><i class="fas fa-wand-magic-sparkles"></i></div>
-            <div class="wf-name">Grok Imagine</div>
-            <div class="wf-desc">Short Film · UGC Product Stories · Brand Identity · Create Worlds. Your TheSaaSsin project pinned.</div>
-            <a class="btn btn-secondary btn-sm" href="https://grok.com/imagine" target="_blank" rel="noopener">
-              <i class="fas fa-external-link-alt"></i> Open
-            </a>
-          </div>
-
-          <!-- VIDEO + AUDIO -->
-          <div class="wf-card" data-tool="capcut">
-            <div class="wf-icon"><i class="fas fa-film"></i></div>
-            <div class="wf-name">CapCut</div>
-            <div class="wf-desc">Free web NLE. Trend-format edits, vertical cuts.</div>
-            <a class="btn btn-secondary btn-sm" href="https://www.capcut.com/" target="_blank" rel="noopener">
-              <i class="fas fa-external-link-alt"></i> Open
-            </a>
-          </div>
-
-          <div class="wf-card" data-tool="davinci">
-            <div class="wf-icon"><i class="fas fa-video"></i></div>
-            <div class="wf-name">DaVinci Resolve</div>
-            <div class="wf-desc">Free Hollywood-grade NLE for the master cut. Download &amp; install.</div>
-            <a class="btn btn-secondary btn-sm" href="https://www.blackmagicdesign.com/products/davinciresolve" target="_blank" rel="noopener">
-              <i class="fas fa-external-link-alt"></i> Get
-            </a>
-          </div>
-
-          <div class="wf-card" data-tool="elevenlabs">
-            <div class="wf-icon"><i class="fas fa-microphone"></i></div>
-            <div class="wf-name">ElevenLabs</div>
-            <div class="wf-desc">Free 10k chars/mo. Voiceover for promo + scenes.</div>
-            <a class="btn btn-secondary btn-sm" href="https://elevenlabs.io/" target="_blank" rel="noopener">
-              <i class="fas fa-external-link-alt"></i> Open
-            </a>
-          </div>
-
-          <!-- 3D / DESIGN -->
-          <div class="wf-card" data-tool="blender">
-            <div class="wf-icon"><i class="fab fa-blender-phone"></i></div>
-            <div class="wf-name">Blender</div>
-            <div class="wf-desc">Local 3D — already installed (5.1.1). Drives the Hero Render workflow.</div>
-            <a class="btn btn-secondary btn-sm" href="https://www.blender.org/" target="_blank" rel="noopener">
-              <i class="fas fa-external-link-alt"></i> Docs
-            </a>
-          </div>
-
-          <div class="wf-card" data-tool="canva">
-            <div class="wf-icon"><i class="fas fa-palette"></i></div>
-            <div class="wf-name">Canva</div>
-            <div class="wf-desc">Free design + whiteboard. Mood boards, social variants.</div>
-            <a class="btn btn-secondary btn-sm" href="https://www.canva.com/" target="_blank" rel="noopener">
-              <i class="fas fa-external-link-alt"></i> Open
-            </a>
-          </div>
-
-          <div class="wf-card" data-tool="figma">
-            <div class="wf-icon"><i class="fab fa-figma"></i></div>
-            <div class="wf-name">Figma</div>
-            <div class="wf-desc">Free design tool. Sigil + type cards + brand kit.</div>
-            <a class="btn btn-secondary btn-sm" href="https://www.figma.com/" target="_blank" rel="noopener">
-              <i class="fas fa-external-link-alt"></i> Open
-            </a>
-          </div>
-
-          <!-- AUTOMATIONS -->
-          <div class="wf-card" data-tool="n8n">
-            <div class="wf-icon"><i class="fas fa-project-diagram"></i></div>
-            <div class="wf-name">n8n</div>
-            <div class="wf-desc">Free self-hosted automations. Wire CRM, Ads, email.</div>
-            <a class="btn btn-secondary btn-sm" href="https://n8n.io/" target="_blank" rel="noopener">
-              <i class="fas fa-external-link-alt"></i> Open
-            </a>
-          </div>
-
-          <div class="wf-card" data-tool="make">
-            <div class="wf-icon"><i class="fas fa-network-wired"></i></div>
-            <div class="wf-name">Make</div>
-            <div class="wf-desc">Free tier automations. Visual workflow alternative to n8n.</div>
-            <a class="btn btn-secondary btn-sm" href="https://www.make.com/" target="_blank" rel="noopener">
-              <i class="fas fa-external-link-alt"></i> Open
-            </a>
-          </div>
-
-        </div>
-
-        <!-- Output viewer for internal workflows -->
-        <div class="wf-output" id="wf-output" style="display:none">
-          <div class="wf-output-header">
-            <span id="wf-output-title">Output</span>
-            <button class="btn btn-secondary btn-sm" id="btn-wf-close-output">Close</button>
-          </div>
-          <div class="wf-output-body" id="wf-output-body"></div>
         </div>
       </div>
 
@@ -498,8 +477,872 @@
           <div class="out-tab active" data-status="pending">Pending <span id="count-pending" class="badge badge-new" style="margin-left:4px">0</span></div>
           <div class="out-tab" data-status="approved">Approved <span id="count-approved" class="badge badge-active" style="margin-left:4px">0</span></div>
           <div class="out-tab" data-status="sent">Sent <span id="count-sent" class="badge badge-pending" style="margin-left:4px">0</span></div>
+          <div class="out-tab" data-status="removed">Removed <span id="count-removed" class="badge badge-muted" style="margin-left:4px">0</span></div>
         </div>
         <div class="out-list" id="out-list"></div>
+      </div>
+
+      <!-- ── PANEL: ANALYTICS ── -->
+      <div class="panel" id="panel-analytics">
+        <div class="an-topbar">
+          <h2><i class="fas fa-chart-bar" style="color:var(--accent);margin-right:8px"></i>Outreach Analytics</h2>
+          <button class="btn btn-secondary btn-sm" onclick="loadAnalytics()"><i class="fas fa-rotate-right"></i> Refresh</button>
+        </div>
+        <div id="an-body" class="an-body">
+          <div class="an-empty"><i class="fas fa-chart-bar"></i><p>Copy a DM from the Lead Feed to start tracking performance</p></div>
+        </div>
+      </div>
+
+      <!-- ── DYNAMIC MODULE PANEL (lazy-loaded) ── -->
+      <div class="panel" id="panel-module">
+        <div class="mod-topbar" id="mod-topbar">
+          <div class="mod-topbar-left">
+            <button class="btn btn-secondary btn-sm mod-back-btn" onclick="switchPanel('dashboard')"><i class="fas fa-arrow-left"></i></button>
+            <h2 id="mod-title">Module</h2>
+          </div>
+          <div class="mod-topbar-right">
+            <button class="btn btn-secondary btn-sm" id="mod-settings-btn" onclick="toggleModSettings()" title="Module settings"><i class="fas fa-gear"></i></button>
+            <button class="btn btn-secondary btn-sm" id="mod-refresh-btn" onclick="refreshCurrentModule()"><i class="fas fa-rotate-right"></i></button>
+          </div>
+        </div>
+        <div class="mod-layout">
+          <div class="mod-body" id="mod-body"></div>
+          <div class="mod-sidebar" id="mod-sidebar" style="display:none">
+            <div class="mod-sidebar-header">
+              <h3>Settings</h3>
+              <button class="btn btn-secondary btn-sm" onclick="toggleModSettings()"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="mod-sidebar-body" id="mod-sidebar-body"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ B.O.S.S: CHANNELS PANEL ══ -->
+      <div class="panel" id="panel-boss-channels">
+        <div style="padding:28px;max-width:1100px;margin:0 auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+            <div>
+              <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 3px">Channels</h2>
+              <p style="font-size:.75rem;color:var(--muted,#666);margin:0">B.O.S.S on every platform — Telegram, X, LinkedIn, Instagram, Discord, Slack</p>
+            </div>
+            <button onclick="bossLoadChannels()" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#ff2a2a;padding:7px 16px;border-radius:100px;font-size:11px;cursor:pointer">↻ Refresh</button>
+          </div>
+          <div id="boss-channels-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:28px">
+            <div style="color:#666;font-size:.8rem">Loading…</div>
+          </div>
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:20px">
+            <div style="font-weight:700;font-size:.75rem;margin-bottom:10px;color:#ff2a2a">⚡ Quick Send</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+              <select id="ch-send-id" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem">
+                <option value="telegram">Telegram</option><option value="discord">Discord</option><option value="slack">Slack</option>
+              </select>
+              <input id="ch-send-to" placeholder="Chat ID / channel" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem;flex:1;min-width:160px">
+              <textarea id="ch-send-text" placeholder="Message…" rows="2" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem;flex:2;min-width:200px;resize:vertical"></textarea>
+              <button onclick="bossChannelSend()" style="background:#ff2a2a;color:#0a0a0a;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:.78rem;cursor:pointer">Send</button>
+            </div>
+            <div id="ch-send-result" style="font-size:.7rem;color:#666;margin-top:6px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ B.O.S.S: AGENTS PANEL ══ -->
+      <div class="panel" id="panel-boss-agents">
+        <div style="padding:28px;max-width:1100px;margin:0 auto">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+            <div>
+              <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 3px">Channel Agents</h2>
+              <p style="font-size:.75rem;color:var(--muted,#666);margin:0">Each channel gets its own persona, memory, and task queue</p>
+            </div>
+            <button onclick="bossLoadAgents()" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#ff2a2a;padding:7px 16px;border-radius:100px;font-size:11px;cursor:pointer">↻ Refresh</button>
+          </div>
+          <div id="boss-agents-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:24px">
+            <div style="color:#666;font-size:.8rem">No agents yet — use Spawn below</div>
+          </div>
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:20px">
+            <div style="font-weight:700;font-size:.75rem;margin-bottom:10px;color:#ff2a2a">🤖 Spawn Agent Persona</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+              <select id="ag-spawn-id" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem">
+                <option value="telegram">Telegram</option><option value="discord">Discord</option><option value="slack">Slack</option><option value="x">X</option><option value="linkedin">LinkedIn</option>
+              </select>
+              <input id="ag-spawn-name" placeholder="Name (e.g. B.O.S.S)" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem;flex:1">
+              <input id="ag-spawn-tone" placeholder="Tone override" style="background:#0a0a0a;border:1px solid #2a2a2a;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.78rem;flex:2">
+              <button onclick="bossSpawnAgent()" style="background:#ff2a2a;color:#0a0a0a;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:.78rem;cursor:pointer">Spawn</button>
+            </div>
+            <div id="ag-spawn-result" style="font-size:.7rem;color:#666;margin-top:6px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ AI TOOLS & MODELS ══ -->
+      <div class="panel" id="panel-ai-tools">
+        <div style="padding:32px;max-width:800px;margin:0 auto">
+          <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 4px">AI Tools &amp; Models</h2>
+          <p style="font-size:.73rem;color:#555;margin:0 0 6px">Every provider B.O.S.S can use. Add keys in <b>API Keys &amp; Settings</b>. Router tries them top → bottom, skips any not configured.</p>
+
+          <!-- Live status bar -->
+          <div id="ait-status-bar" style="display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 28px">
+            <span style="font-size:.68rem;color:#444">Loading status…</span>
+          </div>
+
+          <!-- ── LANGUAGE MODELS ── -->
+          <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:14px">Language Models — Chat &amp; Reasoning</div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;margin-bottom:32px">
+
+            <!-- Groq -->
+            <div class="ait-card" id="aitc-groq">
+              <div class="ait-head"><span class="ait-name" style="color:#00aaff">GROQ</span><span class="ait-badge free">FREE · 800 tok/s</span></div>
+              <div class="ait-model">llama-3.3-70b-versatile</div>
+              <div class="ait-desc">Fastest inference on earth. Llama 3.3 70B free, no rate limit worries for normal use.</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> → Create key → paste in API Keys panel
+              </div>
+            </div>
+
+            <!-- GLM-4 Flash -->
+            <div class="ait-card" id="aitc-glm">
+              <div class="ait-head"><span class="ait-name" style="color:#44aaff">GLM-4 Flash</span><span class="ait-badge free">FREE forever</span></div>
+              <div class="ait-model">glm-4-flash (Zhipu AI)</div>
+              <div class="ait-desc">GLM-4-Flash is permanently free, no credit card. Strong at code and structured output.</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank">open.bigmodel.cn</a> → Register → API Keys → paste as GLM key
+              </div>
+            </div>
+
+            <!-- OpenRouter -->
+            <div class="ait-card" id="aitc-openrouter">
+              <div class="ait-head"><span class="ait-name" style="color:#ff9500">OPENROUTER</span><span class="ait-badge free">FREE models</span></div>
+              <div class="ait-model">Llama / Qwen / Mistral :free</div>
+              <div class="ait-desc">Single key unlocks 50+ models including Llama 3.3 70B, Qwen 2.5 Coder, Mixtral — all with :free tag.</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a> → Create key → paste in API Keys panel
+              </div>
+            </div>
+
+            <!-- Kimi -->
+            <div class="ait-card" id="aitc-kimi">
+              <div class="ait-head"><span class="ait-name" style="color:#00ddaa">KIMI</span><span class="ait-badge">Moonshot AI</span></div>
+              <div class="ait-model">moonshot-v1-8k / 32k / 128k</div>
+              <div class="ait-desc">Long-context specialist. 128k window, excellent for analysing docs, contracts, long threads.</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://platform.moonshot.cn/console/api-keys" target="_blank">platform.moonshot.cn</a> → API Keys → paste as Kimi key
+              </div>
+            </div>
+
+            <!-- MiniMax -->
+            <div class="ait-card" id="aitc-minimax">
+              <div class="ait-head"><span class="ait-name" style="color:#ff6688">MINIMAX</span><span class="ait-badge">MiniMax-Text-01</span></div>
+              <div class="ait-model">MiniMax-Text-01</div>
+              <div class="ait-desc">Strong Chinese frontier model, great for creative writing, pitches and multilingual content.</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://platform.minimax.chat/user-center/basic-information/interface-key" target="_blank">platform.minimax.chat</a> → Interface Key → paste as MiniMax key
+              </div>
+            </div>
+
+            <!-- Anthropic -->
+            <div class="ait-card" id="aitc-anthropic">
+              <div class="ait-head"><span class="ait-name" style="color:#aa44ff">CLAUDE</span><span class="ait-badge paid">Paid · Best quality</span></div>
+              <div class="ait-model">claude-haiku / sonnet (backup)</div>
+              <div class="ait-desc">Used only for code gen, orchestration &amp; heavy pitches. Router falls back here last to preserve credits.</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://console.anthropic.com/billing" target="_blank">console.anthropic.com/billing</a> → Top up → paste in API Keys panel
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── IMAGE / VIDEO MODELS ── -->
+          <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:14px">Image &amp; Video Generation</div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;margin-bottom:32px">
+
+            <!-- Stable Diffusion -->
+            <div class="ait-card">
+              <div class="ait-head"><span class="ait-name" style="color:#ff8844">STABLE DIFFUSION</span><span class="ait-badge free">Local · Free</span></div>
+              <div class="ait-model">SDXL / SD 3.5 / Flux</div>
+              <div class="ait-desc">Run locally via Automatic1111 or ComfyUI. Unlimited generation, no API costs, full control.</div>
+              <div class="ait-steps">
+                <b>Setup (easiest):</b><br>
+                1. Install <a href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/releases" target="_blank">Automatic1111</a> → run webui-user.bat<br>
+                2. Enable API: add <code>--api</code> to COMMANDLINE_ARGS in webui-user.bat<br>
+                3. Add <code>sdxlUrl: "http://127.0.0.1:7860"</code> to your config — B.O.S.S will use it for image tasks
+              </div>
+            </div>
+
+            <!-- Hunyuan -->
+            <div class="ait-card">
+              <div class="ait-head"><span class="ait-name" style="color:#ff4466">HUNYUAN</span><span class="ait-badge">Tencent</span></div>
+              <div class="ait-model">HunyuanDiT / Hunyuan-Video</div>
+              <div class="ait-desc">Tencent's video gen model — best for cinematic video from text. Available via OpenRouter or direct API.</div>
+              <div class="ait-steps">
+                <b>Via OpenRouter (easiest):</b> already covered by your OpenRouter key — model ID: <code>tencent/hunyuan-a13b-instruct</code><br>
+                <b>Direct:</b> <a href="https://cloud.tencent.com/product/hunyuan" target="_blank">cloud.tencent.com/product/hunyuan</a>
+              </div>
+            </div>
+
+            <!-- Fal.ai -->
+            <div class="ait-card">
+              <div class="ait-head"><span class="ait-name" style="color:#aaddff">FAL.AI</span><span class="ait-badge">Fast GPU · Cheap</span></div>
+              <div class="ait-model">Flux / SDXL / LCM / SVD</div>
+              <div class="ait-desc">Fastest cloud GPU inference. SDXL in 2s, video in 30s. Pay-per-use, very cheap (~$0.003/image).</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://fal.ai/dashboard/keys" target="_blank">fal.ai/dashboard/keys</a> → Create key → paste as Fal key
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── DEV TOOLS ── -->
+          <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:14px">Dev Tools &amp; Coding Agents</div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;margin-bottom:32px">
+
+            <!-- Cline -->
+            <div class="ait-card">
+              <div class="ait-head"><span class="ait-name" style="color:#00aaff">CLINE</span><span class="ait-badge free">VS Code · Free</span></div>
+              <div class="ait-model">Autonomous coding agent</div>
+              <div class="ait-desc">Best AI coding agent for VS Code. Reads/writes files, runs terminal commands, browses the web, uses any LLM you already have.</div>
+              <div class="ait-steps">
+                <b>Setup:</b><br>
+                1. VS Code → Extensions → search <b>"Cline"</b> → Install<br>
+                2. Settings → paste your Groq or OpenRouter key (same keys, zero extra cost)<br>
+                3. Open Cline panel → describe what to build → it ships it
+              </div>
+            </div>
+
+            <!-- Playwright -->
+            <div class="ait-card">
+              <div class="ait-head"><span class="ait-name" style="color:#2cb67d">PLAYWRIGHT MCP</span><span class="ait-badge free">Already configured</span></div>
+              <div class="ait-model">Browser automation</div>
+              <div class="ait-desc">B.O.S.S can control Chrome — scrape leads, fill forms, take screenshots, automate workflows.</div>
+              <div class="ait-steps">
+                <b>Setup:</b><br>
+                1. <code>npx playwright install chromium</code> in this folder<br>
+                2. Restart Claude Code — .mcp.json is already wired<br>
+                3. Ask B.O.S.S: "browse [url] and extract leads"
+              </div>
+            </div>
+
+            <!-- Dyad -->
+            <div class="ait-card">
+              <div class="ait-head"><span class="ait-name" style="color:#ff6b35">DYAD</span><span class="ait-badge">App builder</span></div>
+              <div class="ait-model">AI full-stack app builder</div>
+              <div class="ait-desc">Builds and runs full apps from prompts — like Bolt.new but desktop, uses your own LLM keys.</div>
+              <div class="ait-steps">
+                <b>Setup:</b> <a href="https://dyad.sh" target="_blank">dyad.sh</a> → Download → connect your Groq key → build apps via chat
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── OLLAMA LOCAL ── -->
+          <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:14px">Local Models (Ollama — Fully Offline)</div>
+          <div class="ait-card" style="margin-bottom:12px">
+            <div class="ait-head"><span class="ait-name" style="color:#2cb67d">OLLAMA</span><span class="ait-badge free">Local · Unlimited · Private</span></div>
+            <div class="ait-model" id="ait-ollama-status">checking…</div>
+            <div class="ait-desc">Run any open model on your GPU/CPU. B.O.S.S uses it automatically when Ollama is running — no key needed.</div>
+            <div class="ait-steps">
+              <b>Setup:</b><br>
+              1. <a href="https://ollama.com/download" target="_blank">ollama.com/download</a> → Windows installer (~200MB)<br>
+              2. Open terminal: <code>ollama pull qwen2.5:7b</code> (best all-rounder, 4.7GB)<br>
+              3. B.O.S.S auto-detects it — you'll see LOCAL badge on replies<br>
+              <b>Good free models:</b> <code>qwen2.5:7b</code> · <code>llama3.2:3b</code> · <code>qwen2.5-coder:7b</code>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ══ FREE GPU COMPUTE ══ -->
+      <div class="panel" id="panel-gpu">
+        <div style="padding:32px;max-width:860px;margin:0 auto">
+
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:6px">
+            <div>
+              <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 4px">Free GPU Compute</h2>
+              <p style="font-size:.73rem;color:#555;margin:0">Run models, fine-tune, generate images — free VRAM across 4 platforms. Google Drive auto-saves so you never lose work.</p>
+            </div>
+            <div id="gpu-offpeak-badge" style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:10px 16px;text-align:center;white-space:nowrap">
+              <div style="font-size:.6rem;color:#555;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">Right now (UK)</div>
+              <div id="gpu-time-label" style="font-size:.85rem;font-weight:800;color:#aaa">—</div>
+              <div id="gpu-peak-label" style="font-size:.65rem;margin-top:2px">—</div>
+            </div>
+          </div>
+
+          <!-- ── PLATFORM CARDS ── -->
+          <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#444;margin:24px 0 12px">Platforms</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:12px;margin-bottom:32px">
+
+            <!-- Colab -->
+            <div class="ait-card">
+              <div class="ait-head">
+                <span class="ait-name" style="color:#ff9500">GOOGLE COLAB</span>
+                <span class="ait-badge free">T4 15GB free</span>
+                <span class="ait-badge" style="background:#aa44ff18;color:#aa44ff">A100 40GB (Pro)</span>
+              </div>
+              <div class="ait-model">2–4h sessions · resets on disconnect · Drive persists</div>
+              <div class="ait-desc">Best starting point. T4 runs 7B models easily. Always mount Drive first or your work is gone when session ends.</div>
+              <div class="ait-steps">
+                <b>Off-peak:</b> 3am–8am UK (US + EU asleep) → faster GPU allocation<br>
+                <b>Tips:</b> Runtime → Change runtime type → T4 GPU · Use 4-bit models to fit in 15GB<br>
+                <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                  <a href="https://colab.research.google.com/#create=true" target="_blank" style="background:#ff9500;color:#000;padding:5px 12px;border-radius:6px;font-size:.68rem;font-weight:700;text-decoration:none">Open Colab →</a>
+                  <button onclick="gpuCopy('colab-drive')" style="background:#1a1a1a;border:1px solid #333;color:#aaa;padding:5px 12px;border-radius:6px;font-size:.68rem;cursor:pointer">📋 Copy Drive mount</button>
+                  <button onclick="gpuCopy('colab-4bit')" style="background:#1a1a1a;border:1px solid #333;color:#aaa;padding:5px 12px;border-radius:6px;font-size:.68rem;cursor:pointer">📋 Copy 4-bit loader</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Kaggle -->
+            <div class="ait-card">
+              <div class="ait-head">
+                <span class="ait-name" style="color:#20beff">KAGGLE KERNELS</span>
+                <span class="ait-badge free">P100 16GB free</span>
+              </div>
+              <div class="ait-model">30h/week · 9h/session · persistent storage</div>
+              <div class="ait-desc">More weekly hours than Colab. P100 16GB fits most 7B models. Kaggle datasets mount instantly — good for training data.</div>
+              <div class="ait-steps">
+                <b>Off-peak:</b> Same 3am–8am UK<br>
+                <b>Tips:</b> Settings → Accelerator → GPU P100 · Always tick "Save version" before leaving<br>
+                <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                  <a href="https://www.kaggle.com/code" target="_blank" style="background:#20beff;color:#000;padding:5px 12px;border-radius:6px;font-size:.68rem;font-weight:700;text-decoration:none">Open Kaggle →</a>
+                  <button onclick="gpuCopy('kaggle-setup')" style="background:#1a1a1a;border:1px solid #333;color:#aaa;padding:5px 12px;border-radius:6px;font-size:.68rem;cursor:pointer">📋 Copy setup cell</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lightning AI -->
+            <div class="ait-card">
+              <div class="ait-head">
+                <span class="ait-name" style="color:#ff6b35">LIGHTNING AI</span>
+                <span class="ait-badge free">A10G 24GB · 22h/mo</span>
+              </div>
+              <div class="ait-model">22 free GPU hours/month · persistent studio · VS Code interface</div>
+              <div class="ait-desc">Best persistent storage. Files survive between sessions unlike Colab. A10G 24GB runs 13B models in 4-bit. Feels like a real cloud machine.</div>
+              <div class="ait-steps">
+                <b>Off-peak:</b> Evening UK = US morning — still queue so book early<br>
+                <b>Tips:</b> Use for longer training runs — 22h/mo ≈ 3×7h sessions<br>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <a href="https://lightning.ai" target="_blank" style="background:#ff6b35;color:#000;padding:5px 12px;border-radius:6px;font-size:.68rem;font-weight:700;text-decoration:none">Open Lightning →</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- HuggingFace Spaces -->
+            <div class="ait-card">
+              <div class="ait-head">
+                <span class="ait-name" style="color:#ff9500">HUGGING FACE SPACES</span>
+                <span class="ait-badge free">ZeroGPU · T4 shared</span>
+              </div>
+              <div class="ait-model">Shared T4 via ZeroGPU · queued · good for inference</div>
+              <div class="ait-desc">Best for deploying an inference endpoint others can use. Not ideal for training but great for running a model via Gradio/Streamlit for free.</div>
+              <div class="ait-steps">
+                <b>Tips:</b> Use <code>@spaces.GPU</code> decorator · ZeroGPU allocates on-demand<br>
+                <b>Off-peak:</b> midnight–7am UK<br>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <a href="https://huggingface.co/new-space" target="_blank" style="background:#ff9500;color:#000;padding:5px 12px;border-radius:6px;font-size:.68rem;font-weight:700;text-decoration:none">New Space →</a>
+                  <button onclick="gpuCopy('hf-zerogpu')" style="background:#1a1a1a;border:1px solid #333;color:#aaa;padding:5px 12px;border-radius:6px;font-size:.68rem;cursor:pointer">📋 Copy ZeroGPU template</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ── NOTEBOOK TEMPLATES ── -->
+          <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:12px">Notebook Templates — Copy &amp; Paste</div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px">
+
+            <!-- Drive Mount -->
+            <div class="gpu-snippet" id="tpl-colab-drive">
+              <div class="gpu-snip-head">
+                <span style="color:#ff9500;font-weight:700">Colab — Mount Google Drive (always first cell)</span>
+                <button onclick="gpuCopy('colab-drive')" class="gpu-copy-btn">Copy</button>
+              </div>
+              <pre class="gpu-code"># ── Cell 1: Mount Drive + set save dir ────────────────────
+from google.colab import drive
+drive.mount('/content/drive')
+
+import os
+SAVE_DIR = '/content/drive/MyDrive/boss-models/'
+os.makedirs(SAVE_DIR, exist_ok=True)
+print(f"Saving to: {SAVE_DIR}")</pre>
+            </div>
+
+            <!-- 4-bit loader -->
+            <div class="gpu-snippet" id="tpl-colab-4bit">
+              <div class="gpu-snip-head">
+                <span style="color:#aa44ff;font-weight:700">4-bit Model Loader — fits any 7B in T4 15GB</span>
+                <button onclick="gpuCopy('colab-4bit')" class="gpu-copy-btn">Copy</button>
+              </div>
+              <pre class="gpu-code"># ── 4-bit quantised load (bitsandbytes) ───────────────────
+!pip install -q transformers bitsandbytes accelerate
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
+MODEL = "Qwen/Qwen2.5-7B-Instruct"   # swap for any model
+
+bnb_cfg = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.float16,
+    bnb_4bit_use_double_quant=True,
+)
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL)
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL, quantization_config=bnb_cfg, device_map="auto"
+)
+print(f"Loaded {MODEL} in 4-bit — VRAM: {torch.cuda.memory_allocated()/1e9:.1f}GB")</pre>
+            </div>
+
+            <!-- Kaggle setup -->
+            <div class="gpu-snippet" id="tpl-kaggle-setup">
+              <div class="gpu-snip-head">
+                <span style="color:#20beff;font-weight:700">Kaggle — Setup cell (secrets + persistent dir)</span>
+                <button onclick="gpuCopy('kaggle-setup')" class="gpu-copy-btn">Copy</button>
+              </div>
+              <pre class="gpu-code"># ── Kaggle setup cell ─────────────────────────────────────
+import os
+
+# Kaggle /kaggle/working persists within session, /kaggle/input is read-only
+WORK_DIR = "/kaggle/working/boss-outputs"
+os.makedirs(WORK_DIR, exist_ok=True)
+
+# Install essentials
+os.system("pip install -q transformers bitsandbytes accelerate peft")
+
+# Check GPU
+os.system("nvidia-smi --query-gpu=name,memory.total --format=csv,noheader")
+print("Ready")</pre>
+            </div>
+
+            <!-- Fine-tune with LoRA -->
+            <div class="gpu-snippet" id="tpl-lora">
+              <div class="gpu-snip-head">
+                <span style="color:#2cb67d;font-weight:700">LoRA Fine-tune — train on your data, saves to Drive</span>
+                <button onclick="gpuCopy('lora')" class="gpu-copy-btn">Copy</button>
+              </div>
+              <pre class="gpu-code"># ── LoRA fine-tune on custom data ─────────────────────────
+!pip install -q transformers peft bitsandbytes accelerate datasets trl
+
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from peft import LoraConfig, get_peft_model, TaskType
+from trl import SFTTrainer
+from transformers import TrainingArguments
+from datasets import Dataset
+import torch, json, os
+
+SAVE_DIR = '/content/drive/MyDrive/boss-lora/'   # or /kaggle/working/
+os.makedirs(SAVE_DIR, exist_ok=True)
+
+MODEL = "Qwen/Qwen2.5-7B-Instruct"
+bnb   = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16)
+
+model     = AutoModelForCausalLM.from_pretrained(MODEL, quantization_config=bnb, device_map="auto")
+tokenizer = AutoTokenizer.from_pretrained(MODEL)
+
+lora_cfg = LoraConfig(r=16, lora_alpha=32, target_modules=["q_proj","v_proj"],
+                      lora_dropout=0.05, task_type=TaskType.CAUSAL_LM)
+model = get_peft_model(model, lora_cfg)
+model.print_trainable_parameters()
+
+# ── Your training data ────────────────────────────────────
+# Format: list of {"text": "### Human: ...\n### Assistant: ..."}
+train_data = [
+    {"text": "### Human: What is TheSaaSsin?\n### Assistant: AI client acquisition operator for SaaS founders."},
+    # Add more examples here
+]
+dataset = Dataset.from_list(train_data)
+
+args = TrainingArguments(output_dir=SAVE_DIR, num_train_epochs=3,
+                         per_device_train_batch_size=2, save_steps=50,
+                         logging_steps=10, fp16=True)
+
+trainer = SFTTrainer(model=model, tokenizer=tokenizer, train_dataset=dataset,
+                     dataset_text_field="text", args=args, max_seq_length=512)
+trainer.train()
+model.save_pretrained(SAVE_DIR)
+print(f"Saved LoRA adapter to {SAVE_DIR}")</pre>
+            </div>
+
+            <!-- Stable Diffusion on Colab -->
+            <div class="gpu-snippet" id="tpl-sd-colab">
+              <div class="gpu-snip-head">
+                <span style="color:#ff8844;font-weight:700">Stable Diffusion / Flux on Colab T4</span>
+                <button onclick="gpuCopy('sd-colab')" class="gpu-copy-btn">Copy</button>
+              </div>
+              <pre class="gpu-code"># ── SD / Flux inference on free T4 ───────────────────────
+!pip install -q diffusers transformers accelerate
+
+from diffusers import StableDiffusionXLPipeline, DPMSolverMultistepScheduler
+import torch
+
+pipe = StableDiffusionXLPipeline.from_pretrained(
+    "stabilityai/stable-diffusion-xl-base-1.0",
+    torch_dtype=torch.float16, use_safetensors=True, variant="fp16"
+).to("cuda")
+pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
+pipe.enable_xformers_memory_efficient_attention()
+
+prompt = "TheSaaSsin operator dashboard, dark neon UI, cinematic, 8k"
+image  = pipe(prompt=prompt, num_inference_steps=25, guidance_scale=7.5).images[0]
+image.save("/content/drive/MyDrive/boss-models/render.png")
+image  # display in notebook</pre>
+            </div>
+
+            <!-- HF ZeroGPU -->
+            <div class="gpu-snippet" id="tpl-hf-zerogpu">
+              <div class="gpu-snip-head">
+                <span style="color:#ff9500;font-weight:700">HuggingFace Spaces — ZeroGPU Gradio app</span>
+                <button onclick="gpuCopy('hf-zerogpu')" class="gpu-copy-btn">Copy</button>
+              </div>
+              <pre class="gpu-code"># app.py — paste into your HF Space
+import gradio as gr
+import spaces  # ZeroGPU magic
+import torch
+from transformers import pipeline
+
+# Load once (CPU)
+pipe = pipeline("text-generation", model="Qwen/Qwen2.5-7B-Instruct",
+                torch_dtype=torch.float16)
+
+@spaces.GPU  # GPU allocated only during this function call
+def generate(prompt, max_tokens=256):
+    result = pipe(prompt, max_new_tokens=max_tokens, do_sample=True, temperature=0.7)
+    return result[0]["generated_text"]
+
+gr.Interface(fn=generate,
+             inputs=gr.Textbox(label="Prompt"),
+             outputs=gr.Textbox(label="Output"),
+             title="B.O.S.S Inference").launch()</pre>
+            </div>
+
+          </div>
+
+          <!-- ── VRAM CHEAT SHEET ── -->
+          <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:12px">VRAM Cheat Sheet</div>
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:24px;overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:.72rem">
+              <tr style="color:#555;font-size:.62rem;text-transform:uppercase;letter-spacing:.06em">
+                <td style="padding:4px 12px 8px 0">Model</td>
+                <td style="padding:4px 12px 8px">FP16</td>
+                <td style="padding:4px 12px 8px">8-bit</td>
+                <td style="padding:4px 12px 8px">4-bit</td>
+                <td style="padding:4px 0 8px">Fits on</td>
+              </tr>
+              <tr style="border-top:1px solid #1a1a1a;color:#aaa">
+                <td style="padding:6px 12px 6px 0;font-weight:700">7B</td>
+                <td style="padding:6px 12px">14GB</td><td style="padding:6px 12px">7GB</td>
+                <td style="padding:6px 12px;color:#2cb67d;font-weight:700">4GB</td>
+                <td style="padding:6px 0;color:#2cb67d">All free tiers ✓</td>
+              </tr>
+              <tr style="border-top:1px solid #1a1a1a;color:#aaa">
+                <td style="padding:6px 12px 6px 0;font-weight:700">13B</td>
+                <td style="padding:6px 12px">26GB</td><td style="padding:6px 12px">13GB</td>
+                <td style="padding:6px 12px;color:#2cb67d;font-weight:700">7GB</td>
+                <td style="padding:6px 0;color:#2cb67d">T4/P100/A10G ✓</td>
+              </tr>
+              <tr style="border-top:1px solid #1a1a1a;color:#aaa">
+                <td style="padding:6px 12px 6px 0;font-weight:700">30B</td>
+                <td style="padding:6px 12px">60GB</td><td style="padding:6px 12px">30GB</td>
+                <td style="padding:6px 12px;color:#ff9500;font-weight:700">15GB</td>
+                <td style="padding:6px 0;color:#ff9500">A10G (Lightning) only</td>
+              </tr>
+              <tr style="border-top:1px solid #1a1a1a;color:#aaa">
+                <td style="padding:6px 12px 6px 0;font-weight:700">70B</td>
+                <td style="padding:6px 12px">140GB</td><td style="padding:6px 12px">70GB</td>
+                <td style="padding:6px 12px;color:#f55;font-weight:700">35GB</td>
+                <td style="padding:6px 0;color:#f55">Need 2×GPU or pay tier</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- off peak live clock is rendered by JS -->
+          <div id="gpu-offpeak-detail" style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px;font-size:.72rem;color:#666;line-height:1.8">
+            Loading off-peak info…
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ══ B.O.S.S: API KEYS & SETTINGS ══ -->
+      <div class="panel" id="panel-boss-config">
+        <div style="padding:32px;max-width:680px;margin:0 auto">
+
+          <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 4px;color:#f5f2ec">API Keys &amp; Settings</h2>
+          <p style="font-size:.73rem;color:#555;margin:0 0 24px">Stored locally only. Never shared. Keys load in priority order top → bottom.</p>
+
+          <!-- ── AI ON/OFF MASTER TOGGLE ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px">
+            <div>
+              <div style="font-weight:700;font-size:.82rem;color:#f0f0f5">AI Brain</div>
+              <div style="font-size:.7rem;color:#555;margin-top:2px">Turn off to use B.O.S.S as a pure CRM with no AI calls</div>
+            </div>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none">
+              <span id="ai-toggle-label" style="font-size:.72rem;font-weight:700;color:#2cb67d">ON</span>
+              <div id="ai-toggle-track" onclick="bossToggleAI()" style="width:44px;height:24px;background:#2cb67d;border-radius:100px;position:relative;cursor:pointer;transition:background .2s">
+                <div id="ai-toggle-thumb" style="position:absolute;top:3px;left:22px;width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 4px #0006"></div>
+              </div>
+            </label>
+          </div>
+
+          <!-- ── GROQ — recommended free tier ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#00aaff">GROQ</span>
+                <span style="font-size:.65rem;color:#2cb67d;font-weight:700;margin-left:8px;background:#2cb67d18;padding:2px 7px;border-radius:100px">FREE · fastest</span>
+              </div>
+              <a href="https://console.groq.com/keys" target="_blank" style="font-size:.65rem;color:#00aaff;text-decoration:none;opacity:.7">Get key →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Llama 3.3 70B at 800 tok/s — used for chat, analysis, research</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-groq-key" type="password" placeholder="gsk_..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleVisible('cfg-groq-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
+            </div>
+          </div>
+
+          <!-- ── OPENROUTER — free models no card ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#ff9500">OPENROUTER</span>
+                <span style="font-size:.65rem;color:#ff9500;font-weight:700;margin-left:8px;background:#ff950018;padding:2px 7px;border-radius:100px">FREE models · no card</span>
+              </div>
+              <a href="https://openrouter.ai/keys" target="_blank" style="font-size:.65rem;color:#ff9500;text-decoration:none;opacity:.7">Get key →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Auto-fallback when Groq hits rate limits — Llama, Qwen, Mistral all free</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-openrouter-key" type="password" placeholder="sk-or-v1-..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleVisible('cfg-openrouter-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
+            </div>
+          </div>
+
+          <!-- ── GLM — free forever ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#44aaff">GLM-4 FLASH</span>
+                <span style="font-size:.65rem;color:#2cb67d;font-weight:700;margin-left:8px;background:#2cb67d18;padding:2px 7px;border-radius:100px">FREE forever</span>
+              </div>
+              <a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank" style="font-size:.65rem;color:#44aaff;text-decoration:none;opacity:.7">Get key →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Zhipu AI — glm-4-flash is permanently free, no card needed. Good at code + structured output</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-glm-key" type="password" placeholder="GLM key..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleVisible('cfg-glm-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
+            </div>
+          </div>
+
+          <!-- ── CEREBRAS — fastest inference, free, English ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#f97316">CEREBRAS</span>
+                <span style="font-size:.65rem;color:#2cb67d;font-weight:700;margin-left:8px;background:#2cb67d18;padding:2px 7px;border-radius:100px">FREE · 2000+ tok/s</span>
+              </div>
+              <a href="https://cloud.cerebras.ai" target="_blank" style="font-size:.65rem;color:#f97316;text-decoration:none;opacity:.7">Get key →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Fastest inference on the planet. Llama-3.3-70B at 2000+ tok/s. English signup, free tier, no card needed. Best for real-time chat.</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-cerebras-key" type="password" placeholder="csk-..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleVisible('cfg-cerebras-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
+            </div>
+          </div>
+
+          <!-- ── GEMINI ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#4285f4">GEMINI FLASH</span>
+                <span style="font-size:.62rem;background:#0a2a1a;color:#22c55e;padding:2px 8px;border-radius:100px;margin-left:8px">FREE 1500 req/day</span>
+              </div>
+              <a href="https://aistudio.google.com/apikey" target="_blank" style="font-size:.65rem;color:#4285f4;text-decoration:none;opacity:.7">Get key →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Google Gemini 2.0 Flash — best free instruction-following model. Doesn't roleplay. 1500 requests/day free. No card needed at aistudio.google.com</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-gemini-key" type="password" placeholder="AIza..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleVisible('cfg-gemini-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
+            </div>
+          </div>
+
+          <!-- ── OPENAI ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#10a37f">GPT-4o MINI</span>
+                <span style="font-size:.62rem;background:#0d1a12;color:#10a37f;padding:2px 8px;border-radius:100px;margin-left:8px">~$5/month typical</span>
+              </div>
+              <a href="https://platform.openai.com/api-keys" target="_blank" style="font-size:.65rem;color:#10a37f;text-decoration:none;opacity:.7">Get key →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">OpenAI GPT-4o Mini — reliable, instruction-following, very cheap. Best backup when Gemini is rate-limited. $5 credit gets you thousands of conversations.</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-openai-key" type="password" placeholder="sk-..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleVisible('cfg-openai-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
+            </div>
+          </div>
+
+          <!-- ── KIMI ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#00ddaa">KIMI</span>
+                <span style="font-size:.65rem;color:#aaa;font-weight:700;margin-left:8px;background:#ffffff08;padding:2px 7px;border-radius:100px">128k context</span>
+              </div>
+              <a href="https://platform.moonshot.cn/console/api-keys" target="_blank" style="font-size:.65rem;color:#00ddaa;text-decoration:none;opacity:.7">Get key →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Moonshot AI — long-context champion. Great for analysing big docs, threads, codebases</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-kimi-key" type="password" placeholder="sk-..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleVisible('cfg-kimi-key')" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer">👁</button>
+            </div>
+          </div>
+
+          <!-- ── ANTHROPIC CLAUDE — heavy lifting backup ── -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;margin-bottom:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <span style="font-size:.78rem;font-weight:800;color:#aa44ff">ANTHROPIC CLAUDE</span>
+                <span style="font-size:.65rem;color:#aa44ff;font-weight:700;margin-left:8px;background:#aa44ff18;padding:2px 7px;border-radius:100px">paid · best quality</span>
+              </div>
+              <a href="https://console.anthropic.com/billing" target="_blank" style="font-size:.65rem;color:#aa44ff;text-decoration:none;opacity:.7">Top up →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Used only for code, long pitches, orchestration — falls back to Groq when balance is low</div>
+            <div style="display:flex;gap:8px">
+              <input id="cfg-anthropic-key" type="password" placeholder="sk-ant-api03-..."
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.82rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+              <button onclick="bossCfgToggleKey()" title="Show/hide" style="background:#111;border:1px solid #222;color:#555;padding:0 12px;border-radius:8px;cursor:pointer;font-size:.9rem">👁</button>
+            </div>
+            <div id="cfg-key-status" style="font-size:.68rem;margin-top:5px;color:#555">— not set</div>
+          </div>
+
+          <!-- ── IDENTITY ── -->
+          <div style="font-size:.68rem;font-weight:700;color:#444;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Identity</div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div>
+              <label style="display:block;font-size:.68rem;font-weight:700;color:#666;margin-bottom:5px">Your Name</label>
+              <input id="cfg-persona" placeholder="Joshua"
+                style="width:100%;box-sizing:border-box;background:#0d0d0d;border:1px solid #1a1a1a;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.8rem"
+                oninput="bossCfgDirty()">
+            </div>
+            <div>
+              <label style="display:block;font-size:.68rem;font-weight:700;color:#666;margin-bottom:5px">Serper Key <span style="color:#333">(lead search)</span></label>
+              <input id="cfg-serper-key" type="password" placeholder="optional"
+                style="width:100%;box-sizing:border-box;background:#0d0d0d;border:1px solid #1a1a1a;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.78rem;font-family:monospace"
+                oninput="bossCfgDirty()">
+            </div>
+          </div>
+
+          <div style="margin-bottom:24px">
+            <label style="display:block;font-size:.68rem;font-weight:700;color:#666;margin-bottom:5px">Core Offer (used in pitches)</label>
+            <textarea id="cfg-offer" rows="2" placeholder="AI-powered client acquisition system for SaaS/agency founders"
+              style="width:100%;box-sizing:border-box;background:#0d0d0d;border:1px solid #1a1a1a;color:#f5f2ec;padding:9px 12px;border-radius:8px;font-size:.8rem;resize:vertical"
+              oninput="bossCfgDirty()"></textarea>
+          </div>
+
+          <!-- ── CHANNELS ──────────────────────────────────────── -->
+          <div style="font-size:.68rem;font-weight:700;color:#444;letter-spacing:.1em;text-transform:uppercase;margin:20px 0 10px">Channels</div>
+
+          <!-- Telegram -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:.78rem;font-weight:800;color:#2aabee"><i class="fab fa-telegram"></i> Telegram</span>
+              <a href="https://t.me/BotFather" target="_blank" style="font-size:.65rem;color:#2aabee;opacity:.7">1. Get token from @BotFather →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Chat with B.O.S.S from your phone. Steps: get token → paste → Verify → send /hi to your bot → Find My ID → Save.</div>
+            <div style="display:flex;gap:6px;margin-bottom:6px">
+              <input id="cfg-telegram-token" type="password" placeholder="Bot Token (123456:ABC-...)" oninput="bossCfgDirty()"
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.75rem;font-family:monospace">
+              <button onclick="bossTelegramVerify()" style="background:#2aabee;border:none;color:#000;padding:8px 14px;border-radius:8px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap">Verify</button>
+            </div>
+            <div id="tg-verify-status" style="font-size:.68rem;margin-bottom:6px;display:none"></div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input id="cfg-telegram-chatid" type="text" placeholder="Your Chat ID (click Find My ID after sending /hi to bot)" oninput="bossCfgDirty()"
+                style="flex:1;background:#080808;border:1px solid #222;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.75rem;font-family:monospace">
+              <button onclick="bossTelegramFindMe()" style="background:#1a1a1a;border:1px solid #2aabee;color:#2aabee;padding:8px 12px;border-radius:8px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap">Find My ID</button>
+            </div>
+            <div id="tg-findme-status" style="font-size:.68rem;margin-top:6px;display:none"></div>
+            <button onclick="bossTelegramTestSend()" id="tg-test-btn" style="display:none;margin-top:8px;width:100%;background:#0d2a1a;border:1px solid #22c55e;color:#22c55e;padding:8px;border-radius:8px;font-size:.72rem;font-weight:700;cursor:pointer">
+              <i class="fas fa-paper-plane"></i> Send Test Message to My Telegram
+            </button>
+          </div>
+
+          <!-- X / Twitter -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:.78rem;font-weight:800;color:#f5f5f5"><i class="fab fa-x-twitter"></i> X / Twitter</span>
+              <a href="https://developer.twitter.com/en/portal/dashboard" target="_blank" style="font-size:.65rem;color:#aaa;opacity:.7">Dev portal →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Post to X from B.O.S.S Social Post module. Free basic API includes 1,500 tweets/month.</div>
+            <input id="cfg-x-token" type="password" placeholder="X Bearer Token" oninput="bossCfgDirty()"
+              style="width:100%;box-sizing:border-box;background:#080808;border:1px solid #222;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.75rem;font-family:monospace">
+          </div>
+
+          <!-- LinkedIn -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:.78rem;font-weight:800;color:#0077b5"><i class="fab fa-linkedin"></i> LinkedIn</span>
+              <a href="https://www.linkedin.com/developers/apps" target="_blank" style="font-size:.65rem;color:#0077b5;opacity:.7">Create app →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Post updates and articles to LinkedIn profile/page.</div>
+            <input id="cfg-linkedin-token" type="password" placeholder="LinkedIn OAuth Token" oninput="bossCfgDirty()"
+              style="width:100%;box-sizing:border-box;background:#080808;border:1px solid #222;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.75rem;font-family:monospace">
+          </div>
+
+          <!-- Instagram -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:.78rem;font-weight:800;color:#e1306c"><i class="fab fa-instagram"></i> Instagram</span>
+              <a href="https://developers.facebook.com/docs/instagram-api" target="_blank" style="font-size:.65rem;color:#e1306c;opacity:.7">Meta Graph API →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">IG Business/Creator account needed. Requires FB Page link + Graph API access token.</div>
+            <input id="cfg-ig-token" type="password" placeholder="IG Access Token" oninput="bossCfgDirty()"
+              style="width:100%;box-sizing:border-box;background:#080808;border:1px solid #222;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.75rem;font-family:monospace">
+          </div>
+
+          <!-- HuggingFace (image gen) -->
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px 20px;margin-bottom:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:.78rem;font-weight:800;color:#ff9d00">🤗 HuggingFace</span>
+              <a href="https://huggingface.co/settings/tokens" target="_blank" style="font-size:.65rem;color:#ff9d00;opacity:.7">Get token →</a>
+            </div>
+            <div style="font-size:.68rem;color:#555;margin-bottom:8px">Free image generation (FLUX Schnell). Without a token, rate limits apply. With token: unlimited free inference.</div>
+            <input id="cfg-hf-token" type="password" placeholder="hf_..." oninput="bossCfgDirty()"
+              style="width:100%;box-sizing:border-box;background:#080808;border:1px solid #222;color:#f5f2ec;padding:8px 12px;border-radius:8px;font-size:.75rem;font-family:monospace">
+          </div>
+
+          <!-- ── ACTIONS ── -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <button id="cfg-save-btn" onclick="bossCfgSave()"
+              style="background:#ff2a2a;color:#0a0a0a;border:none;padding:11px 28px;border-radius:9px;font-weight:800;font-size:.85rem;cursor:pointer;letter-spacing:.04em">
+              ✓ Save
+            </button>
+            <button onclick="bossCfgTest()"
+              style="background:#0d0d0d;border:1px solid #222;color:#aaa;padding:11px 18px;border-radius:9px;font-weight:700;font-size:.78rem;cursor:pointer">
+              ⚡ Test connection
+            </button>
+          </div>
+          <div id="cfg-save-msg" style="font-size:.73rem;margin-top:10px;color:#555"></div>
+
+        </div>
       </div>
 
     </div><!-- /content -->
@@ -529,6 +1372,329 @@
 </div>
 
 <div id="toast"></div>
+
+<div class="side-drawer-backdrop" id="drawer-backdrop"></div>
+
+<!-- ENRICHMENT DRAWER -->
+<aside id="enrichment-drawer" class="side-drawer">
+  <div class="side-drawer-header">
+    <span class="side-drawer-title">Enrichment Providers</span>
+    <button class="btn btn-secondary btn-sm" onclick="closeDrawer('enrichment-drawer')"><i class="fas fa-xmark"></i></button>
+  </div>
+  <div class="side-drawer-body">
+    <div class="enrichment-global">
+      <label class="enrichment-check"><input type="checkbox" id="enrichment-enabled"> <span>Enrichment enabled</span></label>
+      <label class="enrichment-inline">Timeout (ms) <input type="number" id="enrichment-timeout" min="500" max="20000" step="100" style="width:90px"></label>
+    </div>
+    <div class="enrichment-groups" id="enrichment-groups" style="margin-top:12px"><div class="enrichment-loading">Loading…</div></div>
+    <div class="enrichment-footnote" id="enrichment-footnote" style="margin-top:10px"></div>
+  </div>
+  <div class="side-drawer-footer">
+    <button class="btn btn-secondary btn-sm" id="btn-enrichment-reload"><i class="fas fa-rotate-right"></i> Reload</button>
+    <button class="btn btn-primary btn-sm" id="btn-enrichment-save"><i class="fas fa-floppy-disk"></i> Save</button>
+  </div>
+</aside>
+
+<!-- LEAD DETAIL DRAWER -->
+<aside id="lead-detail-drawer" class="side-drawer">
+  <div class="side-drawer-header">
+    <span class="side-drawer-title" id="ldd-title">Lead Detail</span>
+    <button class="btn btn-secondary btn-sm" onclick="closeDrawer('lead-detail-drawer')"><i class="fas fa-xmark"></i></button>
+  </div>
+  <div class="side-drawer-body" id="ldd-body"></div>
+  <div class="side-drawer-footer" id="ldd-footer"></div>
+</aside>
+
+<!-- REPLY DRAWER -->
+<aside id="reply-drawer" class="side-drawer">
+  <div class="side-drawer-header">
+    <div>
+      <div class="side-drawer-title">Reply to Lead</div>
+      <div style="font-size:.7rem;color:var(--muted);margin-top:2px" id="reply-drawer-sub">AI-drafted · edit then approve</div>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="closeDrawer('reply-drawer')"><i class="fas fa-xmark"></i></button>
+  </div>
+  <div class="side-drawer-body">
+    <div id="reply-drawer-loading" style="color:var(--muted);font-size:.8rem;padding:20px 0">Generating draft…</div>
+    <textarea id="reply-draft-area" style="display:none;width:100%;min-height:180px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:.82rem;line-height:1.55;resize:vertical;outline:none" placeholder="Message will appear here…"></textarea>
+    <div id="reply-ai-actions" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px">
+      <button class="btn btn-secondary btn-sm" onclick="aiRewriteMessage('shorter')">Shorter</button>
+      <button class="btn btn-secondary btn-sm" onclick="aiRewriteMessage('warmer')">Warmer</button>
+      <button class="btn btn-secondary btn-sm" onclick="aiRewriteMessage('stronger_cta')">Stronger CTA</button>
+      <button class="btn btn-secondary btn-sm" onclick="promptAIRewrite()">Custom…</button>
+    </div>
+    <div id="reply-rationale" style="margin-top:10px;font-size:.7rem;color:var(--muted);display:none"></div>
+  </div>
+  <div class="side-drawer-footer">
+    <button class="btn btn-primary btn-sm" id="reply-send-btn" disabled onclick="sendReply()"><i class="fas fa-paper-plane"></i> Send</button>
+    <button class="btn btn-secondary btn-sm" onclick="closeDrawer('reply-drawer')">Cancel</button>
+  </div>
+</aside>
+
+<!-- AUTO-MSG CONFIRM STRIP -->
+<div id="auto-confirm-strip" hidden style="position:fixed;top:0;left:0;right:0;z-index:1300;background:var(--card);border-bottom:2px solid var(--accent);padding:10px 20px;display:flex;gap:12px;align-items:flex-start">
+  <div style="flex:1">
+    <div style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:4px">Auto-message ready <span id="auto-confirm-tier" style="margin-left:6px"></span></div>
+    <div id="auto-confirm-preview" style="font-size:.78rem;color:var(--muted);line-height:1.5;max-height:60px;overflow:hidden"></div>
+  </div>
+  <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
+    <button class="btn btn-primary btn-sm" id="auto-confirm-send"><i class="fas fa-paper-plane"></i> Send</button>
+    <button class="btn btn-secondary btn-sm" id="auto-confirm-edit">Edit</button>
+    <button class="btn btn-secondary btn-sm" id="auto-confirm-cancel"><i class="fas fa-xmark"></i></button>
+    <span id="auto-confirm-countdown" style="font-size:.68rem;color:var(--muted);width:28px;text-align:right"></span>
+  </div>
+</div>
+
 <script src="operator.js"></script>
+<script src="workflows-runner.js"></script>
+
+<!-- ═══ B.O.S.S JARVIS CHAT ═══ -->
+<button id="boss-fab" onclick="bossToggle()" title="Chat with B.O.S.S (⌘K)">B.O.S.S</button>
+<div id="boss-drawer">
+  <div id="boss-head">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="boss-pulse-dot"></div>
+      <div>
+        <div style="font-weight:800;font-size:.95rem;letter-spacing:.04em;color:#ff2a2a">B.O.S.S</div>
+        <div style="font-size:.68rem;color:#666;letter-spacing:.08em;text-transform:uppercase" id="boss-status">Jarvis mode · online</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button onclick="bossMic()" id="boss-mic-btn" title="Voice input (speak to BOSS)" style="background:none;border:1px solid #1f1f1f;color:#888;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.8rem">🎤</button>
+      <button onclick="bossToggleVoice()" id="boss-voice-btn" title="Voice output (BOSS speaks)" style="background:none;border:1px solid #1f1f1f;color:#888;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.8rem">🔊</button>
+      <button onclick="bossToggle()" style="background:none;border:none;color:#666;font-size:1.2rem;cursor:pointer">✕</button>
+    </div>
+  </div>
+  <div id="boss-msgs"></div>
+  <div id="boss-slash" style="display:none;padding:6px 10px;border-top:1px solid #1a1a1a;background:#050505;display:flex;flex-wrap:wrap;gap:5px"></div>
+  <form id="boss-form" onsubmit="bossSend(event)">
+    <input id="boss-input" placeholder="Ask B.O.S.S anything… or type /" autocomplete="off">
+    <button type="submit" style="background:#ff2a2a;color:#0a0a0a;border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;font-weight:900;font-size:.9rem">↑</button>
+  </form>
+</div>
+
+<style>
+  #boss-fab{position:fixed;bottom:24px;right:24px;width:60px;height:60px;border-radius:50%;background:#0d0d0f;border:2px solid rgba(255,42,42,.65);color:#ff2a2a;font-size:.62rem;font-weight:900;cursor:pointer;z-index:9998;box-shadow:0 0 20px rgba(255,42,42,.2),0 8px 28px rgba(0,0,0,.7),0 10px 30px rgba(0,0,0,.5);letter-spacing:.05em;transition:transform .3s,box-shadow .3s}
+  #boss-fab:hover{transform:scale(1.08) translateY(-2px);box-shadow:0 0 36px rgba(255,42,42,.5),0 14px 40px rgba(0,0,0,.5)}
+  #boss-drawer{position:fixed;right:20px;bottom:96px;width:380px;max-width:calc(100vw - 40px);height:560px;max-height:80vh;background:#0c0c0c;border:1px solid #1f1f1f;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.8);display:none;flex-direction:column;z-index:9999;overflow:hidden;font-family:Inter,-apple-system,sans-serif}
+  #boss-drawer.open{display:flex;animation:bossIn .3s cubic-bezier(.22,1,.36,1)}
+  @keyframes bossIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  #boss-head{padding:14px 16px;border-bottom:1px solid #1a1a1a;display:flex;justify-content:space-between;align-items:center;background:#080808}
+  .boss-pulse-dot{width:9px;height:9px;border-radius:50%;background:#ff2a2a;box-shadow:0 0 10px rgba(255,42,42,.6);animation:bossPulseAnim 2s infinite;flex-shrink:0}
+  @keyframes bossPulseAnim{0%,100%{opacity:1}50%{opacity:.35}}
+  #boss-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+  #boss-msgs::-webkit-scrollbar{width:4px}
+  #boss-msgs::-webkit-scrollbar-thumb{background:#1a1a1a;border-radius:2px}
+  .boss-msg{padding:10px 13px;border-radius:13px;max-width:88%;font-size:.85rem;line-height:1.5;word-wrap:break-word}
+  .boss-msg.user{background:#ff2a2a;color:#fff;align-self:flex-end;font-weight:600}
+  .boss-msg.bot{background:#141414;color:#f0f0f0;align-self:flex-start;border:1px solid #1f1f1f;white-space:pre-wrap}
+  .boss-msg.bot code{background:#050505;color:#ff2a2a;padding:2px 5px;border-radius:4px;font-family:monospace;font-size:.8rem}
+  .boss-typing{display:flex;gap:4px;padding:12px 14px;align-self:flex-start}
+  .boss-typing span{width:6px;height:6px;border-radius:50%;background:#ff2a2a;animation:bossBounce 1.2s infinite}
+  .boss-typing span:nth-child(2){animation-delay:.15s}.boss-typing span:nth-child(3){animation-delay:.3s}
+  @keyframes bossBounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1}}
+  #boss-form{display:flex;padding:10px;gap:8px;border-top:1px solid #1a1a1a;background:#080808}
+  #boss-input{flex:1;background:#141414;border:1px solid #1f1f1f;border-radius:100px;color:#f0f0f0;padding:8px 14px;font-size:.85rem;outline:none}
+  #boss-input:focus{border-color:#ff2a2a}
+  #boss-mic-btn.listening{background:#ff2a2a !important;color:#0a0a0a !important}
+</style>
+
+      <!-- ══ WORKFLOWS LAUNCHPAD (n8n-style tools dashboard) ══ -->
+      <div class="panel" id="panel-workflows">
+        <div class="wf-topbar">
+          <h2>Workflows</h2>
+          <div class="spacer" style="flex:1"></div>
+          <span class="wf-hint">Click <i class="fas fa-bolt" style="color:var(--accent)"></i> cards to run inside the panel. External tools open in new tabs.</span>
+        </div>
+        <div class="wf-grid" id="wf-grid">
+
+          <!-- CLAUDE MAX — operator brain -->
+          <div class="wf-card wf-internal wf-claude" data-claude="operator-plan">
+            <div class="wf-icon"><i class="fas fa-brain"></i></div>
+            <div class="wf-name">Operator Plan</div>
+            <div class="wf-desc">Claude Max generates the full system plan from a client brief — GOAL · SYSTEMS · STORYBOARD · COPY · MESHY PROMPTS · PAGE STRUCTURE · AUTOMATION HOOKS.</div>
+            <button class="btn btn-primary btn-sm wf-run-claude" data-claude="operator-plan">
+              <i class="fas fa-play"></i> Run
+            </button>
+          </div>
+
+          <!-- INTERNAL — Blender renders -->
+          <div class="wf-card wf-internal" data-workflow="hero-render">
+            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
+            <div class="wf-name">3D Hero Render</div>
+            <div class="wf-desc">Render a brand-palette 3D hero still (1280×720) via headless Blender.</div>
+            <button class="btn btn-primary btn-sm wf-run" data-workflow="hero-render"><i class="fas fa-play"></i> Run</button>
+          </div>
+          <div class="wf-card wf-internal" data-workflow="tiktok-promo">
+            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
+            <div class="wf-name">TikTok Promo Frame</div>
+            <div class="wf-desc">Vertical 9:16 720×1280 PNG, peak-pulse hero frame. Drop into CapCut + add audio for the Reel.</div>
+            <button class="btn btn-primary btn-sm wf-run" data-workflow="tiktok-promo"><i class="fas fa-play"></i> Run</button>
+          </div>
+          <div class="wf-card wf-internal" data-workflow="logo-mark">
+            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
+            <div class="wf-name">Logo Mark</div>
+            <div class="wf-desc">1:1 1080×1080 PNG of the sigil plinth. Drops into decks + about pages.</div>
+            <button class="btn btn-primary btn-sm wf-run" data-workflow="logo-mark"><i class="fas fa-play"></i> Run</button>
+          </div>
+          <div class="wf-card wf-internal" data-workflow="square-card">
+            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
+            <div class="wf-name">Square Card</div>
+            <div class="wf-desc">1080×1080 PNG of the brand hero. IG / LinkedIn / X feed posts.</div>
+            <button class="btn btn-primary btn-sm wf-run" data-workflow="square-card"><i class="fas fa-play"></i> Run</button>
+          </div>
+          <div class="wf-card wf-internal" data-workflow="mood-pack">
+            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
+            <div class="wf-name">Mood Pack</div>
+            <div class="wf-desc">2×2 contact sheet PNG, 4 angles. Pitch sheet / press kit / asset library starter.</div>
+            <button class="btn btn-primary btn-sm wf-run" data-workflow="mood-pack"><i class="fas fa-play"></i> Run</button>
+          </div>
+
+          <!-- EXTERNAL TOOLS -->
+          <div class="wf-card" data-tool="meshy"><div class="wf-icon"><i class="fas fa-cube"></i></div><div class="wf-name">Meshy AI</div><div class="wf-desc">Image-to-3D, free tier ~200 credits/mo. Upload hero plate → GLB.</div><a class="btn btn-secondary btn-sm" href="https://www.meshy.ai/workspace" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="hunyuan"><div class="wf-icon"><i class="fas fa-shapes"></i></div><div class="wf-name">Hunyuan3D-2</div><div class="wf-desc">Tencent's image-to-3D, unlimited free on HF Space.</div><a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/tencent/Hunyuan3D-2" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="trellis"><div class="wf-icon"><i class="fas fa-cubes"></i></div><div class="wf-name">TRELLIS</div><div class="wf-desc">Microsoft's image-to-3D fallback, free on HF Space.</div><a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/trellis-community/TRELLIS" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="flux"><div class="wf-icon"><i class="fas fa-image"></i></div><div class="wf-name">FLUX.1 Krea Dev</div><div class="wf-desc">Photoreal image gen on HF Space.</div><a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/black-forest-labs/FLUX.1-Krea-dev" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="firefly"><div class="wf-icon"><i class="fas fa-fire"></i></div><div class="wf-name">Adobe Firefly</div><div class="wf-desc">Commercial-licensed image gen.</div><a class="btn btn-secondary btn-sm" href="https://firefly.adobe.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="grok-imagine"><div class="wf-icon"><i class="fas fa-wand-magic-sparkles"></i></div><div class="wf-name">Grok Imagine</div><div class="wf-desc">Short Film · UGC Product Stories · Brand Identity · Create Worlds.</div><a class="btn btn-secondary btn-sm" href="https://grok.com/imagine" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="capcut"><div class="wf-icon"><i class="fas fa-film"></i></div><div class="wf-name">CapCut</div><div class="wf-desc">Free web NLE.</div><a class="btn btn-secondary btn-sm" href="https://www.capcut.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="davinci"><div class="wf-icon"><i class="fas fa-video"></i></div><div class="wf-name">DaVinci Resolve</div><div class="wf-desc">Free Hollywood-grade NLE.</div><a class="btn btn-secondary btn-sm" href="https://www.blackmagicdesign.com/products/davinciresolve" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Get</a></div>
+          <div class="wf-card" data-tool="elevenlabs"><div class="wf-icon"><i class="fas fa-microphone"></i></div><div class="wf-name">ElevenLabs</div><div class="wf-desc">Free 10k chars/mo.</div><a class="btn btn-secondary btn-sm" href="https://elevenlabs.io/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="canva"><div class="wf-icon"><i class="fas fa-palette"></i></div><div class="wf-name">Canva</div><div class="wf-desc">Free design + whiteboard.</div><a class="btn btn-secondary btn-sm" href="https://www.canva.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="figma"><div class="wf-icon"><i class="fab fa-figma"></i></div><div class="wf-name">Figma</div><div class="wf-desc">Sigil + type cards + brand kit.</div><a class="btn btn-secondary btn-sm" href="https://www.figma.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="n8n"><div class="wf-icon"><i class="fas fa-project-diagram"></i></div><div class="wf-name">n8n</div><div class="wf-desc">Free self-hosted automations.</div><a class="btn btn-secondary btn-sm" href="https://n8n.io/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="make"><div class="wf-icon"><i class="fas fa-network-wired"></i></div><div class="wf-name">Make</div><div class="wf-desc">Free tier automations.</div><a class="btn btn-secondary btn-sm" href="https://www.make.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+        </div>
+
+        <div class="wf-output" id="wf-output" style="display:none">
+          <div class="wf-output-header">
+            <span id="wf-output-title">Output</span>
+            <button class="btn btn-secondary btn-sm" id="btn-wf-close-output">Close</button>
+          </div>
+          <div class="wf-output-body" id="wf-output-body"></div>
+        </div>
+      </div>
+
+      <!-- ══ B.O.S.S: CREATIVE STUDIO ══ -->
+      <div class="panel" id="panel-boss-creative">
+        <div style="padding:32px;max-width:1000px;margin:0 auto">
+          <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 4px">Creative Studio</h2>
+          <p style="font-size:.75rem;color:#666;margin:0 0 24px">Render the Anime Morph video — 10 scenes, 24.5 seconds, 1920×1080 MP4</p>
+
+          <!-- Status bar -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:28px" id="creative-status-bar">
+            <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px">
+              <div style="font-size:.65rem;color:#666;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">MP4 Status</div>
+              <div id="cs-mp4-status" style="font-weight:700;color:#666;font-size:.9rem">—</div>
+            </div>
+            <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px">
+              <div style="font-size:.65rem;color:#666;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">File Size</div>
+              <div id="cs-mp4-size" style="font-weight:700;color:#666;font-size:.9rem">—</div>
+            </div>
+            <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px">
+              <div style="font-size:.65rem;color:#666;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Assets</div>
+              <div id="cs-assets" style="font-weight:700;color:#666;font-size:.9rem">—</div>
+            </div>
+            <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px">
+              <div style="font-size:.65rem;color:#666;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Render</div>
+              <div id="cs-render-status" style="font-weight:700;color:#666;font-size:.9rem">idle</div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px">
+            <button onclick="bossRenderVideo()" id="cs-render-btn"
+              style="background:#ff2a2a;color:#0a0a0a;border:none;padding:12px 28px;border-radius:9px;font-weight:800;font-size:.85rem;cursor:pointer">
+              ▶ Render MP4
+            </button>
+            <button onclick="bossCreativeRefresh()"
+              style="background:#1a1a1a;border:1px solid #2a2a2a;color:#aaa;padding:12px 18px;border-radius:9px;font-weight:700;font-size:.82rem;cursor:pointer">
+              ↻ Refresh Status
+            </button>
+            <a id="cs-download-btn" href="/api/creative/download" style="display:none;background:#0a1a0a;border:1px solid #2a3a1a;color:#ff2a2a;padding:12px 22px;border-radius:9px;font-weight:700;font-size:.82rem;text-decoration:none">
+              ⬇ Download MP4
+            </a>
+          </div>
+
+          <!-- Render log -->
+          <div style="background:#050505;border:1px solid #111;border-radius:10px;padding:14px;font-family:monospace;font-size:.7rem;color:#555;min-height:80px;max-height:160px;overflow-y:auto;white-space:pre-wrap" id="cs-log">
+            Render log will appear here…
+          </div>
+
+          <!-- Scene asset grid -->
+          <div style="margin-top:24px">
+            <div style="font-size:.72rem;font-weight:700;color:#aaa;letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">Scene Assets</div>
+            <div id="cs-asset-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px"></div>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        .router-tile{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px}
+        .router-tile .rt-dot{width:10px;height:10px;border-radius:50%;background:#333;flex-shrink:0;transition:background .3s}
+        .router-tile.on .rt-dot{background:#2cb67d;box-shadow:0 0 8px rgba(44,182,125,.5)}
+        .router-tile.groq-on .rt-dot{background:#00aaff;box-shadow:0 0 8px rgba(0,170,255,.5)}
+        .router-tile.cloud-on .rt-dot{background:#aa44ff;box-shadow:0 0 8px rgba(170,68,255,.5)}
+        .rt-label{font-size:.65rem;color:#666;text-transform:uppercase;letter-spacing:.08em}
+        .rt-val{font-size:.82rem;font-weight:700;color:#aaa}
+        /* AI Tools panel */
+        .ait-card{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:18px 20px;transition:border-color .2s}
+        .ait-card.active{border-color:#2cb67d}
+        .ait-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+        .ait-name{font-size:.82rem;font-weight:800}
+        .ait-badge{font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:100px;background:#1a1a1a;color:#666}
+        .ait-badge.free{background:#2cb67d18;color:#2cb67d}
+        .ait-badge.paid{background:#aa44ff18;color:#aa44ff}
+        .ait-model{font-size:.68rem;color:#555;margin-bottom:6px;font-family:monospace}
+        .ait-desc{font-size:.72rem;color:#888;line-height:1.55;margin-bottom:10px}
+        .ait-steps{font-size:.7rem;color:#666;line-height:1.7;background:#080808;border-radius:8px;padding:10px 12px}
+        .ait-steps a{color:#ff2a2a;text-decoration:none}
+        .ait-steps a:hover{text-decoration:underline}
+        .ait-steps code{color:#aaa;background:#111;padding:1px 5px;border-radius:4px;font-size:.68rem}
+        /* GPU panel */
+        .gpu-snippet{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;overflow:hidden}
+        .gpu-snip-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #1a1a1a;gap:12px}
+        .gpu-copy-btn{background:#1a1a1a;border:1px solid #333;color:#ff2a2a;padding:4px 12px;border-radius:6px;font-size:.68rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+        .gpu-copy-btn:hover{background:#ff2a2a18;border-color:#ff2a2a}
+        .gpu-code{margin:0;padding:14px 16px;font-size:.7rem;color:#aaa;font-family:'Fira Code',monospace;line-height:1.6;overflow-x:auto;white-space:pre}
+      </style>
+
+
+  <!-- â”€â”€ KNOWLEDGE GRAPH PANEL â”€â”€ -->
+  <div class="panel" id="panel-graph" style="flex-direction:column;overflow:hidden;">
+    <div class="panel-header" style="flex-shrink:0;padding:10px 16px;">
+      <h2 style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);">Knowledge Graph</h2>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('graph-frame').src='graph.html?t='+Date.now()">â†º Refresh</button>
+        <a href="graph.html" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">â¤¢ Full Screen</a>
+      </div>
+    </div>
+    <iframe id="graph-frame" src="graph.html" style="flex:1;border:none;width:100%;height:100%;background:#0a0a0f;" loading="lazy"></iframe>
+  </div>
+
+  <!-- â”€â”€ BRAND ASSETS PANEL â”€â”€ -->
+  <div class="panel" id="panel-design" style="flex-direction:column;overflow:hidden;">
+    <div class="panel-header" style="flex-shrink:0;padding:10px 16px;">
+      <h2 style="font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);">Brand Assets</h2>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" id="brand-tab-1" onclick="switchBrandBoard(1)" style="border-color:rgba(255,42,42,.4);color:#ff2a2a;">Board 01 â€” Identity</button>
+        <button class="btn btn-secondary btn-sm" id="brand-tab-2" onclick="switchBrandBoard(2)">Board 02 â€” Components</button>
+        <a href="brand-board-1.html" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">â¤¢ Open</a>
+      </div>
+    </div>
+    <iframe id="brand-frame" src="brand-board-1.html" style="flex:1;border:none;width:100%;height:100%;background:#0a0a0f;" loading="lazy"></iframe>
+  </div>
+
+  <script>
+  function switchBrandBoard(n) {
+    document.getElementById('brand-frame').src = 'brand-board-'+n+'.html';
+    document.getElementById('brand-tab-1').style.borderColor = n===1 ? 'rgba(255,42,42,.4)' : '';
+    document.getElementById('brand-tab-1').style.color = n===1 ? '#ff2a2a' : '';
+    document.getElementById('brand-tab-2').style.borderColor = n===2 ? 'rgba(255,42,42,.4)' : '';
+    document.getElementById('brand-tab-2').style.color = n===2 ? '#ff2a2a' : '';
+  }
+  </script>
+  <!-- boss.js MUST load after #boss-drawer and #boss-fab exist in the DOM -->
+<script src="boss.js"></script>
 </body>
 </html>
