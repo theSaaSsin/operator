@@ -416,16 +416,17 @@ These block Day 1. None of them are "we'll figure it out later."
 
 | # | Decision | Options | My recommendation | Your call |
 |---|---|---|---|---|
-| D1 | Operator accent colour | **LOCKED — arterial red `#ff2a2a` on deep ink `#0a0a0f`** to match Operator Panel brand CSS | n/a — palette inherited from product | ✅ locked 2026-05-02 |
-| D2 | Operator face | Half-mask + sigil / full hood (no face) / human face (Josh-coded) | **Half-mask + sigil** — keeps mystery, makes the brand mark wearable | _____ |
-| D3 | Founder shown on screen at F08 | Generic figure / Josh's face / silhouette only | **Generic figure** — viewer projects themselves in. Avoid Josh's face for now. | _____ |
-| D4 | VO accent | British calm (Charlie) / American low (Liam) / Female alt | **Charlie** — adds class, distinguishes from every American startup VO | _____ |
-| D5 | Music intensity | Sicario-tense / Social Network-cool / Mr. Robot-glitchy | **Social Network-cool** — confidence over menace. Tense reads as desperate. | _____ |
-| D6 | Tagline final | "Operator-class systems for solo builders" / "The work was always going to get done" / write-in | **Operator-class systems for solo builders** — describes the product. Other line is in the VO already. | _____ |
-| D7 | URL card animation | Static / cursor blink / glitch reveal | **Cursor blink** — matches opening frame, closes the loop | _____ |
-| D8 | Where the master lives at end of Day 5 | Cloudflare R2 / Drive / repo LFS only | **Drive for v1**, R2 once domain is live | _____ |
+| D1 | Operator accent colour | **LOCKED — arterial red `#ff2a2a` on deep ink `#0a0a0f`** | inherited from Operator Panel brand CSS | ✅ locked 2026-05-02 |
+| D2 | Operator face at F10 | **Half-mask + sigil on forehead** | mystery preserved, brand mark wearable, FLUX-friendly | ✅ locked 2026-05-02 |
+| D3 | Founder shown at F08 | **Generic figure** (FLUX-generated) | viewer projects themselves in, Josh's personal-brand face saved for separate content | ✅ locked 2026-05-02 |
+| D4 | VO accent | **Charlie — British calm (ElevenLabs)** | adds class, distinguishes from every American startup VO | ✅ locked 2026-05-02 |
+| D5 | Music intensity | **Social Network-cool** (Reznor/Ross-style restrained) | confidence > menace; tense reads as desperate | ✅ locked 2026-05-02 |
+| D6 | Final tagline | **"Operator-class systems for solo builders"** | describes the product; other contender is already in the VO | ✅ locked 2026-05-02 |
+| D7 | URL card animation at F12 | **Cursor blink** | matches opening F01 frame, closes the loop | ✅ locked 2026-05-02 |
+| D8 | Master location end of Day 5 | **Google Drive folder** for v1 | upgrade to Cloudflare R2 once domain is live | ✅ locked 2026-05-02 |
+| D9 | Render engine for finals | **Mix — Eevee for tests, Cycles for hero shots F02/F07/F09/F10** | iterate fast, render hero shots photoreal | ✅ locked 2026-05-02 |
 
-Once I have D1–D8, I drive FLUX in Chrome and we land the hero plate before end of day.
+**All decisions locked.** Day 1 (hero plate generation) is unblocked.
 
 ---
 
@@ -443,6 +444,7 @@ Once I have D1–D8, I drive FLUX in Chrome and we land the hero plate before en
 | v1.0 | 2026-05-02 | Initial bible — script, treatment, shot list, asset register, schedule, RACI, risks, decisions sheet | Claude (drafted), Josh (sign-off pending) |
 | v1.1 | 2026-05-02 | Palette locked to brand black + red (`#0a0a0f` / `#ff2a2a`) inherited from `public/operator.css`. PROMPTS.md updated. D1 closed. | Josh + Claude |
 | v1.2 | 2026-05-02 | Tool stack upgraded to MCP-orchestrated: Blender MCP, `operator-pipeline` skill, `voice-avatar` skill, `canvas-design`, `theme-factory`, `pptx`/`pdf`, Figma MCP, Claude Preview MCP. Shot list pipeline column rewritten. Manual fallbacks retained per row. | Josh + Claude |
+| v1.3 | 2026-05-02 | Path C proof landed — Blender headless render works (1280×720 Eevee in 29s, brand palette holds). All decisions D1–D9 locked: half-mask + sigil, generic founder, Charlie British VO, Social Network-cool score, "Operator-class systems for solo builders" tagline, cursor-blink URL, Drive master, Eevee+Cycles render mix. Day 1 unblocked. | Josh (sign-off) + Claude |
 
 ### D. Tool stack rationale
 **Why we layered the skills + MCPs on top instead of staying with v1's manual chain:**
