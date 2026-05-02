@@ -1,0 +1,28 @@
+{
+  "$schema": "./systems.schema.json",
+  "version": "0.1.0",
+  "lockedAt": "2026-05-02",
+  "library": {
+    "repo": "theSaaSsin/TheSaaSsin-vol1-16-systems",
+    "branch": "main",
+    "rootPath": "systems"
+  },
+  "systems": [
+    { "id": "01-lead-intake",   "name": "Lead Intake",       "status": "stub", "path": "systems/01-lead-intake" },
+    { "id": "02-offer-clarity", "name": "Offer Clarity",     "status": "stub", "path": "systems/02-offer-clarity" },
+    { "id": "03-cro-audit",     "name": "CRO Audit",         "status": "stub", "path": "systems/03-cro-audit" },
+    { "id": "04-crm-setup",     "name": "CRM Setup",         "status": "stub", "path": "systems/04-crm-setup" },
+    { "id": "05-ads-launch",    "name": "Ads Launch",        "status": "stub", "path": "systems/05-ads-launch" },
+    { "id": "06-tba",           "name": "TBA",               "status": "tbd",  "path": "systems/06-tba" },
+    { "id": "07-tba",           "name": "TBA",               "status": "tbd",  "path": "systems/07-tba" },
+    { "id": "08-tba",           "name": "TBA",               "status": "tbd",  "path": "systems/08-tba" },
+    { "id": "09-tba",           "name": "TBA",               "status": "tbd",  "path": "systems/09-tba" },
+    { "id": "10-tba",           "name": "TBA",               "status": "tbd",  "path": "systems/10-tba" },
+    { "id": "11-tba",           "name": "TBA",               "status": "tbd",  "path": "systems/11-tba" },
+    { "id": "12-tba",           "name": "TBA",               "status": "tbd",  "path": "systems/12-tba" },
+    { "id": "13-tba",           "name": "TBA",               "status": "tbd",  "path": "systems/13-tba" },
+    { "id": "14-tba",           "name": "TBA",               "status": "tbd",  "path": "systems/14-tba" },
+    { "id": "15-tba",           "name": "TBA",               "status": "tbd",  "path": "systems/15-tba" },
+    { "id": "16-tba",           "name": "TBA",               "status": "tbd",  "path": "systems/16-tba" }
+  ]
+}

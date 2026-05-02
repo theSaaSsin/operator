@@ -1,0 +1,55 @@
+{
+  "$schema": "./workflows.schema.json",
+  "version": "0.1.0",
+  "lockedAt": "2026-05-02",
+  "categories": [
+    "3d-page",
+    "cro",
+    "crm",
+    "ads",
+    "full-funnel",
+    "promo-video"
+  ],
+  "workflows": [
+    {
+      "id": "3d-parallax-sales-page",
+      "name": "3D Parallax Sales Page",
+      "category": "3d-page",
+      "status": "flagship",
+      "description": "End-to-end 3D parallax sales page from brief to deployed asset.",
+      "inputs": ["client-brief", "target-system-ids", "brand-kit"],
+      "outputs": ["storyboard", "copy", "meshy-prompts", "page-html", "automation-hooks"],
+      "systemsUsed": ["01-lead-intake", "02-offer-clarity", "03-cro-audit"],
+      "tools": ["claude-max", "meshy", "blender", "chrome-mcp", "github"],
+      "estimatedRuntime": "4-8h first run, 1-2h after lock"
+    },
+    {
+      "id": "cro-audit",
+      "name": "CRO Audit",
+      "category": "cro",
+      "status": "stub",
+      "description": "Conversion-rate audit + redesign recommendations + before/after.",
+      "systemsUsed": ["03-cro-audit"],
+      "tools": ["claude-max", "chrome-mcp"]
+    },
+    {
+      "id": "crm-onboarding",
+      "name": "CRM + Onboarding",
+      "category": "crm",
+      "status": "stub",
+      "description": "CRM setup with onboarding sequences and automation hooks.",
+      "systemsUsed": ["04-crm-setup"],
+      "tools": ["claude-max", "monday-or-crm", "n8n"]
+    },
+    {
+      "id": "promo-video",
+      "name": "Brand / Promo Video",
+      "category": "promo-video",
+      "status": "in-progress",
+      "description": "60-90s cinematic brand promo. Currently in build for TheSaaSsin's own intro (Ip Man metaphor, see docs/intro-video/).",
+      "tools": ["claude-max", "flux-hf", "pulid-instantid", "blender-mcp", "elevenlabs", "davinci-resolve", "capcut"],
+      "currentClient": "internal",
+      "bibleVersion": "v1.4"
+    }
+  ]
+}
