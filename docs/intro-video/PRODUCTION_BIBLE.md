@@ -52,41 +52,51 @@
 - **Quality bar:** Apple-event polish on a Pixabay-music budget. If it looks like a Fiverr explainer we tear it up and start over.
 - **Brand:** Deep-ink palette, mono type, no emoji, builder voice. **Ever.**
 
-### 1.7 Brand palette (locked — inherited from `public/operator.css`)
+### 1.7 Brand palette (v1.4 — black + red + grey, photo-shoot lighting)
 | Role | Hex | Use |
 |---|---|---|
-| Ground | `#0a0a0f` | Base background, deepest shadows |
+| Ground | `#0a0a0f` | Base background, deepest shadows, monitor surfaces (matte, non-emissive) |
 | Surface | `#0f0f17` / `#121218` | Card / panel surfaces, mid-shadow |
-| **Accent** | **`#ff2a2a`** | **Single brand-red glow — the only saturated colour on screen** |
-| Accent dim | `rgba(255,42,42,0.12)` | Faint glows, secondary monitors in background |
-| Accent edge | `rgba(255,42,42,0.35)` | Sigil edge bloom, key-light rim |
-| Text | `#f0f0f5` | Logotype, near-white UI elements |
-| Muted | `#6b6b80` | Inactive UI, vignette transitions |
+| **Architectural grey** | **`#6b6b80`** | **Concrete, fabric, mid-tone surfaces, hood material — adds depth and "studio-shoot" weight** |
+| Mid-grey | `#3a3a44` | Wall material, deeper concrete, transitional shadow |
+| **Accent** | **`#ff2a2a`** | **Single brand-red — sigil glow only, NOT every monitor. Reserved for the operator mark and one emergency-strip light.** |
+| Accent dim | `rgba(255,42,42,0.12)` | Faint glows, sigil bloom edge |
+| Accent edge | `rgba(255,42,42,0.35)` | Sigil edge bloom, key-light rim on operator |
+| Text | `#f0f0f5` | Logotype, type cards, near-white UI elements |
+| Muted | `#6b6b80` | Inactive UI |
 
-**Discipline rule:** every shot must contain `#0a0a0f` and `#ff2a2a` and *nothing* warm or green. If a render comes back with cyan, blue, or any other hue we re-prompt. The brand reads black + red or it doesn't read.
+**Lighting philosophy (locked v1.4):**
+- **Monitors are matte black surfaces** — they DO NOT self-emit. They reflect the room's lighting. Subtle screen content is allowed (low contrast, near-monochrome) but no glowing dashboards.
+- **Primary illumination is white architectural light** — large soft key (5500K), cooler fill bounce. Studio photo-shoot energy, not SOC dungeon.
+- **Red is a single accent** — operator's sigil, one emergency-strip light along the floor or ceiling, possibly the cursor in the URL card. *That's it.* Not on monitors, not on the floor, not in the haze.
+- **Grey is structural** — concrete walls, fabric of the operator's coat, ground texture. Carries the architectural weight that keeps the frame "professional product launch" not "moody hacker."
+
+**Discipline rule:** every shot must contain `#0a0a0f` (deep black) + `#6b6b80` (architectural grey) + a single `#ff2a2a` (red accent). Lighting is white. If a render comes back with cyan, blue, green, or warm orange anywhere in frame, we re-prompt. Brand reads "Apple keynote x cinematic operator" — clean, light-perspective, professional.
 
 ---
 
 ## 2. CREATIVE TREATMENT
 
-### 2.1 World
-A near-future operator's command room. Off-grid, deliberately analog in places (real keyboard, real mug of black coffee), digital where it matters (walls of monitors, holographic data overlays). Not Hollywood-glossy — utilitarian. Closer to a SOC analyst's desk than a Tony Stark lab. The room exists *outside* normal SaaS founder reality — a glimpse of how the work could be done.
+### 2.1 World (v1.4 — clean architectural studio, not dungeon)
+A purpose-built operator command space. Concrete-and-glass architecture, gallery proportions, controlled studio lighting. The room is *displayed*, not hidden — like an Apple Park interior shoot or a Bjarke Ingels Group atelier. The operator works at a single, deliberate workstation; the monitor wall behind is a black-mirror surface (matte, non-emissive) that reflects the room's white architectural light. This isn't a SOC dungeon — it's the *showroom* version of how the work gets done. Aspirational. Inhabitable. Premium.
 
-### 2.2 Tone
-- **Confidence over hype.** No "10X your business." No exclamation marks. No emoji.
-- **Quiet menace.** The operator isn't intimidating; the *work getting done* is.
+### 2.2 Tone (v1.4)
+- **Confident, not menacing.** Apple keynote energy applied to a builder's craft. No hype, no exclamation, no emoji — also no horror score, no shadow play, no paranoia.
+- **Light, perspective, professional.** Clean white lighting, deep architectural perspective, controlled depth of field. Frame breathes.
+- **Single saturated note.** Red is reserved for the operator mark. Everything else is black + grey + white. The brand reads on a glance.
 - **Builder honesty.** What's on screen is recognisably real product UI, not faked dashboards. The viewer's brain registers "wait, that's actually working."
 
-### 2.3 Visual references
+### 2.3 Visual references (v1.4 — pulled toward Apple/architectural, away from Mr. Robot dungeon)
 | Ref | What we're stealing |
 |---|---|
+| Apple — *iPhone 15 Pro launch film* | Studio architectural lighting, black-on-black product against grey concrete, single accent colour |
+| Apple — *"Privacy. That's iPhone."* | Tight VO/visual sync, blacks lifted not crushed, calm authority |
+| Apple — *Vision Pro reveal* | Volumetric clean light, hardware-as-art framing |
 | *The Social Network* (2010) — opening | Dialogue cadence, restrained palette, subliminal speed |
-| *Mr. Robot* — title sequence | Mono type, asymmetric framing, code-as-character |
-| *Sicario* — *The Beast* sequence | Tension via stillness, percussion as menace |
-| *Death Stranding* — Kojima trailers | Hooded silhouette, otherworldly tech, lonely competence |
-| *Ghost in the Shell* (1995) — opening | Dissolves between data and body |
-| Apple — "Privacy. That's iPhone." | Tight VO/visual sync, blacks crushed but not muddy |
-| *Hereditary* trailer (A24) | One-word VO punches landing on cuts |
+| Bjarke Ingels Group — architectural films | Light through glass, vanishing-point perspective, human scale next to monumental geometry |
+| Kanye West — *Donda* listening event | Single-figure stagecraft, monolithic black + red palette, controlled negative space |
+| *Drive* (2011) — title sequence | Mono type, single accent colour, restraint over flourish |
+| Tesla — *Cybertruck reveal stage* | Concrete-and-light architecture, single human silhouette, no warmth |
 
 ### 2.4 Sound references
 - *The Social Network* — *In Motion* (Reznor/Ross)
@@ -430,6 +440,57 @@ These block Day 1. None of them are "we'll figure it out later."
 
 ---
 
+## 13. CREATIVE REVIEW CHECKPOINTS
+
+Every asset gates through a **dailies review** before it propagates downstream. The combined toolkit (Claude orchestration + your judgment) runs each gate. No asset enters the final cut without explicit sign-off.
+
+### 13.1 Gate map (in production order)
+| Gate | What lands | Tools combined for review | Approve criteria | Status |
+|---|---|---|---|---|
+| **G0 — Treatment** | Bible v1.x + script | Claude (drafts) + you (sign-off) | All decisions §12 closed | ✅ Done |
+| **G1 — Style proof** | Test render at brand palette | Blender headless + you | Lighting + palette + composition match §1.7 + §2.1 | ✅ Done (v002 render) |
+| **G2 — Hero plate (CHR-01)** | FLUX/Firefly output of operator | Chrome MCP + you + reference deck (Appendix A) | Photoreal, on palette, Apple-keynote tone, no warm/cyan/green hues | Pending |
+| **G3 — Hero plate (CHR-02)** | FLUX/Firefly output of mask reveal | Chrome MCP + you | Sigil clean, mask geometry readable, single red accent | Pending |
+| **G4 — 3D mesh** | Meshy/Hunyuan output of CHR-01 | Chrome MCP + you + Blender preview | Topology clean enough for camera moves; no melting on rotate | Pending |
+| **G5 — Shot rough** | Each Blender shot rendered at 720p Eevee | Blender MCP/CLI + you | Composition, camera move, palette discipline | Per-shot |
+| **G6 — Shot final** | Each shot re-rendered Cycles 1080p | Blender CLI + you | Photoreal grade, no fireflies, palette holds | Hero shots only (F02/F07/F09/F10) |
+| **G7 — UI captures** | Screen recordings of real Operator Panel | Claude Preview MCP + you | Real product shown clearly, paced for cuts | Pending |
+| **G8 — Voice take** | 3 ElevenLabs takes at Charlie/British calm | Skill: voice-avatar + you | Bored authority, pause cadence, no theatrical breath | Pending |
+| **G9 — Music select** | 3 Pixabay candidates + 1 Artlist (if trial available) | Manual + you | Reznor/Ross restraint, no menace | Pending |
+| **G10 — Sigil + type cards** | SVG exports from Figma | Figma MCP + you | Mono, single weight, locked palette, scales to 4K | Pending |
+| **G11 — Rough cut** | Picture-locked sequence in CapCut | Manual + you | Pacing reads, VO/visual sync tight, music levels balanced | Pending |
+| **G12 — Master deliverables** | All 7 cuts in §1.5 | Manual + Claude verifies file specs | Spec match (resolution/codec/duration/size) | Pending |
+
+### 13.2 Review session format
+Every gate runs as a **5-minute dailies session**:
+1. **Show** — render/asset displayed inline (or in browser tab, or Blender viewport).
+2. **Compare** — held against the locked spec from §1.7 / §2 / §3 / appendix.
+3. **Verdict** — one of: **APPROVE** (lock, move on), **ITERATE** (specific change, re-render, re-review), **KILL** (asset is wrong direction, re-spec needed).
+4. **Log** — verdict written into the bible Status column. APPROVE → status = ✅; ITERATE → status = 🔄 with note; KILL → status = ❌ with reason and updated spec.
+
+### 13.3 Tools combined per gate (the "all of them at once" pattern)
+This is the answer to *"can we combine all the tools on creative reviews."* Yes — every gate spans:
+- **Claude** as orchestrator (fetches the asset, holds it against the spec, points out drift)
+- **Chrome MCP** if reviewing web-generated content (FLUX, Firefly, Meshy, etc.)
+- **Blender MCP / CLI** if reviewing 3D scenes
+- **Preview MCP** if reviewing Operator Panel UI captures
+- **Figma MCP** if reviewing type / sigil
+- **Anthropic skills** (`canvas-design`, `theme-factory`) if reviewing static deliverables for brand-consistency
+- **You** — final taste call. Always.
+
+The combination matters because no single tool sees the whole picture: Claude sees the spec, Chrome shows the source, Blender shows the render, Figma shows the type. The review session pulls them all into one decision.
+
+### 13.4 Adobe layer (optional, not blocking v1)
+If/when you add Creative Cloud, gates G2/G6/G10/G11 can upgrade to:
+- **G2** Firefly (commercial license) replaces FLUX.1 Krea (non-commercial)
+- **G6** After Effects compositing on top of Cycles renders
+- **G10** Illustrator as the source-of-truth sigil + type lockup
+- **G11** Premiere Pro replaces CapCut for picture-lock
+
+Adobe doesn't block v1 — but it elevates v2.
+
+---
+
 ## APPENDICES
 
 ### A. Reference shot deck
@@ -445,6 +506,7 @@ These block Day 1. None of them are "we'll figure it out later."
 | v1.1 | 2026-05-02 | Palette locked to brand black + red (`#0a0a0f` / `#ff2a2a`) inherited from `public/operator.css`. PROMPTS.md updated. D1 closed. | Josh + Claude |
 | v1.2 | 2026-05-02 | Tool stack upgraded to MCP-orchestrated: Blender MCP, `operator-pipeline` skill, `voice-avatar` skill, `canvas-design`, `theme-factory`, `pptx`/`pdf`, Figma MCP, Claude Preview MCP. Shot list pipeline column rewritten. Manual fallbacks retained per row. | Josh + Claude |
 | v1.3 | 2026-05-02 | Path C proof landed — Blender headless render works (1280×720 Eevee in 29s, brand palette holds). All decisions D1–D9 locked: half-mask + sigil, generic founder, Charlie British VO, Social Network-cool score, "Operator-class systems for solo builders" tagline, cursor-blink URL, Drive master, Eevee+Cycles render mix. Day 1 unblocked. | Josh (sign-off) + Claude |
+| v1.4 | 2026-05-02 | Brand palette extended to **black + red + grey** (added `#6b6b80` architectural grey + `#3a3a44` mid-grey). World shifted from "SOC dungeon" to "clean architectural studio" (Apple Park x BIG, not Mr Robot). Lighting philosophy locked: monitors are matte-black non-emissive, white 5500K key+fill is primary, red is sigil-only. PROMPTS.md fully rewritten. test_dolly.py re-rendered (v002) and validates the new direction. §13 Creative Review Checkpoints added — 12 gates from G0 treatment through G12 master delivery, "all tools combined" pattern documented. Adobe layer specced as optional v2 upgrade (G2/G6/G10/G11). | Josh + Claude |
 
 ### D. Tool stack rationale
 **Why we layered the skills + MCPs on top instead of staying with v1's manual chain:**
