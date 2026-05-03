@@ -1,0 +1,32 @@
+/* ── NOTIFICATIONS HUB ── */
+#panel-notifications{flex-direction:column;background:var(--bg);}
+.nh-topbar{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;flex-shrink:0;background:linear-gradient(180deg,var(--bg2),transparent);}
+.nh-topbar h2{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:var(--muted);font-family:'JetBrains Mono','Courier New',monospace;}
+.nh-topbar .spacer{flex:1;}
+.nh-topbar .btn{font-family:'JetBrains Mono','Courier New',monospace;font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+
+.nh-filterbar{padding:10px 24px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border);background:var(--bg2);}
+.nh-filter{font-family:'JetBrains Mono','Courier New',monospace;font-size:.66rem;font-weight:600;letter-spacing:.06em;color:var(--muted);background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:999px;padding:6px 12px;cursor:pointer;text-transform:uppercase;transition:all .15s;}
+.nh-filter:hover{color:var(--text);border-color:rgba(255,42,42,0.35);}
+.nh-filter.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+#nh-list{flex:1;overflow-y:auto;padding:14px 24px;display:flex;flex-direction:column;gap:8px;}
+
+.nh-item{display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:center;padding:13px 14px;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:9px;cursor:pointer;transition:transform .12s,border-color .12s,background .12s;}
+.nh-item:hover{transform:translateX(2px);border-color:rgba(255,42,42,0.4);background:rgba(255,42,42,0.03);}
+.nh-item.nh-read{opacity:.55;border-left-color:var(--border);}
+.nh-icon{width:36px;height:36px;border-radius:8px;background:rgba(255,42,42,0.1);display:flex;align-items:center;justify-content:center;font-size:.95rem;}
+.nh-body{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.nh-title{font-size:.86rem;font-weight:700;color:var(--text);letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nh-text{font-size:.74rem;color:var(--muted);line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nh-meta{font-family:'JetBrains Mono','Courier New',monospace;font-size:.6rem;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;font-weight:600;}
+.nh-x{background:transparent;border:none;color:var(--muted);font-size:.85rem;cursor:pointer;padding:6px 8px;border-radius:4px;transition:all .15s;}
+.nh-x:hover{color:var(--accent);background:rgba(255,42,42,0.08);}
+
+.nh-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--muted);gap:12px;}
+.nh-empty i{font-size:2.4rem;opacity:.25;}
+.nh-empty p{font-size:.82rem;text-align:center;max-width:300px;line-height:1.5;}
+
+/* Nav badge — unread count next to "Notifications" sidebar item */
+.nh-badge{display:none;margin-left:auto;background:var(--accent);color:#fff;font-family:'JetBrains Mono','Courier New',monospace;font-size:.58rem;font-weight:800;letter-spacing:.04em;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center;align-items:center;justify-content:center;line-height:1.3;}
+.nav-item.active .nh-badge{background:#fff;color:var(--accent);}

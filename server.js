@@ -19,6 +19,44 @@ const WORKFLOWS = {
   'mood-pack':    { script: path.join(__dirname, 'modules/workflows/mood-pack/render.py'),    output: () => `moodpack_${Date.now()}.png`, kind: 'image' }
 };
 
+// ── Notifications hub ──────────────────────────
+const NOTIF_FILE = path.join(DATA, 'notifications.json');
+const NOTIF_MAX = 200;
+function notify(type, payload = {}) {
+  // type: workflow.start, workflow.done, workflow.error, lead.new, outreach.queued,
+  //       client.created, lead.created, agent.message, system
+  try {
+    let store;
+    try { store = JSON.parse(fs.readFileSync(NOTIF_FILE, 'utf8')); }
+    catch { store = { notifications: [] }; }
+    const item = {
+      id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+      type,
+      title:  payload.title  || '',
+      body:   payload.body   || '',
+      source: payload.source || type.split('.')[0],
+      panel:  payload.panel  || null,         // sidebar panel to jump to
+      meta:   payload.meta   || {},
+      ts:     Date.now(),
+      read:   false
+    };
+    store.notifications.unshift(item);
+    if (store.notifications.length > NOTIF_MAX) store.notifications.length = NOTIF_MAX;
+    fs.writeFileSync(NOTIF_FILE, JSON.stringify(store, null, 2));
+    // Broadcast over WebSocket if WS_CLIENTS exists in this scope
+    if (typeof WS_CLIENTS !== 'undefined' && WS_CLIENTS.size > 0) {
+      const frame = JSON.stringify({ type: 'notify', notification: item });
+      for (const ws of WS_CLIENTS) {
+        try { wsSend(ws, frame); } catch (_) {}
+      }
+    }
+    return item;
+  } catch (e) {
+    console.error('notify() failed:', e.message);
+    return null;
+  }
+}
+
 const MIME = {
   '.html': 'text/html', '.css': 'text/css',
   '.js':   'text/javascript', '.json': 'application/json',
@@ -1492,6 +1530,43 @@ What do you actually need done right now?`;
 }
 
 const ROUTES = {
+  'GET /api/notifications': (req, res) => {
+    let store;
+    try { store = JSON.parse(fs.readFileSync(NOTIF_FILE, 'utf8')); } catch { store = { notifications: [] }; }
+    const qs = req.url.includes('?') ? req.url.split('?')[1] : '';
+    const filter = decodeURIComponent((qs.match(/filter=([^&]*)/) || [])[1] || 'all');
+    const limit  = parseInt(decodeURIComponent((qs.match(/limit=([^&]*)/) || [])[1] || '50'));
+    let items = store.notifications;
+    if (filter !== 'all') items = items.filter(n => n.source === filter || n.type === filter);
+    items = items.slice(0, limit);
+    const unread = store.notifications.filter(n => !n.read).length;
+    res.end(JSON.stringify({ ok: true, notifications: items, unread, total: store.notifications.length }));
+  },
+
+  'POST /api/notifications/mark-read': async (req, res) => {
+    const data = await body(req);
+    let store; try { store = JSON.parse(fs.readFileSync(NOTIF_FILE, 'utf8')); } catch { store = { notifications: [] }; }
+    if (data.all) {
+      store.notifications.forEach(n => n.read = true);
+    } else if (data.id) {
+      const item = store.notifications.find(n => n.id === data.id);
+      if (item) item.read = true;
+    }
+    fs.writeFileSync(NOTIF_FILE, JSON.stringify(store, null, 2));
+    res.end(JSON.stringify({ ok: true }));
+  },
+
+  'DELETE /api/notifications': async (req, res) => {
+    const qs = req.url.includes('?') ? req.url.split('?')[1] : '';
+    const id = decodeURIComponent((qs.match(/id=([^&]*)/) || [])[1] || '');
+    const all = qs.includes('all=1');
+    let store; try { store = JSON.parse(fs.readFileSync(NOTIF_FILE, 'utf8')); } catch { store = { notifications: [] }; }
+    if (all) store.notifications = [];
+    else if (id) store.notifications = store.notifications.filter(n => n.id !== id);
+    fs.writeFileSync(NOTIF_FILE, JSON.stringify(store, null, 2));
+    res.end(JSON.stringify({ ok: true }));
+  },
+
   'POST /api/workflow/run': async (req, res) => {
     const data = await body(req);
     const wf = WORKFLOWS[data.workflow];
@@ -1502,6 +1577,15 @@ const ROUTES = {
     const filename = wf.output();
     const outputPath = path.join(RENDERS, filename);
     const startedAt = Date.now();
+
+    notify('workflow.start', {
+      title: `Render queued: ${data.workflow}`,
+      body: `Spawning Blender for ${filename}`,
+      source: 'workflow',
+      panel: 'workflows',
+      meta: { workflow: data.workflow }
+    });
+
     const child = spawn(BLENDER_PATH, ['--background', '--python', wf.script], {
       env: { ...process.env, OUTPUT_PATH: outputPath }
     });
@@ -1511,6 +1595,13 @@ const ROUTES = {
     child.on('close', code => {
       const durationMs = Date.now() - startedAt;
       if (code !== 0 || !fs.existsSync(outputPath)) {
+        notify('workflow.error', {
+          title: `Render failed: ${data.workflow}`,
+          body: `Exit ${code} after ${(durationMs/1000).toFixed(1)}s`,
+          source: 'workflow',
+          panel: 'workflows',
+          meta: { workflow: data.workflow, durationMs }
+        });
         return res.end(JSON.stringify({
           ok: false,
           error: `Render failed (exit ${code})`,
@@ -1518,6 +1609,13 @@ const ROUTES = {
           durationMs
         }));
       }
+      notify('workflow.done', {
+        title: `Render done: ${data.workflow}`,
+        body: `${filename} · ${(durationMs/1000).toFixed(1)}s`,
+        source: 'workflow',
+        panel: 'workflows',
+        meta: { workflow: data.workflow, outputUrl: `/renders/${filename}`, kind: wf.kind, durationMs }
+      });
       res.end(JSON.stringify({
         ok: true,
         outputUrl: `/renders/${filename}`,
@@ -2046,6 +2144,13 @@ const ROUTES = {
     data.systems = data.systems || { landingPage: '', outreach: [], crm: {} };
     db.clients.push(data);
     writeJSON('clients.json', db);
+    notify('client.created', {
+      title: `New client: ${data.businessName || data.name || 'unnamed'}`,
+      body: `${data.niche || ''} · goal: ${data.goal || 'leads'}`,
+      source: 'client',
+      panel: 'client',
+      meta: { id: data.id }
+    });
     res.end(JSON.stringify({ ok: true, client: data }));
   },
 
@@ -2092,6 +2197,13 @@ const ROUTES = {
     data.baseScore   = Number.isFinite(data.baseScore) ? data.baseScore : data.score;
     db.leads.push(data);
     writeJSON('leads.json', db);
+    notify('lead.created', {
+      title: `New lead: ${data.name || data.author || 'unknown'}`,
+      body: `${data.businessName || data.subreddit || ''} · score ${data.score} · ${data.painLabel || data.status}`,
+      source: 'lead',
+      panel: 'crm',
+      meta: { id: data.id, score: data.score, intent: data.intentScore }
+    });
     res.end(JSON.stringify({ ok: true, lead: data }));
   },
 
@@ -2173,6 +2285,13 @@ const ROUTES = {
     data.painChallenge = data.painChallenge || '';
     db.queue.push(data);
     writeJSON('outreach_queue.json', db);
+    notify('outreach.queued', {
+      title: `Outreach queued: ${data.label || data.clientName || 'message'}`,
+      body: `${data.niche || ''} · ${(data.message || '').slice(0, 70)}`,
+      source: 'outreach',
+      panel: 'outreach',
+      meta: { id: data.id }
+    });
     res.end(JSON.stringify({ ok: true }));
   },
 

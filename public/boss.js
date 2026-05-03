@@ -1356,9 +1356,24 @@ gr.Interface(fn=generate,
 
   let _renderPoll = null;
 
+  function mountCreativePanel() {
+    const creativePanel = document.getElementById('panel-boss-creative');
+    const content = document.getElementById('content');
+    if (creativePanel && content && creativePanel.parentElement !== content) {
+      content.appendChild(creativePanel);
+    }
+  }
+
   window.bossLoadCreative = async function() {
-    await bossCreativeRefresh();
-  };
+  mountCreativePanel();
+  if (!restoreScenePlan()) {
+    bossScenePreset('character');
+  } else {
+    bossScenePreview();
+    bossBuildSceneBrief();
+  }
+  await bossCreativeRefresh();
+};
 
   window.bossCreativeRefresh = async function() {
     try {
@@ -1402,21 +1417,222 @@ gr.Interface(fn=generate,
     } catch (_) {}
   };
 
+
+  const SCENE_PRESETS = {
+    product: {
+      source: '',
+      scene: 'A premium product object is reconstructed from a real image into a 2.5D depth mesh. The camera pushes through soft studio haze, light wraps across the surface, and the final shot lands on a clean branded hero frame.',
+      environment: 'studio-cyc', character: 'product', mesh: '2.5d-depth', action: 'slow rotation with product reveal', camera: 'dolly-push', movement: 'slow-premium', lens: '50mm-portrait', physics: 'particles-smoke', output: 'remotion-3d', seconds: 15
+    },
+    character: {
+      source: '',
+      scene: 'A character is built from reference art into a mesh-like staged scene with foreground, midground, and background layers. The character steps forward, turns to camera, and the environment reacts with light and particles.',
+      environment: 'neon-city', character: 'anime-hero', mesh: 'full-3d', action: 'walk forward, turn, power-up reveal', camera: 'orbit-hero', movement: 'impact-shake', lens: '35mm-natural', physics: 'cloth-hair', output: 'remotion-3d', seconds: 22
+    },
+    cinematic: {
+      source: '',
+      scene: 'A cinematic world opens from a still image into a deep parallax 3D environment. The camera cranes over foreground objects, passes through atmosphere, and reveals a central hero subject in the distance.',
+      environment: 'space-hangar', character: 'human-founder', mesh: 'gaussian-splat', action: 'slow entrance and reveal', camera: 'crane-reveal', movement: 'parallax-depth', lens: '24mm-wide', physics: 'particles-smoke', output: 'image-to-video', seconds: 28
+    }
+  };
+
+  function setSceneField(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  }
+
+  function getScenePlan() {
+    return {
+      source: document.getElementById('csb-source')?.value.trim() || '',
+      scene: document.getElementById('csb-scene')?.value.trim() || '',
+      environment: document.getElementById('csb-environment')?.value || 'neon-city',
+      characterType: document.getElementById('csb-character-type')?.value || 'human-founder',
+      mesh: document.getElementById('csb-mesh')?.value || '2.5d-depth',
+      action: document.getElementById('csb-action')?.value.trim() || 'subtle hero movement',
+      cameraRig: document.getElementById('csb-camera-rig')?.value || 'dolly-push',
+      movement: document.getElementById('csb-movement')?.value || 'slow-premium',
+      lens: document.getElementById('csb-lens')?.value || '35mm-natural',
+      physics: document.getElementById('csb-physics')?.value || 'grounded-real',
+      output: document.getElementById('csb-output')?.value || 'remotion-3d',
+      seconds: Number(document.getElementById('csb-seconds')?.value || 18),
+      fps: 30,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  function sceneBriefText(plan) {
+    const frames = Math.round(plan.seconds * plan.fps);
+    return [
+      'B.O.S.S SCENE RENDER BRIEF',
+      '',
+      'Source: ' + (plan.source || 'no source attached yet'),
+      'Scene: ' + (plan.scene || 'build a cinematic 3D scene from the chosen preset'),
+      'Environment preset: ' + plan.environment,
+      'Character / object: ' + plan.characterType,
+      'Mesh mode: ' + plan.mesh,
+      'Action: ' + plan.action,
+      'Camera rig: ' + plan.cameraRig + ' | lens: ' + plan.lens,
+      'Movement preset: ' + plan.movement,
+      'Physics preset: ' + plan.physics,
+      'Output route: ' + plan.output,
+      'Timing: ' + plan.seconds + ' seconds, ' + plan.fps + 'fps, ' + frames + ' frames',
+      '',
+      'Pipeline:',
+      '1. Create or import source image/video and isolate subject.',
+      '2. Generate depth mesh or GLB/splat depending on mesh mode.',
+      '3. Build environment layers and character/object rig.',
+      '4. Apply camera rig, movement preset, lighting, and physics pass.',
+      '5. Render through Remotion/Three or send brief to image-to-video model.',
+      '',
+      'Prompt core:',
+      (plan.scene || 'cinematic product/character scene') + ' Camera: ' + plan.cameraRig + ', ' + plan.lens + '. Motion: ' + plan.movement + '. Physics: ' + plan.physics + '. Mesh: ' + plan.mesh + '.'
+    ].join('\n');
+  }
+
+  window.bossScenePreset = function(name) {
+    const p = SCENE_PRESETS[name] || SCENE_PRESETS.product;
+    setSceneField('csb-source', p.source);
+    setSceneField('csb-scene', p.scene);
+    setSceneField('csb-environment', p.environment);
+    setSceneField('csb-character-type', p.character);
+    setSceneField('csb-mesh', p.mesh);
+    setSceneField('csb-action', p.action);
+    setSceneField('csb-camera-rig', p.camera);
+    setSceneField('csb-movement', p.movement);
+    setSceneField('csb-lens', p.lens);
+    setSceneField('csb-physics', p.physics);
+    setSceneField('csb-output', p.output);
+    setSceneField('csb-seconds', p.seconds);
+    bossScenePreview();
+    bossBuildSceneBrief();
+  };
+
+  window.bossScenePreview = function() {
+    const plan = getScenePlan();
+    const caption = document.getElementById('csb-caption');
+    const character = document.getElementById('csb-character');
+    const camera = document.getElementById('csb-camera');
+    const path = document.getElementById('csb-camera-path');
+    const preview = document.getElementById('csb-preview');
+    const duration = document.getElementById('csb-duration');
+    const mode = document.getElementById('csb-render-mode');
+    if (caption) caption.textContent = plan.cameraRig.replace(/-/g, ' ') + ' on ' + plan.characterType.replace(/-/g, ' ') + ' using ' + plan.mesh.replace(/-/g, ' ');
+    if (duration) duration.textContent = plan.seconds + 's';
+    if (mode) mode.textContent = plan.output.includes('video') ? 'I2V' : plan.output.includes('three') ? '3D' : 'PLAN';
+    if (character) {
+      const map = { 'product':'linear-gradient(160deg,#fff,#888 45%,#ff2a2a)', 'robot-operator':'linear-gradient(160deg,#d8f3ff,#455 45%,#1de5ff)', 'anime-hero':'linear-gradient(160deg,#fff,#7f5af0 45%,#ff2a2a)', 'creature':'linear-gradient(160deg,#e8ffe8,#2cb67d 45%,#0a0)', 'human-founder':'linear-gradient(160deg,#f4f4f7,#777 45%,#ff2a2a)' };
+      character.style.background = map[plan.characterType] || map['human-founder'];
+      character.style.borderRadius = plan.characterType === 'product' ? '16px' : '36px 36px 16px 16px';
+    }
+    if (camera) {
+      camera.style.right = plan.cameraRig === 'orbit-hero' ? '48%' : plan.cameraRig === 'fpv-flythrough' ? '12%' : '20%';
+      camera.style.top = plan.cameraRig === 'crane-reveal' ? '20%' : '48%';
+    }
+    if (path) {
+      path.style.transform = plan.cameraRig === 'crane-reveal' ? 'rotate(-22deg)' : plan.cameraRig === 'orbit-hero' ? 'rotate(0deg)' : 'rotate(-8deg)';
+    }
+    if (preview) {
+      const env = {
+        'neon-city':'radial-gradient(circle at 50% 30%,#24243a,#09090e 60%)',
+        'studio-cyc':'radial-gradient(circle at 50% 30%,#2b2b32,#08080d 64%)',
+        'desert-temple':'radial-gradient(circle at 50% 30%,#3a2818,#09090e 62%)',
+        'space-hangar':'radial-gradient(circle at 50% 20%,#17264f,#050509 64%)',
+        'forest-stage':'radial-gradient(circle at 50% 30%,#173223,#07090a 62%)',
+        'luxury-room':'radial-gradient(circle at 50% 30%,#3a2530,#09090e 62%)'
+      };
+      preview.style.background = env[plan.environment] || env['neon-city'];
+    }
+  };
+
+  window.bossBuildSceneBrief = function() {
+    const plan = getScenePlan();
+    const brief = sceneBriefText(plan);
+    const el = document.getElementById('csb-brief');
+    if (el) el.textContent = brief;
+    return { plan, brief };
+  };
+
+  window.bossSaveSceneBrief = async function() {
+    const payload = bossBuildSceneBrief();
+    localStorage.setItem('boss_scene_plan', JSON.stringify(payload.plan));
+    localStorage.setItem('boss_scene_brief', payload.brief);
+    const log = document.getElementById('cs-log');
+    if (log) log.textContent = 'Saving scene plan...';
+    try {
+      const r = await fetch(API + '/creative/scene-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(x => x.json());
+      if (log) log.textContent = r.ok ? 'Scene plan saved to B.O.S.S render memory.' : (r.error || 'Scene plan saved locally only.');
+    } catch (_) {
+      if (log) log.textContent = 'Scene plan saved locally. Server save unavailable.';
+    }
+  };
+
+  window.bossCopySceneBrief = async function() {
+    const payload = bossBuildSceneBrief();
+    try { await navigator.clipboard.writeText(payload.brief); } catch {}
+    const log = document.getElementById('cs-log');
+    if (log) log.textContent = 'Scene render brief copied.';
+  };
+
+  window.bossDownloadScenePlan = function() {
+    const payload = bossBuildSceneBrief();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'boss-scene-plan.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  function restoreScenePlan() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('boss_scene_plan') || 'null');
+      if (!saved) return false;
+      setSceneField('csb-source', saved.source || '');
+      setSceneField('csb-scene', saved.scene || '');
+      setSceneField('csb-environment', saved.environment || 'neon-city');
+      setSceneField('csb-character-type', saved.characterType || 'human-founder');
+      setSceneField('csb-mesh', saved.mesh || '2.5d-depth');
+      setSceneField('csb-action', saved.action || 'subtle hero movement');
+      setSceneField('csb-camera-rig', saved.cameraRig || 'dolly-push');
+      setSceneField('csb-movement', saved.movement || 'slow-premium');
+      setSceneField('csb-lens', saved.lens || '35mm-natural');
+      setSceneField('csb-physics', saved.physics || 'grounded-real');
+      setSceneField('csb-output', saved.output || 'remotion-3d');
+      setSceneField('csb-seconds', saved.seconds || 18);
+      return true;
+    } catch { return false; }
+  }
   window.bossRenderVideo = async function() {
     const btn = document.getElementById('cs-render-btn');
     const log = document.getElementById('cs-log');
-    if (btn) { btn.textContent = '⏳ Rendering…'; btn.disabled = true; }
-    if (log) log.textContent = 'Starting render…';
+    const payload = bossBuildSceneBrief();
+    localStorage.setItem('boss_scene_plan', JSON.stringify(payload.plan));
+    localStorage.setItem('boss_scene_brief', payload.brief);
+    if (btn) { btn.textContent = 'Rendering...'; btn.disabled = true; }
+    if (log) log.textContent = 'Starting render with Scene Builder plan...';
     try {
-      const r = await fetch(API + '/creative/render', { method: 'POST' }).then(x => x.json());
-      if (log) log.textContent = r.message || 'Render started…';
-      // Poll every 5s
+      const r = await fetch(API + '/creative/render', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(x => x.json());
+      if (log) log.textContent = r.message || 'Render started with scene plan.';
       _renderPoll = setInterval(bossCreativeRefresh, 5000);
       setTimeout(bossCreativeRefresh, 2000);
     } catch (_) {
       if (log) log.textContent = 'Failed to start render. Is the server running?';
-      if (btn) { btn.textContent = '▶ Render MP4'; btn.disabled = false; }
+      if (btn) { btn.textContent = 'Render MP4'; btn.disabled = false; }
     }
   };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mountCreativePanel);
+  } else {
+    mountCreativePanel();
+  }
 
 })();
+

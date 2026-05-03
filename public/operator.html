@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="workflows-runner.css">
 <link rel="stylesheet" href="operator-agent.css">
 <link rel="stylesheet" href="studio-canvas.css">
+<link rel="stylesheet" href="notifications-hub.css">
 </head>
 <body>
 <div id="app">
@@ -28,6 +29,7 @@
       <div class="nav-item" data-panel="workflows" onclick="switchPanel('panel-workflows')"><i class="fas fa-bolt"></i> Workflows</div>
       <div class="nav-item" data-panel="operator-agent" onclick="switchPanel('panel-operator-agent')" style="color:#ff2a2a"><i class="fas fa-comments"></i> Operator Agent <span style="font-size:.55rem;background:rgba(255,42,42,.14);color:var(--accent);padding:1px 5px;border-radius:3px;margin-left:4px;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;font-weight:700">BETA</span></div>
       <div class="nav-item" data-panel="studio-canvas" onclick="switchPanel('panel-studio-canvas')" style="color:#ff2a2a"><i class="fas fa-pen-ruler"></i> Studio Canvas <span style="font-size:.55rem;background:rgba(255,42,42,.14);color:var(--accent);padding:1px 5px;border-radius:3px;margin-left:4px;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;font-weight:700">BETA</span></div>
+      <div class="nav-item" data-panel="notifications" onclick="switchPanel('panel-notifications')" style="color:#ff2a2a"><i class="fas fa-bell"></i> Notifications</div>
 
       <!-- ── DYNAMIC MODULE NAV (built by buildNav() in operator.js) ── -->
       <div id="nav-modules"></div>
@@ -415,12 +417,24 @@
           </div>
           <div class="feed-topbar-row">
             <input type="text" id="feed-custom-kw" placeholder="Custom keyword..." style="padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.8rem;flex:1;font-family:inherit;outline:none;">
+            <button class="btn btn-secondary btn-sm" id="btn-subs-toggle" style="flex-shrink:0" title="Choose which subreddits to scan">
+              <i class="fas fa-list-check"></i> Subreddits <span id="subs-count" style="opacity:.7;font-weight:400"></span>
+            </button>
             <button class="btn btn-secondary btn-sm" id="btn-enrichment-settings" style="flex-shrink:0" title="Enrichment providers">
               <i class="fas fa-sliders"></i> Providers
             </button>
             <button class="btn btn-secondary btn-sm" id="btn-feed-refresh" style="flex-shrink:0">
               <i class="fas fa-rotate-right"></i> Fetch Leads
             </button>
+          </div>
+          <div class="feed-subs-picker" id="feed-subs-picker" style="display:none">
+            <div class="feed-subs-controls">
+              <button class="kw-btn" id="btn-subs-all">Select all</button>
+              <button class="kw-btn" id="btn-subs-none">Clear</button>
+              <input type="text" id="feed-subs-add" placeholder="Add r/... (press Enter)" class="feed-subs-input">
+              <span class="feed-subs-hint">Click a chip to toggle. Selection persists.</span>
+            </div>
+            <div class="feed-subs-chips" id="feed-subs-chips"></div>
           </div>
         </div>
         <div class="feed-meta" id="feed-meta"></div>
@@ -1349,6 +1363,135 @@ gr.Interface(fn=generate,
         </div>
       </div>
 
+      <!-- ══ NOTIFICATIONS HUB ══ -->
+      <div class="panel" id="panel-notifications">
+        <div class="nh-topbar">
+          <h2>Notifications</h2>
+          <div class="spacer" style="flex:1"></div>
+          <button class="btn btn-secondary btn-sm" id="nh-mark-all"><i class="fas fa-check-double"></i> Mark all read</button>
+          <button class="btn btn-secondary btn-sm" id="nh-clear"><i class="fas fa-trash"></i> Clear</button>
+        </div>
+        <div class="nh-filterbar">
+          <div class="nh-filter active" data-filter="all">All</div>
+          <div class="nh-filter" data-filter="workflow">Workflows</div>
+          <div class="nh-filter" data-filter="lead">Leads</div>
+          <div class="nh-filter" data-filter="client">Clients</div>
+          <div class="nh-filter" data-filter="outreach">Outreach</div>
+          <div class="nh-filter" data-filter="agent">Agent</div>
+          <div class="nh-filter" data-filter="feed">Feed</div>
+        </div>
+        <div id="nh-list"></div>
+      </div>
+
+      <!-- ══ STUDIO CANVAS (beta) ══ -->
+      <div class="panel" id="panel-studio-canvas">
+        <div class="sc-topbar">
+          <h2>Studio Canvas</h2>
+          <span class="sc-badge">BETA</span>
+          <div class="sc-toolbar">
+            <button class="sc-btn" id="sc-add-img"><i class="fas fa-image"></i> Image</button>
+            <button class="sc-btn" id="sc-add-vid"><i class="fas fa-film"></i> Video</button>
+            <button class="sc-btn" id="sc-add-text"><i class="fas fa-font"></i> Text</button>
+            <button class="sc-btn" id="sc-add-kanji"><i class="fas fa-bolt"></i> Kanji</button>
+            <button class="sc-btn" id="sc-add-audio"><i class="fas fa-music"></i> Audio + Beats</button>
+            <button class="sc-btn" id="sc-zoom-fit"><i class="fas fa-compress"></i> Fit</button>
+            <button class="sc-btn" id="sc-clear"><i class="fas fa-trash"></i> Clear</button>
+          </div>
+        </div>
+        <div class="sc-body">
+          <div class="sc-left">
+            <div class="sc-left-title">Layers</div>
+            <div id="sc-layer-list"><div class="sc-empty">No layers yet — add one from the toolbar.</div></div>
+          </div>
+          <div class="sc-centre">
+            <div id="sc-canvas">
+              <div id="sc-world"></div>
+            </div>
+            <div class="sc-canvas-hint">Pan: hold SPACE + drag · Zoom: mouse wheel · Drag layers · Z = depth (3D)</div>
+          </div>
+          <div class="sc-right">
+            <div class="sc-right-title">Properties</div>
+            <div id="sc-props"><div class="sc-empty">Select a layer.</div></div>
+          </div>
+        </div>
+        <div class="sc-timeline-bar">
+          <div class="sc-tl-controls">
+            <button class="sc-tl-btn sc-tl-btn-secondary" id="sc-rewind" title="Rewind"><i class="fas fa-backward-step"></i></button>
+            <button class="sc-tl-btn" id="sc-play" title="Play/Pause"><i class="fas fa-play"></i></button>
+          </div>
+          <div id="sc-timeline">
+            <div id="sc-beat-track"></div>
+            <div id="sc-playhead"></div>
+          </div>
+          <div id="sc-time-readout">0.00 / 12.0s</div>
+          <audio id="sc-audio"></audio>
+        </div>
+      </div>
+
+      <!-- ══ OPERATOR AGENT (beta) — Grok-style chat driven by Claude Max ══ -->
+      <div class="panel" id="panel-operator-agent">
+        <div class="agent-topbar">
+          <h2>Operator Agent</h2>
+          <span class="agent-badge">BETA</span>
+          <div class="spacer"></div>
+          <button class="btn btn-secondary btn-sm" id="agent-clear"><i class="fas fa-trash"></i> Clear</button>
+        </div>
+        <div id="agent-log"></div>
+        <div class="agent-quickbar">
+          <div class="agent-quick" data-prompt="Operator online: design a full 3D parallax sales page workflow for a struggling SaaS founder using my 16 systems.">3D parallax page</div>
+          <div class="agent-quick" data-prompt="Plan a CRO audit for a SaaS landing page where bounce rate is 78% and signup conversion is 1.2%. Identify root causes and a 5-step fix plan.">CRO audit</div>
+          <div class="agent-quick" data-prompt="Draft a 5-email cold-outreach sequence for a local trade business (plumbing, UK) targeting homeowners. Builder voice, no fluff.">Cold outreach</div>
+          <div class="agent-quick" data-prompt="Write the storyboard, copy, timing, and Meshy prompts for a 60s TikTok promo where the operator (me) ships 10 client systems while a competitor manually struggles with one.">TikTok storyboard</div>
+          <div class="agent-quick" data-prompt="What system from my 16-systems library would I use for a SaaS founder who has paying users but 6% monthly churn? Output the system + the workflow to fix it.">Churn fix system</div>
+        </div>
+        <div class="agent-input-wrap">
+          <textarea id="agent-input" placeholder="Ask the operator anything — system design, copy, workflows, client briefs..." rows="1"></textarea>
+          <button id="agent-send"><i class="fas fa-paper-plane"></i> Send</button>
+        </div>
+      </div>
+
+      <!-- ══ WORKFLOWS LAUNCHPAD ══ -->
+      <div class="panel" id="panel-workflows">
+        <div class="wf-topbar">
+          <h2>Workflows</h2>
+          <div class="spacer" style="flex:1"></div>
+          <span class="wf-hint">Click <i class="fas fa-bolt" style="color:var(--accent)"></i> cards to run inside the panel. External tools open in new tabs.</span>
+        </div>
+        <div class="wf-grid" id="wf-grid">
+          <div class="wf-card wf-internal wf-claude" data-claude="operator-plan">
+            <div class="wf-icon"><i class="fas fa-brain"></i></div>
+            <div class="wf-name">Operator Plan</div>
+            <div class="wf-desc">Claude Max generates the full system plan from a client brief — GOAL · SYSTEMS · STORYBOARD · COPY · MESHY PROMPTS · PAGE STRUCTURE · AUTOMATION HOOKS.</div>
+            <button class="btn btn-primary btn-sm wf-run-claude" data-claude="operator-plan"><i class="fas fa-play"></i> Run</button>
+          </div>
+          <div class="wf-card wf-internal" data-workflow="hero-render"><div class="wf-icon"><i class="fas fa-bolt"></i></div><div class="wf-name">3D Hero Render</div><div class="wf-desc">1280×720 PNG via headless Blender.</div><button class="btn btn-primary btn-sm wf-run" data-workflow="hero-render"><i class="fas fa-play"></i> Run</button></div>
+          <div class="wf-card wf-internal" data-workflow="tiktok-promo"><div class="wf-icon"><i class="fas fa-bolt"></i></div><div class="wf-name">TikTok Promo Frame</div><div class="wf-desc">Vertical 9:16 720×1280 PNG.</div><button class="btn btn-primary btn-sm wf-run" data-workflow="tiktok-promo"><i class="fas fa-play"></i> Run</button></div>
+          <div class="wf-card wf-internal" data-workflow="logo-mark"><div class="wf-icon"><i class="fas fa-bolt"></i></div><div class="wf-name">Logo Mark</div><div class="wf-desc">1:1 1080×1080 PNG of the sigil plinth.</div><button class="btn btn-primary btn-sm wf-run" data-workflow="logo-mark"><i class="fas fa-play"></i> Run</button></div>
+          <div class="wf-card wf-internal" data-workflow="square-card"><div class="wf-icon"><i class="fas fa-bolt"></i></div><div class="wf-name">Square Card</div><div class="wf-desc">1080×1080 PNG for IG/LinkedIn/X.</div><button class="btn btn-primary btn-sm wf-run" data-workflow="square-card"><i class="fas fa-play"></i> Run</button></div>
+          <div class="wf-card wf-internal" data-workflow="mood-pack"><div class="wf-icon"><i class="fas fa-bolt"></i></div><div class="wf-name">Mood Pack</div><div class="wf-desc">2×2 contact sheet, 4 angles.</div><button class="btn btn-primary btn-sm wf-run" data-workflow="mood-pack"><i class="fas fa-play"></i> Run</button></div>
+          <div class="wf-card" data-tool="meshy"><div class="wf-icon"><i class="fas fa-cube"></i></div><div class="wf-name">Meshy AI</div><div class="wf-desc">Image-to-3D, free tier.</div><a class="btn btn-secondary btn-sm" href="https://www.meshy.ai/workspace" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="hunyuan"><div class="wf-icon"><i class="fas fa-shapes"></i></div><div class="wf-name">Hunyuan3D-2</div><div class="wf-desc">Tencent's image-to-3D, free.</div><a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/tencent/Hunyuan3D-2" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="trellis"><div class="wf-icon"><i class="fas fa-cubes"></i></div><div class="wf-name">TRELLIS</div><div class="wf-desc">Microsoft's image-to-3D fallback.</div><a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/trellis-community/TRELLIS" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="flux"><div class="wf-icon"><i class="fas fa-image"></i></div><div class="wf-name">FLUX.1 Krea Dev</div><div class="wf-desc">Photoreal image gen on HF Space.</div><a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/black-forest-labs/FLUX.1-Krea-dev" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="firefly"><div class="wf-icon"><i class="fas fa-fire"></i></div><div class="wf-name">Adobe Firefly</div><div class="wf-desc">Commercial-licensed image gen.</div><a class="btn btn-secondary btn-sm" href="https://firefly.adobe.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="grok-imagine"><div class="wf-icon"><i class="fas fa-wand-magic-sparkles"></i></div><div class="wf-name">Grok Imagine</div><div class="wf-desc">Short Film · UGC · Brand Identity · Worlds.</div><a class="btn btn-secondary btn-sm" href="https://grok.com/imagine" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="capcut"><div class="wf-icon"><i class="fas fa-film"></i></div><div class="wf-name">CapCut</div><div class="wf-desc">Free web NLE.</div><a class="btn btn-secondary btn-sm" href="https://www.capcut.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="davinci"><div class="wf-icon"><i class="fas fa-video"></i></div><div class="wf-name">DaVinci Resolve</div><div class="wf-desc">Free Hollywood-grade NLE.</div><a class="btn btn-secondary btn-sm" href="https://www.blackmagicdesign.com/products/davinciresolve" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Get</a></div>
+          <div class="wf-card" data-tool="elevenlabs"><div class="wf-icon"><i class="fas fa-microphone"></i></div><div class="wf-name">ElevenLabs</div><div class="wf-desc">Free 10k chars/mo voice gen.</div><a class="btn btn-secondary btn-sm" href="https://elevenlabs.io/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="canva"><div class="wf-icon"><i class="fas fa-palette"></i></div><div class="wf-name">Canva</div><div class="wf-desc">Free design + whiteboard.</div><a class="btn btn-secondary btn-sm" href="https://www.canva.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="figma"><div class="wf-icon"><i class="fab fa-figma"></i></div><div class="wf-name">Figma</div><div class="wf-desc">Sigil + type cards + brand kit.</div><a class="btn btn-secondary btn-sm" href="https://www.figma.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="n8n"><div class="wf-icon"><i class="fas fa-project-diagram"></i></div><div class="wf-name">n8n</div><div class="wf-desc">Free self-hosted automations.</div><a class="btn btn-secondary btn-sm" href="https://n8n.io/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+          <div class="wf-card" data-tool="make"><div class="wf-icon"><i class="fas fa-network-wired"></i></div><div class="wf-name">Make</div><div class="wf-desc">Free tier visual automations.</div><a class="btn btn-secondary btn-sm" href="https://www.make.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
+        </div>
+        <div class="wf-output" id="wf-output" style="display:none">
+          <div class="wf-output-header">
+            <span id="wf-output-title">Output</span>
+            <button class="btn btn-secondary btn-sm" id="btn-wf-close-output">Close</button>
+          </div>
+          <div class="wf-output-body" id="wf-output-body"></div>
+        </div>
+      </div>
+
     </div><!-- /content -->
   </div><!-- /main -->
 </div><!-- /app -->
@@ -1453,6 +1596,7 @@ gr.Interface(fn=generate,
 <script src="workflows-runner.js"></script>
 <script src="operator-agent.js"></script>
 <script src="studio-canvas.js"></script>
+<script src="notifications-hub.js"></script>
 
 <!-- ═══ B.O.S.S JARVIS CHAT ═══ -->
 <button id="boss-fab" onclick="bossToggle()" title="Chat with B.O.S.S (⌘K)">B.O.S.S</button>
@@ -1505,149 +1649,6 @@ gr.Interface(fn=generate,
   #boss-mic-btn.listening{background:#ff2a2a !important;color:#0a0a0a !important}
 </style>
 
-      <!-- ══ STUDIO CANVAS (beta) — infinite canvas + timeline + beat-match + 3D + animation ══ -->
-      <div class="panel" id="panel-studio-canvas">
-        <div class="sc-topbar">
-          <h2>Studio Canvas</h2>
-          <span class="sc-badge">BETA</span>
-          <div class="sc-toolbar">
-            <button class="sc-btn" id="sc-add-img"><i class="fas fa-image"></i> Image</button>
-            <button class="sc-btn" id="sc-add-vid"><i class="fas fa-film"></i> Video</button>
-            <button class="sc-btn" id="sc-add-text"><i class="fas fa-font"></i> Text</button>
-            <button class="sc-btn" id="sc-add-kanji"><i class="fas fa-bolt"></i> Kanji</button>
-            <button class="sc-btn" id="sc-add-audio"><i class="fas fa-music"></i> Audio + Beats</button>
-            <button class="sc-btn" id="sc-zoom-fit"><i class="fas fa-compress"></i> Fit</button>
-            <button class="sc-btn" id="sc-clear"><i class="fas fa-trash"></i> Clear</button>
-          </div>
-        </div>
-        <div class="sc-body">
-          <div class="sc-left">
-            <div class="sc-left-title">Layers</div>
-            <div id="sc-layer-list"><div class="sc-empty">No layers yet — add one from the toolbar.</div></div>
-          </div>
-          <div class="sc-centre">
-            <div id="sc-canvas">
-              <div id="sc-world"></div>
-            </div>
-            <div class="sc-canvas-hint">Pan: hold SPACE + drag &nbsp;·&nbsp; Zoom: mouse wheel &nbsp;·&nbsp; Drag layers to move &nbsp;·&nbsp; Z = depth (3D)</div>
-          </div>
-          <div class="sc-right">
-            <div class="sc-right-title">Properties</div>
-            <div id="sc-props"><div class="sc-empty">Select a layer.</div></div>
-          </div>
-        </div>
-        <div class="sc-timeline-bar">
-          <div class="sc-tl-controls">
-            <button class="sc-tl-btn sc-tl-btn-secondary" id="sc-rewind" title="Rewind"><i class="fas fa-backward-step"></i></button>
-            <button class="sc-tl-btn" id="sc-play" title="Play/Pause"><i class="fas fa-play"></i></button>
-          </div>
-          <div id="sc-timeline">
-            <div id="sc-beat-track"></div>
-            <div id="sc-playhead"></div>
-          </div>
-          <div id="sc-time-readout">0.00 / 12.0s</div>
-          <audio id="sc-audio"></audio>
-        </div>
-      </div>
-
-      <!-- ══ OPERATOR AGENT (beta) — Grok-style chat driven by Claude Max ══ -->
-      <div class="panel" id="panel-operator-agent">
-        <div class="agent-topbar">
-          <h2>Operator Agent</h2>
-          <span class="agent-badge">BETA</span>
-          <div class="spacer"></div>
-          <button class="btn btn-secondary btn-sm" id="agent-clear"><i class="fas fa-trash"></i> Clear</button>
-        </div>
-        <div id="agent-log"></div>
-        <div class="agent-quickbar">
-          <div class="agent-quick" data-prompt="Operator online: design a full 3D parallax sales page workflow for a struggling SaaS founder using my 16 systems.">3D parallax page</div>
-          <div class="agent-quick" data-prompt="Plan a CRO audit for a SaaS landing page where bounce rate is 78% and signup conversion is 1.2%. Identify root causes and a 5-step fix plan.">CRO audit</div>
-          <div class="agent-quick" data-prompt="Draft a 5-email cold-outreach sequence for a local trade business (plumbing, UK) targeting homeowners. Builder voice, no fluff.">Cold outreach (5 emails)</div>
-          <div class="agent-quick" data-prompt="Write the storyboard, copy, timing, and Meshy prompts for a 60s TikTok promo where the operator (me) ships 10 client systems while a competitor manually struggles with one.">TikTok storyboard</div>
-          <div class="agent-quick" data-prompt="What system from my 16-systems library would I use for a SaaS founder who has paying users but 6% monthly churn? Output the system + the workflow to fix it.">Churn fix system</div>
-        </div>
-        <div class="agent-input-wrap">
-          <textarea id="agent-input" placeholder="Ask the operator anything — system design, copy, workflows, client briefs..." rows="1"></textarea>
-          <button id="agent-send"><i class="fas fa-paper-plane"></i> Send</button>
-        </div>
-      </div>
-
-      <!-- ══ WORKFLOWS LAUNCHPAD (n8n-style tools dashboard) ══ -->
-      <div class="panel" id="panel-workflows">
-        <div class="wf-topbar">
-          <h2>Workflows</h2>
-          <div class="spacer" style="flex:1"></div>
-          <span class="wf-hint">Click <i class="fas fa-bolt" style="color:var(--accent)"></i> cards to run inside the panel. External tools open in new tabs.</span>
-        </div>
-        <div class="wf-grid" id="wf-grid">
-
-          <!-- CLAUDE MAX — operator brain -->
-          <div class="wf-card wf-internal wf-claude" data-claude="operator-plan">
-            <div class="wf-icon"><i class="fas fa-brain"></i></div>
-            <div class="wf-name">Operator Plan</div>
-            <div class="wf-desc">Claude Max generates the full system plan from a client brief — GOAL · SYSTEMS · STORYBOARD · COPY · MESHY PROMPTS · PAGE STRUCTURE · AUTOMATION HOOKS.</div>
-            <button class="btn btn-primary btn-sm wf-run-claude" data-claude="operator-plan">
-              <i class="fas fa-play"></i> Run
-            </button>
-          </div>
-
-          <!-- INTERNAL — Blender renders -->
-          <div class="wf-card wf-internal" data-workflow="hero-render">
-            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
-            <div class="wf-name">3D Hero Render</div>
-            <div class="wf-desc">Render a brand-palette 3D hero still (1280×720) via headless Blender.</div>
-            <button class="btn btn-primary btn-sm wf-run" data-workflow="hero-render"><i class="fas fa-play"></i> Run</button>
-          </div>
-          <div class="wf-card wf-internal" data-workflow="tiktok-promo">
-            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
-            <div class="wf-name">TikTok Promo Frame</div>
-            <div class="wf-desc">Vertical 9:16 720×1280 PNG, peak-pulse hero frame. Drop into CapCut + add audio for the Reel.</div>
-            <button class="btn btn-primary btn-sm wf-run" data-workflow="tiktok-promo"><i class="fas fa-play"></i> Run</button>
-          </div>
-          <div class="wf-card wf-internal" data-workflow="logo-mark">
-            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
-            <div class="wf-name">Logo Mark</div>
-            <div class="wf-desc">1:1 1080×1080 PNG of the sigil plinth. Drops into decks + about pages.</div>
-            <button class="btn btn-primary btn-sm wf-run" data-workflow="logo-mark"><i class="fas fa-play"></i> Run</button>
-          </div>
-          <div class="wf-card wf-internal" data-workflow="square-card">
-            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
-            <div class="wf-name">Square Card</div>
-            <div class="wf-desc">1080×1080 PNG of the brand hero. IG / LinkedIn / X feed posts.</div>
-            <button class="btn btn-primary btn-sm wf-run" data-workflow="square-card"><i class="fas fa-play"></i> Run</button>
-          </div>
-          <div class="wf-card wf-internal" data-workflow="mood-pack">
-            <div class="wf-icon"><i class="fas fa-bolt"></i></div>
-            <div class="wf-name">Mood Pack</div>
-            <div class="wf-desc">2×2 contact sheet PNG, 4 angles. Pitch sheet / press kit / asset library starter.</div>
-            <button class="btn btn-primary btn-sm wf-run" data-workflow="mood-pack"><i class="fas fa-play"></i> Run</button>
-          </div>
-
-          <!-- EXTERNAL TOOLS -->
-          <div class="wf-card" data-tool="meshy"><div class="wf-icon"><i class="fas fa-cube"></i></div><div class="wf-name">Meshy AI</div><div class="wf-desc">Image-to-3D, free tier ~200 credits/mo. Upload hero plate → GLB.</div><a class="btn btn-secondary btn-sm" href="https://www.meshy.ai/workspace" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
-          <div class="wf-card" data-tool="hunyuan"><div class="wf-icon"><i class="fas fa-shapes"></i></div><div class="wf-name">Hunyuan3D-2</div><div class="wf-desc">Tencent's image-to-3D, unlimited free on HF Space.</div><a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/tencent/Hunyuan3D-2" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
-          <div class="wf-card" data-tool="trellis"><div class="wf-icon"><i class="fas fa-cubes"></i></div><div class="wf-name">TRELLIS</div><div class="wf-desc">Microsoft's image-to-3D fallback, free on HF Space.</div><a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/trellis-community/TRELLIS" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
-          <div class="wf-card" data-tool="flux"><div class="wf-icon"><i class="fas fa-image"></i></div><div class="wf-name">FLUX.1 Krea Dev</div><div class="wf-desc">Photoreal image gen on HF Space.</div><a class="btn btn-secondary btn-sm" href="https://huggingface.co/spaces/black-forest-labs/FLUX.1-Krea-dev" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
-          <div class="wf-card" data-tool="firefly"><div class="wf-icon"><i class="fas fa-fire"></i></div><div class="wf-name">Adobe Firefly</div><div class="wf-desc">Commercial-licensed image gen.</div><a class="btn btn-secondary btn-sm" href="https://firefly.adobe.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
-          <div class="wf-card" data-tool="grok-imagine"><div class="wf-icon"><i class="fas fa-wand-magic-sparkles"></i></div><div class="wf-name">Grok Imagine</div><div class="wf-desc">Short Film · UGC Product Stories · Brand Identity · Create Worlds.</div><a class="btn btn-secondary btn-sm" href="https://grok.com/imagine" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
-          <div class="wf-card" data-tool="capcut"><div class="wf-icon"><i class="fas fa-film"></i></div><div class="wf-name">CapCut</div><div class="wf-desc">Free web NLE.</div><a class="btn btn-secondary btn-sm" href="https://www.capcut.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
-          <div class="wf-card" data-tool="davinci"><div class="wf-icon"><i class="fas fa-video"></i></div><div class="wf-name">DaVinci Resolve</div><div class="wf-desc">Free Hollywood-grade NLE.</div><a class="btn btn-secondary btn-sm" href="https://www.blackmagicdesign.com/products/davinciresolve" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Get</a></div>
-          <div class="wf-card" data-tool="elevenlabs"><div class="wf-icon"><i class="fas fa-microphone"></i></div><div class="wf-name">ElevenLabs</div><div class="wf-desc">Free 10k chars/mo.</div><a class="btn btn-secondary btn-sm" href="https://elevenlabs.io/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
-          <div class="wf-card" data-tool="canva"><div class="wf-icon"><i class="fas fa-palette"></i></div><div class="wf-name">Canva</div><div class="wf-desc">Free design + whiteboard.</div><a class="btn btn-secondary btn-sm" href="https://www.canva.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
-          <div class="wf-card" data-tool="figma"><div class="wf-icon"><i class="fab fa-figma"></i></div><div class="wf-name">Figma</div><div class="wf-desc">Sigil + type cards + brand kit.</div><a class="btn btn-secondary btn-sm" href="https://www.figma.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
-          <div class="wf-card" data-tool="n8n"><div class="wf-icon"><i class="fas fa-project-diagram"></i></div><div class="wf-name">n8n</div><div class="wf-desc">Free self-hosted automations.</div><a class="btn btn-secondary btn-sm" href="https://n8n.io/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
-          <div class="wf-card" data-tool="make"><div class="wf-icon"><i class="fas fa-network-wired"></i></div><div class="wf-name">Make</div><div class="wf-desc">Free tier automations.</div><a class="btn btn-secondary btn-sm" href="https://www.make.com/" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Open</a></div>
-        </div>
-
-        <div class="wf-output" id="wf-output" style="display:none">
-          <div class="wf-output-header">
-            <span id="wf-output-title">Output</span>
-            <button class="btn btn-secondary btn-sm" id="btn-wf-close-output">Close</button>
-          </div>
-          <div class="wf-output-body" id="wf-output-body"></div>
-        </div>
-      </div>
-
       <!-- ══ B.O.S.S: CREATIVE STUDIO ══ -->
       <div class="panel" id="panel-boss-creative">
         <div style="padding:32px;max-width:1000px;margin:0 auto">
@@ -1694,6 +1695,139 @@ gr.Interface(fn=generate,
             Render log will appear here…
           </div>
 
+
+          <!-- Scene Builder -->
+          <div id="cs-builder" style="margin-top:24px;background:#0b0b10;border:1px solid #1b1b24;border-radius:14px;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid #1b1b24;background:#0f0f15">
+              <div>
+                <div style="font-size:.72rem;color:#ff2a2a;font-weight:800;letter-spacing:.12em;text-transform:uppercase">Scene Builder</div>
+                <div style="font-size:.92rem;color:#f3f3f7;font-weight:800;margin-top:3px">Image to 3D mesh video director</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+                <button class="csb-btn" onclick="bossScenePreset('product')">Product Ad</button>
+                <button class="csb-btn" onclick="bossScenePreset('character')">Character Scene</button>
+                <button class="csb-btn" onclick="bossScenePreset('cinematic')">Cinematic</button>
+                <button class="csb-btn" onclick="window.open('/offaxis.html','_blank')">Open 3D Viewer</button>
+              </div>
+            </div>
+
+            <div class="csb-grid">
+              <div class="csb-panel csb-preview-panel">
+                <div class="csb-preview" id="csb-preview">
+                  <div class="csb-sky"></div>
+                  <div class="csb-floor"></div>
+                  <div class="csb-character" id="csb-character"></div>
+                  <div class="csb-camera-path" id="csb-camera-path"></div>
+                  <div class="csb-camera" id="csb-camera"></div>
+                  <div class="csb-caption" id="csb-caption">Dolly push on a meshed hero character</div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">
+                  <div class="csb-stat"><b id="csb-shot-count">6</b><span>shots</span></div>
+                  <div class="csb-stat"><b id="csb-duration">18s</b><span>duration</span></div>
+                  <div class="csb-stat"><b id="csb-render-mode">3D</b><span>mode</span></div>
+                </div>
+              </div>
+
+              <div class="csb-panel">
+                <div class="csb-section-title">Source and scene</div>
+                <label class="csb-label">Source image / footage URL</label>
+                <input id="csb-source" class="csb-input" placeholder="Paste image, video, or character reference URL">
+                <label class="csb-label">Scene description</label>
+                <textarea id="csb-scene" class="csb-textarea" placeholder="Describe the world, mood, set, product, and action"></textarea>
+                <label class="csb-label">Environment preset</label>
+                <select id="csb-environment" class="csb-input" onchange="bossScenePreview()">
+                  <option value="neon-city">Neon city</option>
+                  <option value="studio-cyc">Studio cyc wall</option>
+                  <option value="desert-temple">Desert temple</option>
+                  <option value="space-hangar">Space hangar</option>
+                  <option value="forest-stage">Forest stage</option>
+                  <option value="luxury-room">Luxury room</option>
+                </select>
+              </div>
+
+              <div class="csb-panel">
+                <div class="csb-section-title">Character and mesh</div>
+                <label class="csb-label">Character type</label>
+                <select id="csb-character-type" class="csb-input" onchange="bossScenePreview()">
+                  <option value="human-founder">Human founder</option>
+                  <option value="anime-hero">Anime hero</option>
+                  <option value="robot-operator">Robot operator</option>
+                  <option value="creature">Creature / mascot</option>
+                  <option value="product">Product object</option>
+                </select>
+                <label class="csb-label">Mesh depth</label>
+                <select id="csb-mesh" class="csb-input" onchange="bossScenePreview()">
+                  <option value="2.5d-depth">2.5D image depth mesh</option>
+                  <option value="billboard-layers">Billboard layer cards</option>
+                  <option value="full-3d">Full 3D mesh / GLB</option>
+                  <option value="gaussian-splat">Gaussian splat scene</option>
+                </select>
+                <label class="csb-label">Action</label>
+                <input id="csb-action" class="csb-input" placeholder="Walk forward, turn, jump, reveal product">
+              </div>
+
+              <div class="csb-panel">
+                <div class="csb-section-title">Camera rig</div>
+                <select id="csb-camera-rig" class="csb-input" onchange="bossScenePreview()">
+                  <option value="dolly-push">Dolly push</option>
+                  <option value="orbit-hero">Orbit hero</option>
+                  <option value="handheld-chase">Handheld chase</option>
+                  <option value="crane-reveal">Crane reveal</option>
+                  <option value="fpv-flythrough">FPV flythrough</option>
+                  <option value="locked-tripod">Locked tripod</option>
+                </select>
+                <label class="csb-label">Movement preset</label>
+                <select id="csb-movement" class="csb-input" onchange="bossScenePreview()">
+                  <option value="slow-premium">Slow premium</option>
+                  <option value="fast-cut">Fast cut</option>
+                  <option value="floaty-dream">Floaty dream</option>
+                  <option value="impact-shake">Impact shake</option>
+                  <option value="parallax-depth">Parallax depth</option>
+                </select>
+                <label class="csb-label">Lens</label>
+                <select id="csb-lens" class="csb-input">
+                  <option value="24mm-wide">24mm wide</option>
+                  <option value="35mm-natural">35mm natural</option>
+                  <option value="50mm-portrait">50mm portrait</option>
+                  <option value="85mm-compression">85mm compression</option>
+                </select>
+              </div>
+
+              <div class="csb-panel">
+                <div class="csb-section-title">Physics and render</div>
+                <label class="csb-label">Physics preset</label>
+                <select id="csb-physics" class="csb-input" onchange="bossScenePreview()">
+                  <option value="grounded-real">Grounded real</option>
+                  <option value="ragdoll-lite">Ragdoll lite</option>
+                  <option value="cloth-hair">Cloth and hair</option>
+                  <option value="particles-smoke">Particles and smoke</option>
+                  <option value="vehicle-rig">Vehicle rig</option>
+                </select>
+                <label class="csb-label">Output</label>
+                <select id="csb-output" class="csb-input" onchange="bossScenePreview()">
+                  <option value="remotion-3d">Remotion 3D render</option>
+                  <option value="image-to-video">Image to video model</option>
+                  <option value="three-preview">Three.js preview</option>
+                  <option value="asset-pack">Asset pack brief</option>
+                </select>
+                <label class="csb-label">Duration seconds</label>
+                <input id="csb-seconds" class="csb-input" type="number" min="3" max="90" value="18" oninput="bossScenePreview()">
+              </div>
+            </div>
+
+            <div style="padding:16px 18px;border-top:1px solid #1b1b24;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start">
+              <div>
+                <div class="csb-section-title">Render brief</div>
+                <pre id="csb-brief" style="min-height:130px;background:#050507;border:1px solid #15151d;border-radius:10px;padding:12px;color:#8f8fa3;font-size:.72rem;line-height:1.55;white-space:pre-wrap;margin:0"></pre>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;min-width:170px">
+                <button class="csb-primary" onclick="bossBuildSceneBrief()">Build Brief</button>
+                <button class="csb-btn" onclick="bossSaveSceneBrief()">Save Plan</button>
+                <button class="csb-btn" onclick="bossCopySceneBrief()">Copy Brief</button>
+                <button class="csb-btn" onclick="bossDownloadScenePlan()">Download JSON</button>
+              </div>
+            </div>
+          </div>
           <!-- Scene asset grid -->
           <div style="margin-top:24px">
             <div style="font-size:.72rem;font-weight:700;color:#aaa;letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">Scene Assets</div>
@@ -1703,6 +1837,28 @@ gr.Interface(fn=generate,
       </div>
 
       <style>
+
+        .csb-grid{display:grid;grid-template-columns:minmax(260px,.95fr) repeat(2,minmax(220px,1fr));gap:12px;padding:14px}
+        .csb-panel{background:#08080d;border:1px solid #171720;border-radius:10px;padding:14px;min-width:0}
+        .csb-preview-panel{grid-row:span 2}
+        .csb-section-title{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.11em;color:#777;margin-bottom:10px}
+        .csb-label{display:block;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#666;margin:10px 0 5px}
+        .csb-input,.csb-textarea{width:100%;background:#050507;border:1px solid #1b1b24;border-radius:8px;color:#e8e8ef;padding:9px 10px;font:inherit;font-size:.78rem;outline:none}
+        .csb-textarea{min-height:92px;resize:vertical;line-height:1.45}
+        .csb-input:focus,.csb-textarea:focus{border-color:#ff2a2a;box-shadow:0 0 0 1px rgba(255,42,42,.15)}
+        .csb-btn,.csb-primary{border:1px solid #2a2a34;background:#14141b;color:#aaa;border-radius:8px;padding:9px 12px;font-size:.73rem;font-weight:800;cursor:pointer;letter-spacing:.03em;text-decoration:none;text-align:center}
+        .csb-btn:hover{border-color:#ff2a2a;color:#ff2a2a;background:#ff2a2a12}
+        .csb-primary{background:#ff2a2a;border-color:#ff2a2a;color:#0a0a0a}
+        .csb-preview{position:relative;min-height:340px;border-radius:12px;overflow:hidden;background:radial-gradient(circle at 50% 30%,#24243a,#09090e 60%);border:1px solid #20202c}
+        .csb-sky{position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,42,42,.18),transparent 36%),radial-gradient(circle at 70% 18%,rgba(89,120,255,.24),transparent 30%)}
+        .csb-floor{position:absolute;left:-20%;right:-20%;bottom:-18%;height:48%;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,42,42,.09));transform:perspective(500px) rotateX(62deg);border-top:1px solid rgba(255,255,255,.14)}
+        .csb-character{position:absolute;left:50%;top:44%;width:70px;height:122px;transform:translate(-50%,-50%);border-radius:36px 36px 16px 16px;background:linear-gradient(160deg,#f4f4f7,#777 45%,#ff2a2a);box-shadow:0 18px 60px rgba(255,42,42,.28)}
+        .csb-character:before{content:"";position:absolute;left:17px;top:-30px;width:36px;height:36px;border-radius:50%;background:#ececf2;box-shadow:0 0 24px rgba(255,255,255,.22)}
+        .csb-camera-path{position:absolute;left:18%;right:18%;top:58%;height:2px;background:linear-gradient(90deg,transparent,#ff2a2a,transparent);opacity:.75;transform:rotate(-8deg)}
+        .csb-camera{position:absolute;right:20%;top:48%;width:34px;height:24px;border:2px solid #ff2a2a;border-radius:6px;box-shadow:0 0 18px rgba(255,42,42,.45)}
+        .csb-caption{position:absolute;left:12px;right:12px;bottom:12px;background:#050507cc;border:1px solid #242430;border-radius:8px;padding:9px 10px;font-size:.72rem;color:#aaa;line-height:1.4}
+        .csb-stat{background:#08080d;border:1px solid #191922;border-radius:8px;padding:10px;text-align:center}.csb-stat b{display:block;color:#f5f5fa;font-size:1rem}.csb-stat span{font-size:.62rem;color:#666;text-transform:uppercase;letter-spacing:.08em}
+        @media(max-width:980px){.csb-grid{grid-template-columns:1fr}.csb-preview-panel{grid-row:auto}}
         .router-tile{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px}
         .router-tile .rt-dot{width:10px;height:10px;border-radius:50%;background:#333;flex-shrink:0;transition:background .3s}
         .router-tile.on .rt-dot{background:#2cb67d;box-shadow:0 0 8px rgba(44,182,125,.5)}
@@ -1771,3 +1927,4 @@ gr.Interface(fn=generate,
 <script src="boss.js"></script>
 </body>
 </html>
+

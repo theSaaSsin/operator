@@ -1,10 +1,143 @@
-/* ── TheSaaSsin Operator Panel — operator.js ── */
+﻿/* â”€â”€ TheSaaSsin Operator Panel â€” operator.js â”€â”€ */
 'use strict';
 
 // Use relative path so API calls work on both localhost AND mobile via ngrok
 const API = window.location.origin + '/api';
+const BROWSER_STATE_API = API + '/browser-state';
 
-/* ── DRAWER HELPERS ── */
+const browserStateBridge = (() => {
+  const storage = window.localStorage;
+  const proto = Object.getPrototypeOf(storage);
+  const native = {
+    getItem: (key) => proto.getItem.call(storage, key),
+    setItem: (key, value) => proto.setItem.call(storage, key, value),
+    removeItem: (key) => proto.removeItem.call(storage, key),
+    clear: () => proto.clear.call(storage),
+    key: (index) => proto.key.call(storage, index),
+  };
+
+  let cache = {};
+  let ready = false;
+  let flushTimer = null;
+  let flushing = false;
+  let flushQueued = false;
+
+  function snapshotNative() {
+    const out = {};
+    for (let i = 0; i < storage.length; i++) {
+      const key = native.key(i);
+      if (key !== null) out[key] = native.getItem(key) || '';
+    }
+    return out;
+  }
+
+  function normalizeState(input) {
+    const out = {};
+    if (!input || typeof input !== 'object') return out;
+    Object.entries(input).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      out[String(key)] = String(value);
+    });
+    return out;
+  }
+
+  function replaceNative(state) {
+    native.clear();
+    Object.entries(state).forEach(([key, value]) => native.setItem(key, value));
+  }
+
+  async function flush(options = {}) {
+    if (!ready) return;
+    if (flushing) {
+      flushQueued = true;
+      return;
+    }
+    flushing = true;
+    try {
+      await fetch(BROWSER_STATE_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: cache }),
+        keepalive: !!options.keepalive,
+      });
+    } catch (_) {
+      // Keep the browser copy even if the backend is temporarily unavailable.
+    } finally {
+      flushing = false;
+      if (flushQueued) {
+        flushQueued = false;
+        scheduleFlush();
+      }
+    }
+  }
+
+  function scheduleFlush() {
+    clearTimeout(flushTimer);
+    flushTimer = setTimeout(() => { flush(); }, 250);
+  }
+
+  proto.getItem = function patchedGetItem(key) {
+    if (this !== storage || !ready) return native.getItem(key);
+    key = String(key);
+    return Object.prototype.hasOwnProperty.call(cache, key) ? cache[key] : null;
+  };
+
+  proto.setItem = function patchedSetItem(key, value) {
+    if (this !== storage) return native.setItem(key, value);
+    key = String(key);
+    value = String(value);
+    cache[key] = value;
+    native.setItem(key, value);
+    ready = true;
+    scheduleFlush();
+  };
+
+  proto.removeItem = function patchedRemoveItem(key) {
+    if (this !== storage) return native.removeItem(key);
+    key = String(key);
+    delete cache[key];
+    native.removeItem(key);
+    ready = true;
+    scheduleFlush();
+  };
+
+  proto.clear = function patchedClear() {
+    if (this !== storage) return native.clear();
+    cache = {};
+    native.clear();
+    ready = true;
+    scheduleFlush();
+  };
+
+  async function init() {
+    const localState = snapshotNative();
+    let remoteState = {};
+
+    try {
+      const res = await fetch(BROWSER_STATE_API);
+      const data = await res.json();
+      if (res.ok && data && data.ok) remoteState = normalizeState(data.state);
+    } catch (_) {}
+
+    cache = { ...localState, ...remoteState };
+    replaceNative(cache);
+    ready = true;
+
+    if (Object.keys(localState).length && JSON.stringify(localState) !== JSON.stringify(cache)) {
+      scheduleFlush();
+    }
+  }
+
+  init();
+  window.addEventListener('beforeunload', () => { flush({ keepalive: true }); });
+
+  return {
+    flush,
+    ready: () => ready,
+  };
+})();
+
+/* â”€â”€ DRAWER HELPERS â”€â”€ */
 function openDrawer(id) {
   document.querySelectorAll('.side-drawer.open').forEach(d => d.classList.remove('open'));
   const el = document.getElementById(id);
@@ -24,7 +157,7 @@ document.addEventListener('click', e => {
   if (e.target && e.target.id === 'drawer-backdrop') closeDrawer();
 });
 
-/* ── CLOCK ── */
+/* â”€â”€ CLOCK â”€â”€ */
 (function clock() {
   const el = document.getElementById('clock');
   function tick() {
@@ -33,7 +166,7 @@ document.addEventListener('click', e => {
   tick(); setInterval(tick, 30000);
 })();
 
-/* ── TOAST ── */
+/* â”€â”€ TOAST â”€â”€ */
 function toast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -42,12 +175,12 @@ function toast(msg, type) {
   t._timer = setTimeout(() => { t.className = ''; }, 3000);
 }
 
-/* ══════════════════════════════════════════════════
-   MODULE SYSTEM — THE FULL 70-MODULE MAP
-══════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   MODULE SYSTEM â€” THE FULL 70-MODULE MAP
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 const MODULE_MAP = [
   {
-    id: 'core', name: 'Core Layer', desc: 'Operator Brain — always present',
+    id: 'core', name: 'Core Layer', desc: 'Operator Brain â€” always present',
     icon: 'fa-microchip', color: '#ff2a2a',
     modules: [
       { n:1,  name:'Lead Feed Engine',           icon:'fa-satellite-dish',   status:'active', panel:'feed' },
@@ -63,7 +196,7 @@ const MODULE_MAP = [
     ]
   },
   {
-    id: 'acquisition', name: 'Acquisition', desc: 'Get clients — scraping, outreach, booking',
+    id: 'acquisition', name: 'Acquisition', desc: 'Get clients â€” scraping, outreach, booking',
     icon: 'fa-bullseye', color: '#22c55e',
     modules: [
       { n:11, name:'Social Media Lead Scraper',     icon:'fa-hashtag',         status:'active', panel:'feed' },
@@ -172,7 +305,7 @@ const MODULE_MAP = [
     ]
   },
   {
-    id: 'expansion', name: 'Expansion', desc: 'Later — partners, marketplace, billing, teams',
+    id: 'expansion', name: 'Expansion', desc: 'Later â€” partners, marketplace, billing, teams',
     icon: 'fa-rocket', color: '#ec4899',
     modules: [
       { n:61, name:'Partner Management System',     icon:'fa-handshake',       status:'later' },
@@ -205,7 +338,7 @@ const STATUS_META = {
 };
 const STATUS_CYCLE = { planned: 'building', building: 'active', active: 'later', later: 'planned' };
 
-/* ── BUILD COLLAPSIBLE NAV FROM MODULE_MAP ── */
+/* â”€â”€ BUILD COLLAPSIBLE NAV FROM MODULE_MAP â”€â”€ */
 function buildNav() {
   const container = document.getElementById('nav-modules');
   if (!container) return;
@@ -221,7 +354,7 @@ function buildNav() {
     expansion:   { icon:'fa-rocket',               color:'#ec4899', label:'Expand' },
   };
 
-  // Module icon map (filekey → FA icon)
+  // Module icon map (filekey â†’ FA icon)
   const MOD_ICONS = {
     'lead-intel':'fa-radar','cold-outreach':'fa-comment-dots','proposal':'fa-file-invoice','call-script':'fa-phone',
     'intent':'fa-brain','followup':'fa-clock-rotate-left','competitor-hijack':'fa-user-secret',
@@ -388,7 +521,7 @@ function updateSidebarModuleCounts() {
   });
   const totalActive = MODULE_MAP.reduce((sum, cat) => sum + cat.modules.filter(m => m.status === 'active').length, 0);
   const versionEl = document.querySelector('.sidebar-version');
-  if (versionEl) versionEl.textContent = `v0.2 — ${totalActive} / 70 modules`;
+  if (versionEl) versionEl.textContent = `v0.2 â€” ${totalActive} / 70 modules`;
 }
 
 function renderDashboard() {
@@ -482,7 +615,7 @@ async function cycleModuleStatus(moduleNumber) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ n: moduleNumber, status: next })
     });
-    toast(`Module #${moduleNumber} → ${STATUS_META[next].label}`, 'ok');
+    toast(`Module #${moduleNumber} â†’ ${STATUS_META[next].label}`, 'ok');
   } catch {
     mod.status = prev;
     renderDashboard();
@@ -496,7 +629,7 @@ renderDashboard();
 updateSidebarModuleCounts();
 loadModuleState();
 
-/* ── NAV ── */
+/* â”€â”€ NAV â”€â”€ */
 const panels = document.querySelectorAll('.panel');
 const navItems = document.querySelectorAll('.nav-item');
 const topbarTitle = document.getElementById('topbar-title');
@@ -509,7 +642,7 @@ const TITLES = {
   analytics: 'Outreach Analytics'
 };
 
-/* ── MODULE LOADER SYSTEM ── */
+/* â”€â”€ MODULE LOADER SYSTEM â”€â”€ */
 const _loadedModules = {};
 let _currentModuleKey = null;
 
@@ -542,7 +675,7 @@ async function loadModulePanel(target) {
   const modTitle = document.getElementById('mod-title');
   const modSidebar = document.getElementById('mod-sidebar');
 
-  modBody.innerHTML = '<div class="mod-loading"><i class="fas fa-circle-notch fa-spin"></i> Loading module…</div>';
+  modBody.innerHTML = '<div class="mod-loading"><i class="fas fa-circle-notch fa-spin"></i> Loading moduleâ€¦</div>';
   if (modSidebar) modSidebar.style.display = 'none';
 
   const mod = _findModuleByNavKey(target);
@@ -551,7 +684,7 @@ async function loadModulePanel(target) {
 
   if (_loadedModules[fileKey]) {
     try {
-      _loadedModules[fileKey].render(modBody, mod);
+      await _loadedModules[fileKey].render(modBody, mod);
       if (_loadedModules[fileKey].renderSettings) {
         document.getElementById('mod-settings-btn').style.display = '';
       } else {
@@ -572,7 +705,7 @@ async function loadModulePanel(target) {
     _loadedModules[fileKey] = moduleFactory;
 
     if (moduleFactory.init) await moduleFactory.init(mod);
-    moduleFactory.render(modBody, mod);
+    await moduleFactory.render(modBody, mod);
 
     if (moduleFactory.renderSettings) {
       document.getElementById('mod-settings-btn').style.display = '';
@@ -603,13 +736,20 @@ function refreshCurrentModule() {
   if (_currentModuleKey && _loadedModules[_currentModuleKey]) {
     const modBody = document.getElementById('mod-body');
     const mod = _findModuleByNavKey('mod-' + _currentModuleKey);
-    _loadedModules[_currentModuleKey].render(modBody, mod);
+    _loadedModules[_currentModuleKey].render(modBody, mod).catch ? _loadedModules[_currentModuleKey].render(modBody, mod).catch(e => { modBody.innerHTML = `<div class="mod-error"><i class="fas fa-triangle-exclamation"></i><p>Module render error: ${e.message}</p></div>`; }) : _loadedModules[_currentModuleKey].render(modBody, mod);
   }
 }
 
 function switchPanel(target) {
+  if (target === 'boss-creative') {
+    const creativePanel = document.getElementById('panel-boss-creative');
+    const content = document.getElementById('content');
+    if (creativePanel && content && creativePanel.parentElement !== content) {
+      content.appendChild(creativePanel);
+    }
+  }
   navItems.forEach(n => n.classList.remove('active'));
-  panels.forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
   const navItem = document.querySelector(`.nav-item[data-panel="${target}"]`);
   if (navItem) navItem.classList.add('active');
@@ -619,7 +759,7 @@ function switchPanel(target) {
   if (target && target.startsWith('mod-')) {
     const panel = document.getElementById('panel-module');
     if (panel) panel.classList.add('active');
-    topbarTitle.textContent = 'Loading…';
+    topbarTitle.textContent = 'Loadingâ€¦';
     loadModulePanel(target);
     return;
   }
@@ -640,9 +780,9 @@ document.querySelectorAll('.mob-nav-btn').forEach(btn => {
   btn.addEventListener('click', () => switchPanel(btn.dataset.panel));
 });
 
-/* ══════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    CLIENT CREATOR
-══════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 let selectedClient = null;
 let generatedHTML  = '';
 
@@ -807,9 +947,9 @@ document.getElementById('btn-save-client').addEventListener('click', async () =>
   } catch { toast('Could not save client', 'err'); }
 });
 
-/* ── STYLE CONTROLS WIRING ── */
+/* â”€â”€ STYLE CONTROLS WIRING â”€â”€ */
 (function() {
-  // Sync color picker ↔ hex input
+  // Sync color picker â†” hex input
   function syncColor(pickerId, hexId) {
     const picker = document.getElementById(pickerId);
     const hex    = document.getElementById(hexId);
@@ -830,7 +970,7 @@ document.getElementById('btn-save-client').addEventListener('click', async () =>
     });
   });
 
-  // Button group toggles — each group is isolated by data attribute
+  // Button group toggles â€” each group is isolated by data attribute
   ['tone', 'price', 'stage'].forEach(attr => {
     document.querySelectorAll(`[data-${attr}]`).forEach(btn => {
       btn.addEventListener('click', () => {
@@ -873,16 +1013,16 @@ function getStyle() {
   };
 }
 
-/* ── Derive 3 style variants from the client's chosen colours ── */
+/* â”€â”€ Derive 3 style variants from the client's chosen colours â”€â”€ */
 function buildVariantStyles(base) {
-  // V1 — Bold/Contrast: client colours, darkest theme, aggressive punch
+  // V1 â€” Bold/Contrast: client colours, darkest theme, aggressive punch
   const v1 = { ...base, theme: 'contrast', tone: 'aggressive' };
 
-  // V2 — Dark/Professional: slightly shift accent to complement, dark theme
+  // V2 â€” Dark/Professional: slightly shift accent to complement, dark theme
   const v2 = { ...base, theme: 'dark', tone: 'professional',
     accent: base.accent === '#ffffff' ? '#cccccc' : base.accent };
 
-  // V3 — Light/Friendly: client primary on a light background
+  // V3 â€” Light/Friendly: client primary on a light background
   const v3 = { ...base, theme: 'light', tone: 'friendly',
     accent: base.primary || base.accent };
 
@@ -898,13 +1038,13 @@ function setActiveVariant(idx) {
   document.querySelectorAll('.variant-frame-wrap').forEach((w, i) => w.classList.toggle('active-frame', i === idx));
   generatedHTML = _variantHTMLs[idx];
   const useBtn = document.getElementById('btn-use-variant');
-  if (useBtn) { useBtn.textContent = '✓ Use This'; useBtn.classList.remove('saved'); }
+  if (useBtn) { useBtn.textContent = 'âœ“ Use This'; useBtn.classList.remove('saved'); }
 }
 
 function useActiveVariant() {
   generatedHTML = _variantHTMLs[_activeVariant];
   const useBtn = document.getElementById('btn-use-variant');
-  if (useBtn) { useBtn.textContent = '✓ Saved'; useBtn.classList.add('saved'); }
+  if (useBtn) { useBtn.textContent = 'âœ“ Saved'; useBtn.classList.add('saved'); }
   if (selectedClient) {
     fetch(API + '/clients', {
       method: 'PATCH',
@@ -914,7 +1054,7 @@ function useActiveVariant() {
   toast('V' + (_activeVariant + 1) + ' set as active page', 'ok');
 }
 
-/* ── VARIANT EDITOR ── */
+/* â”€â”€ VARIANT EDITOR â”€â”€ */
 function toggleVariantEdit() {
   const panel = document.getElementById('variant-edit-panel');
   const btn   = document.getElementById('btn-variant-edit');
@@ -932,7 +1072,7 @@ function reRenderActiveVariant() {
   generatedHTML = _variantHTMLs[_activeVariant];
 }
 
-/* Patch the .btn{…} CSS block inside the variant HTML */
+/* Patch the .btn{â€¦} CSS block inside the variant HTML */
 function patchBtnCSS(html, fn) {
   return html.replace(/(\.btn\{)([^}]+)(\})/, (_, open, props, close) => open + fn(props) + close);
 }
@@ -1007,7 +1147,7 @@ document.getElementById('btn-generate').addEventListener('click', () => {
   const notes  = document.getElementById('f-notes').value.trim();
   const style  = getStyle();
 
-  /* Resolve niche profile — drives ALL output */
+  /* Resolve niche profile â€” drives ALL output */
   const profile = getNicheProfile(niche, offer, goal, loc);
 
   /* 1. Build all 3 landing page variants */
@@ -1024,7 +1164,7 @@ document.getElementById('btn-generate').addEventListener('click', () => {
   generatedHTML = _variantHTMLs[0];
   showVariants(_variantHTMLs);
 
-  /* 2. Full outreach sequence → outreach queue */
+  /* 2. Full outreach sequence â†’ outreach queue */
   const sequence = buildOutreachSequence({ name, niche, offer, loc, profile, style });
   if (style.systems.outreach) {
     sequence.forEach((msg) => {
@@ -1035,20 +1175,20 @@ document.getElementById('btn-generate').addEventListener('click', () => {
     });
   }
 
-  /* 3. CRM + Offer → logged */
+  /* 3. CRM + Offer â†’ logged */
   console.log('[TheSaaSsin] CRM:', JSON.stringify(buildCRMStructure({ name, niche, offer, goal, profile }), null, 2));
   console.log('[TheSaaSsin] Offer:', JSON.stringify(buildOfferDefinition({ name, niche, offer, goal, loc, profile }), null, 2));
 
   /* 4. Package summary */
   showPackageSummary(buildPackageSummary({ name, profile, style }));
 
-  /* 4b. If routed from a scraped lead → prepend a pain-matched deliverable */
+  /* 4b. If routed from a scraped lead â†’ prepend a pain-matched deliverable */
   if (window.__activeLeadContext) {
     try { renderLeadDeliverable(window.__activeLeadContext, { name, niche, profile }); }
     catch (e) { console.error('[renderLeadDeliverable]', e); }
   }
 
-  /* 5. Auto-save V1 (Bold) to client — they can switch and re-save with Use This */
+  /* 5. Auto-save V1 (Bold) to client â€” they can switch and re-save with Use This */
   if (selectedClient) {
     const updatedSystems = {
       landingPage: generatedHTML,
@@ -1113,7 +1253,7 @@ function showVariants(htmls) {
   document.querySelectorAll('.variant-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
   document.querySelectorAll('.variant-frame-wrap').forEach((w, i) => w.classList.toggle('active-frame', i === 0));
   const useBtn = document.getElementById('btn-use-variant');
-  if (useBtn) { useBtn.textContent = '✓ Use This'; useBtn.classList.remove('saved'); }
+  if (useBtn) { useBtn.textContent = 'âœ“ Use This'; useBtn.classList.remove('saved'); }
 }
 
 // Keep showPreview as fallback (used by buildFromLead)
@@ -1124,78 +1264,78 @@ function showPreview(html) {
   showVariants([html, html, html]);
 }
 
-/* ══════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    NICHE INTELLIGENCE ENGINE
-══════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 /**
  * Returns a rich niche profile that drives all generator outputs.
- * Falls back gracefully if no keyword match — no generic filler.
+ * Falls back gracefully if no keyword match â€” no generic filler.
  */
 function getNicheProfile(niche, offer, goal, loc) {
   const n   = (niche + ' ' + offer).toLowerCase();
   const at  = loc ? ` in ${loc}` : '';
   const for_ = loc ? `for ${loc} homeowners` : 'for local homeowners';
 
-  /* ── PLUMBER ── */
+  /* â”€â”€ PLUMBER â”€â”€ */
   if (/plumb|pipe|boiler|heating|gas|drain/.test(n)) return {
     type: 'trade',
     audience: `homeowners and landlords${at}`,
     scenarios: [
-      `When your boiler dies at 9pm on a Sunday${at} — and every plumber you call either doesn't answer or quotes you a fortune just to show up`,
+      `When your boiler dies at 9pm on a Sunday${at} â€” and every plumber you call either doesn't answer or quotes you a fortune just to show up`,
       `When you've got a leak spreading through the ceiling and you can't find anyone who can come today`,
-      `When you've been let down by a tradesperson who said they'd show up and just… didn't`
+      `When you've been let down by a tradesperson who said they'd show up and justâ€¦ didn't`
     ],
     painPoints: [
-      `Boiler breaks down${at} — nobody picks up, or they want £150 just to look at it`,
-      `Waiting 3–5 days for a callout that should take hours`,
+      `Boiler breaks down${at} â€” nobody picks up, or they want Â£150 just to look at it`,
+      `Waiting 3â€“5 days for a callout that should take hours`,
       `Getting quoted one price on the phone and a different one on the day`,
       `Never knowing if the person coming is actually qualified`
     ],
     outcomes: [
-      `Same-day callout booked within 2 hours — 7 days a week${at}`,
+      `Same-day callout booked within 2 hours â€” 7 days a week${at}`,
       `Upfront fixed price before anyone sets foot in your home`,
-      `Gas Safe registered — certificate provided on completion`,
+      `Gas Safe registered â€” certificate provided on completion`,
       `Problem diagnosed and resolved in a single visit, 90% of the time`
     ],
-    headline:  `${loc ? loc + ' Emergency Plumber' : 'Emergency Plumber Near You'} — Here Today, Not Next Week`,
-    subline:   `${offer || 'Emergency callouts, boiler repairs & heating'} · Fixed pricing · Available 7 days`,
+    headline:  `${loc ? loc + ' Emergency Plumber' : 'Emergency Plumber Near You'} â€” Here Today, Not Next Week`,
+    subline:   `${offer || 'Emergency callouts, boiler repairs & heating'} Â· Fixed pricing Â· Available 7 days`,
     cta:       goal === 'bookings' ? `Book a Callout${at}` : `Get a Fixed Quote Today`,
     ctaLow:    `Want me to show you what this system looks like for your setup?`,
-    proof:     [`Trusted by 100+ ${loc || 'local'} homeowners`, 'Gas Safe registered', 'Same-day response', 'Fixed pricing — no surprises'],
-    form:      { q1: `What's the problem? (e.g. no hot water, leak, boiler fault)`, q2: `Is this urgent — or can it wait a day or two?` }
+    proof:     [`Trusted by 100+ ${loc || 'local'} homeowners`, 'Gas Safe registered', 'Same-day response', 'Fixed pricing â€” no surprises'],
+    form:      { q1: `What's the problem? (e.g. no hot water, leak, boiler fault)`, q2: `Is this urgent â€” or can it wait a day or two?` }
   };
 
-  /* ── ELECTRICIAN ── */
+  /* â”€â”€ ELECTRICIAN â”€â”€ */
   if (/electric|wir|fuse|power|sparks/.test(n)) return {
     type: 'trade',
     audience: `homeowners, landlords and small businesses${at}`,
     scenarios: [
-      `When a fuse keeps tripping and you don't know if it's safe to leave — let alone who to call`,
+      `When a fuse keeps tripping and you don't know if it's safe to leave â€” let alone who to call`,
       `When a landlord certificate is overdue and your tenant's chasing you${at}`,
       `When you've had three electricians quote three wildly different prices and you still don't know who to trust`
     ],
     painPoints: [
-      `Electrical faults you're not sure are safe to leave — and no one to call at short notice`,
+      `Electrical faults you're not sure are safe to leave â€” and no one to call at short notice`,
       `Landlord certificates overdue, holding up a sale or new tenancy${at}`,
       `Quotes that vary by hundreds with no explanation`,
       `Electricians who book in then cancel, leaving you in the dark`
     ],
     outcomes: [
-      `Fault found and fixed in a single visit — certificate issued same day`,
+      `Fault found and fixed in a single visit â€” certificate issued same day`,
       `Landlord EICR completed within 48 hours, paperwork sent immediately`,
-      `Fixed price agreed before work starts — nothing added on the day`,
+      `Fixed price agreed before work starts â€” nothing added on the day`,
       `NICEIC approved work, fully insured, guaranteed for 12 months`
     ],
-    headline:  `${loc ? loc + ' Electrician' : 'Local Electrician'} — Certified, On Time, Fixed Price`,
-    subline:   `${offer || 'Electrical installations, fault finding & certificates'} · NICEIC approved · No hidden costs`,
+    headline:  `${loc ? loc + ' Electrician' : 'Local Electrician'} â€” Certified, On Time, Fixed Price`,
+    subline:   `${offer || 'Electrical installations, fault finding & certificates'} Â· NICEIC approved Â· No hidden costs`,
     cta:       goal === 'bookings' ? `Book a Free Assessment` : `Get a Fixed Quote`,
     ctaLow:    `Happy to show you what a system like this looks like for your business`,
     proof:     [`Trusted by ${loc || 'local'} homeowners & landlords`, 'NICEIC Approved', 'Same-day certificates', 'Fully insured'],
     form:      { q1: `What electrical work do you need?`, q2: `Is this a safety issue, or is it planned work?` }
   };
 
-  /* ── BUILDER / RENOVATION ── */
+  /* â”€â”€ BUILDER / RENOVATION â”€â”€ */
   if (/build|construct|renovat|extension|loft|kitchen fit/.test(n)) return {
     type: 'trade',
     audience: `homeowners planning renovations${at}`,
@@ -1206,171 +1346,171 @@ function getNicheProfile(niche, offer, goal, loc) {
     ],
     painPoints: [
       `Projects going 40% over budget with no warning it was coming`,
-      `Builders${at} who disappear mid-job — phone goes straight to voicemail`,
+      `Builders${at} who disappear mid-job â€” phone goes straight to voicemail`,
       `No project timeline, no updates, no idea what's happening on site`,
       `Paying for work that wasn't done right the first time`
     ],
     outcomes: [
       `Fixed-price contract signed before a single tool is picked up`,
-      `Dedicated project manager — you get updates without having to chase`,
+      `Dedicated project manager â€” you get updates without having to chase`,
       `Build diary with photos sent weekly so you always know the status`,
       `On-time completion or we work weekends to catch up at no extra cost`
     ],
-    headline:  `${loc ? loc + ' Builder' : 'Local Builder'} You Can Actually Trust — Fixed Price, No Surprises`,
-    subline:   `${offer || 'Extensions, renovations & kitchen fits'} · Fixed-price contracts · Project managed`,
+    headline:  `${loc ? loc + ' Builder' : 'Local Builder'} You Can Actually Trust â€” Fixed Price, No Surprises`,
+    subline:   `${offer || 'Extensions, renovations & kitchen fits'} Â· Fixed-price contracts Â· Project managed`,
     cta:       `Get a Free Project Quote`,
     ctaLow:    `Want me to pull together a quick outline for your project?`,
     proof:     [`50+ projects completed${at}`, 'Fixed-price contracts', 'Fully insured', '5-star Google reviews'],
     form:      { q1: `What project are you planning? (e.g. extension, loft, kitchen)`, q2: `Do you have a rough budget in mind, or are you still at the quote stage?` }
   };
 
-  /* ── FITNESS / PT / GYM ── */
+  /* â”€â”€ FITNESS / PT / GYM â”€â”€ */
   if (/gym|fitness|personal train|pt |coach|weight|muscle|fat loss/.test(n)) return {
     type: 'fitness',
     audience: `people who are serious about results but keep hitting the same wall`,
     scenarios: [
       `When you've tried the gym three times this year, got results for about two weeks, then life got in the way and you're back at square one`,
-      `When you're training consistently but the weight just isn't shifting — and you can't work out what you're doing wrong`,
-      `When you've bought the programme, watched the videos, done everything right — and still don't look like any of the before and afters`
+      `When you're training consistently but the weight just isn't shifting â€” and you can't work out what you're doing wrong`,
+      `When you've bought the programme, watched the videos, done everything right â€” and still don't look like any of the before and afters`
     ],
     painPoints: [
       `Paying for a gym${at ? ' ' + at : ''} you use twice a month and feel guilty about every time`,
-      `Training with no real plan — just doing what feels right and hoping it works`,
-      `Results that plateau after 3–4 weeks because nothing changes`,
+      `Training with no real plan â€” just doing what feels right and hoping it works`,
+      `Results that plateau after 3â€“4 weeks because nothing changes`,
       `Nutrition advice that contradicts itself every time you Google something`
     ],
     outcomes: [
-      `Visible body composition change within 8 weeks — or your money back`,
+      `Visible body composition change within 8 weeks â€” or your money back`,
       `A weekly plan that fits around your actual schedule, not a perfect one`,
-      `Check-in every week — someone who notices if you've gone off track`,
+      `Check-in every week â€” someone who notices if you've gone off track`,
       `Nutrition that works without weighing everything or cutting out entire food groups`
     ],
     headline:  `Stop Starting Over. Get a Plan Built for You${loc ? ' in ' + loc : ''} That Actually Sticks.`,
-    subline:   `${offer || 'Personal training & transformation coaching'} · 8-week results · No contracts`,
+    subline:   `${offer || 'Personal training & transformation coaching'} Â· 8-week results Â· No contracts`,
     cta:       goal === 'leads' ? `Apply for a Free Strategy Call` : `Book Your Free Consultation`,
     ctaLow:    `Want me to show you what a 12-week plan would look like for your situation?`,
-    proof:     [`50+ transformations${at}`, 'Average 8–10kg lost in 12 weeks', 'No lock-in contracts', 'Online & in-person'],
+    proof:     [`50+ transformations${at}`, 'Average 8â€“10kg lost in 12 weeks', 'No lock-in contracts', 'Online & in-person'],
     form:      { q1: `What's your main goal? (e.g. lose fat, build muscle, get consistent)`, q2: `What's stopped you getting the result before?` }
   };
 
-  /* ── CONSULTANT / COACH / FREELANCER ── */
+  /* â”€â”€ CONSULTANT / COACH / FREELANCER â”€â”€ */
   if (/consult|freelanc|strateg|adviso|coach|mentor/.test(n)) return {
     type: 'consulting',
     audience: `business owners who are working too hard for the revenue they're getting`,
     scenarios: [
-      `When you're doing £10–20K a month but working 60 hours a week to hold it together — and you can't see how to grow without it getting worse`,
+      `When you're doing Â£10â€“20K a month but working 60 hours a week to hold it together â€” and you can't see how to grow without it getting worse`,
       `When you know exactly what needs to change in your business but you keep putting it off because there's no time to actually work on it`,
       `When a client ghosts after asking for a proposal and you spend three days wondering what went wrong`
     ],
     painPoints: [
-      `Revenue is decent but the margin — after your time — barely makes sense`,
+      `Revenue is decent but the margin â€” after your time â€” barely makes sense`,
       `No system for getting clients consistently: some months great, some months nothing`,
-      `Every new client feels like starting from scratch — no repeatable process`,
+      `Every new client feels like starting from scratch â€” no repeatable process`,
       `You're the bottleneck: nothing moves unless you're involved in it`
     ],
     outcomes: [
-      `A repeatable client acquisition process that runs without you chasing — within 30 days`,
+      `A repeatable client acquisition process that runs without you chasing â€” within 30 days`,
       `Revenue clarity: know exactly which activities are driving income and cut the rest`,
       `A clear 90-day plan that's specific to your business, not a generic framework`,
       `Reclaim 10+ hours a week by systemising what you're currently doing manually`
     ],
     headline:  `You Shouldn't Have to Work This Hard for This Result. Let's Fix That.`,
-    subline:   `${offer || 'Business strategy & growth consulting'} · 30-day results · Built around your business`,
+    subline:   `${offer || 'Business strategy & growth consulting'} Â· 30-day results Â· Built around your business`,
     cta:       `Book a Free 30-Min Strategy Call`,
-    ctaLow:    `Happy to map out what's actually holding you back — no prep needed, just a 30-min call`,
-    proof:     ['Average 3x ROI in 90 days', 'Former operator — not a theorist', '100% confidential', 'No long-term retainers'],
-    form:      { q1: `What's the single biggest thing holding your business back right now?`, q2: `What have you already tried — and why do you think it didn't work?` }
+    ctaLow:    `Happy to map out what's actually holding you back â€” no prep needed, just a 30-min call`,
+    proof:     ['Average 3x ROI in 90 days', 'Former operator â€” not a theorist', '100% confidential', 'No long-term retainers'],
+    form:      { q1: `What's the single biggest thing holding your business back right now?`, q2: `What have you already tried â€” and why do you think it didn't work?` }
   };
 
-  /* ── MARKETING / AGENCY ── */
+  /* â”€â”€ MARKETING / AGENCY â”€â”€ */
   if (/market|agency|seo|ads|social|lead gen|growth|digital/.test(n)) return {
     type: 'agency',
     audience: `business owners who've been burned by agencies before`,
     scenarios: [
-      `When you're paying £2,000/month in ads and the agency's monthly report is 6 slides of metrics that don't explain why enquiries are down`,
+      `When you're paying Â£2,000/month in ads and the agency's monthly report is 6 slides of metrics that don't explain why enquiries are down`,
       `When you hit month four of an SEO retainer and you're still "building domain authority" with nothing to show for it`,
-      `When leads come in through the form but nobody calls back within the hour — and by the time someone does, they've moved on`
+      `When leads come in through the form but nobody calls back within the hour â€” and by the time someone does, they've moved on`
     ],
     painPoints: [
       `Ad spend going up, cost-per-lead going up, and the agency says "it's the algorithm"`,
-      `No clear attribution — impossible to tell which channel is actually bringing in revenue`,
+      `No clear attribution â€” impossible to tell which channel is actually bringing in revenue`,
       `Leads from campaigns that don't convert because the follow-up is broken`,
       `Agencies who lock you into 6-month contracts and go quiet after month one`
     ],
     outcomes: [
-      `Clear attribution dashboard live within 7 days — know exactly what's working`,
+      `Clear attribution dashboard live within 7 days â€” know exactly what's working`,
       `Avg 4x ROAS within 60 days or we work at cost until we hit it`,
-      `Follow-up automation that contacts new leads within 5 minutes — automatically`,
-      `No lock-in — monthly rolling, cancel with 30 days notice`
+      `Follow-up automation that contacts new leads within 5 minutes â€” automatically`,
+      `No lock-in â€” monthly rolling, cancel with 30 days notice`
     ],
     headline:  `Your Last Agency Took Your Money. We Only Win When You Do.`,
-    subline:   `${offer || 'Performance marketing & lead generation'} · ROI-focused · No long-term lock-in`,
+    subline:   `${offer || 'Performance marketing & lead generation'} Â· ROI-focused Â· No long-term lock-in`,
     cta:       `Get a Free Account Audit`,
     ctaLow:    `Want me to take a quick look at your current setup and tell you what I'd fix first?`,
-    proof:     ['£500K+ in ad spend managed', 'Avg 4x ROAS', 'No lock-in contracts', 'Weekly reporting — real numbers'],
+    proof:     ['Â£500K+ in ad spend managed', 'Avg 4x ROAS', 'No lock-in contracts', 'Weekly reporting â€” real numbers'],
     form:      { q1: `What are you currently running and what's it costing you per month?`, q2: `What does a "good result" actually look like for your business?` }
   };
 
-  /* ── SAAS / TECH / AUTOMATION ── */
+  /* â”€â”€ SAAS / TECH / AUTOMATION â”€â”€ */
   if (/saas|software|app|tech|platform|tool|automat/.test(n)) return {
     type: 'saas',
     audience: `founders who are building but not growing fast enough`,
     scenarios: [
       `When you've shipped the product, you've got users, but you can't work out why 60% of them aren't coming back after week one`,
       `When your dev sprint is full but you're not sure half the features on the list are actually what users want`,
-      `When you're doing all the right things — content, outreach, product updates — but MRR has been flat for three months`
+      `When you're doing all the right things â€” content, outreach, product updates â€” but MRR has been flat for three months`
     ],
     painPoints: [
-      `Churn eating growth as fast as acquisition — net revenue barely moves`,
+      `Churn eating growth as fast as acquisition â€” net revenue barely moves`,
       `Building features users asked for but activation rates aren't improving`,
-      `No onboarding system — users sign up, poke around, and leave before seeing value`,
+      `No onboarding system â€” users sign up, poke around, and leave before seeing value`,
       `Dev time spent on the wrong things because there's no clear signal from users`
     ],
     outcomes: [
-      `Onboarding flow rebuilt to hit the "aha moment" within the first session — churn drops within 30 days`,
+      `Onboarding flow rebuilt to hit the "aha moment" within the first session â€” churn drops within 30 days`,
       `Clear feature priority based on what actually correlates with retention, not gut feel`,
       `Automated email sequences that bring dormant users back without manual effort`,
-      `MRR movement within 60 days — or we keep working until it does`
+      `MRR movement within 60 days â€” or we keep working until it does`
     ],
     headline:  `${offer ? esc(offer) : 'Your Product'} Is Good. Here's Why It's Not Growing Faster.`,
-    subline:   `${offer || 'SaaS growth systems & retention automation'} · Churn reduction · Scalable from current stage`,
+    subline:   `${offer || 'SaaS growth systems & retention automation'} Â· Churn reduction Â· Scalable from current stage`,
     cta:       `Book a Free Discovery Call`,
     ctaLow:    `Want me to take a look at your onboarding flow and tell you what I'd change first?`,
     proof:     ['10+ SaaS products scaled', 'Avg 40% churn reduction in 60 days', 'From MVP to Series A', 'No bloated retainers'],
-    form:      { q1: `What stage is the product and what's your current MRR?`, q2: `Where are users dropping off — and do you know why yet?` }
+    form:      { q1: `What stage is the product and what's your current MRR?`, q2: `Where are users dropping off â€” and do you know why yet?` }
   };
 
-  /* ── DEFAULT ── */
+  /* â”€â”€ DEFAULT â”€â”€ */
   return {
     type: 'general',
     audience: `business owners${at} who are tired of inconsistent results`,
     scenarios: [
-      `When you have a great month and think you've cracked it — then the next month is half the revenue and you don't know why`,
-      `When a potential client lands on your site, looks around, and leaves without contacting you — and you have no idea it's happening`,
+      `When you have a great month and think you've cracked it â€” then the next month is half the revenue and you don't know why`,
+      `When a potential client lands on your site, looks around, and leaves without contacting you â€” and you have no idea it's happening`,
       `When you're doing everything you're "supposed" to do but the pipeline still feels like it's running on luck`
     ],
     painPoints: [
-      `Leads come in when you're busy — then dry up the moment you need them`,
-      `People visit your site${at} and leave without contacting you — nothing captures them`,
+      `Leads come in when you're busy â€” then dry up the moment you need them`,
+      `People visit your site${at} and leave without contacting you â€” nothing captures them`,
       `No follow-up system: enquiries that don't convert immediately just disappear`,
       `Competitors${at} winning jobs that should be coming to you`
     ],
     outcomes: [
-      `A consistent lead flow within 30 days — not dependent on referrals or luck`,
+      `A consistent lead flow within 30 days â€” not dependent on referrals or luck`,
       `Automated follow-up that contacts every enquiry within minutes, not days`,
-      `A site that converts visitors into booked calls — not just a digital brochure`,
-      `${offer || 'Your service'} positioned to win${at} — priced, presented and promoted properly`
+      `A site that converts visitors into booked calls â€” not just a digital brochure`,
+      `${offer || 'Your service'} positioned to win${at} â€” priced, presented and promoted properly`
     ],
-    headline:  `${offer ? esc(offer) : 'Your Business'}${at} — Built to Get Clients Consistently.`,
-    subline:   `Stop relying on referrals. Build a system that fills your pipeline — every month.`,
+    headline:  `${offer ? esc(offer) : 'Your Business'}${at} â€” Built to Get Clients Consistently.`,
+    subline:   `Stop relying on referrals. Build a system that fills your pipeline â€” every month.`,
     cta:       goal === 'bookings' ? `Book a Free Strategy Call` : `Get Your Free Growth Plan`,
     ctaLow:    `Want me to map out what this would look like for your business specifically?`,
     proof:     [`Trusted by ${loc || 'UK'} businesses`, 'Proven system', '14-day delivery', 'Free strategy call'],
-    form:      { q1: `What are you trying to achieve in the next 90 days?`, q2: `What's currently in place — and what do you think is missing?` }
+    form:      { q1: `What are you trying to achieve in the next 90 days?`, q2: `What's currently in place â€” and what do you think is missing?` }
   };
 }
 
-/* ── IMAGE LOOKUP ── */
+/* â”€â”€ IMAGE LOOKUP â”€â”€ */
 function getNicheImage(niche, offer, imgStyle, imgUrl, profileType) {
   if (imgUrl) return imgUrl;
   const n = (niche + ' ' + offer).toLowerCase();
@@ -1406,20 +1546,20 @@ function getNicheImage(niche, offer, imgStyle, imgUrl, profileType) {
   return imgs[resolvedStyle] || imgs.neutral;
 }
 
-/* ── THEME PRESETS ── */
+/* â”€â”€ THEME PRESETS â”€â”€ */
 const THEMES = {
   dark:     { bg:'#0a0a0f', bg2:'#0d0d14', card:'#121218', text:'#f0f0f5', muted:'#8888a0', border:'rgba(255,255,255,0.06)' },
   light:    { bg:'#f5f5fa', bg2:'#ffffff',  card:'#ffffff', text:'#1a1a2e', muted:'#666680', border:'rgba(0,0,0,0.08)' },
   contrast: { bg:'#000000', bg2:'#111111',  card:'#0d0d0d', text:'#ffffff', muted:'#aaaaaa', border:'rgba(255,255,255,0.12)' }
 };
 
-/* ── TONE ADAPTERS ── */
+/* â”€â”€ TONE ADAPTERS â”€â”€ */
 function applyTone(profile, tone) {
   if (tone === 'friendly') {
     return Object.assign({}, profile, {
       cta:    profile.ctaLow || 'Want me to map this out for you?',
       ctaLow: 'Let me show you exactly what this would look like for you',
-      headline: profile.headline.replace(/\.$/, '') + ' — Let\'s Fix That Together.'
+      headline: profile.headline.replace(/\.$/, '') + ' â€” Let\'s Fix That Together.'
     });
   }
   if (tone === 'aggressive') {
@@ -1428,19 +1568,19 @@ function applyTone(profile, tone) {
       headline: profile.headline.toUpperCase().substring(0,1) + profile.headline.substring(1)
     });
   }
-  return profile; // professional — default, no change
+  return profile; // professional â€” default, no change
 }
 
-/* ── LANDING PAGE GENERATOR ── */
+/* â”€â”€ LANDING PAGE GENERATOR â”€â”€ */
 function buildLandingPage({ name, niche, offer, goal, loc, profile, style, target, usp, price, stage }) {
   const p  = applyTone(profile, (style && style.tone) || 'professional');
   const st = style || { primary:'#ff2a2a', accent:'#ffffff', theme:'dark', tone:'professional', imgStyle:'auto', imgUrl:'' };
 
-  // ── Lead context injection — consume & clear so next manual generate is clean ──
+  // â”€â”€ Lead context injection â€” consume & clear so next manual generate is clean â”€â”€
   const lc = window.currentLeadContext || null;
   window.currentLeadContext = null;
 
-  // Defaults — may be overridden by lead context below
+  // Defaults â€” may be overridden by lead context below
   let overrideHeadline = p.headline;
   let overrideEyebrow  = usp || p.eyebrow || niche;
   let overrideSubline  = null; // null = use profile subline
@@ -1451,20 +1591,20 @@ function buildLandingPage({ name, niche, offer, goal, loc, profile, style, targe
 
   if (lc && lc.ctx) {
     const ctx = lc.ctx;
-    // 1. Headline — from context engine (specific to their situation)
+    // 1. Headline â€” from context engine (specific to their situation)
     overrideHeadline = ctx.headline;
-    // 2. Eyebrow — short positioning angle
+    // 2. Eyebrow â€” short positioning angle
     overrideEyebrow  = ctx.angle;
-    // 3. Subline — context-aware subtext (override p.subline)
+    // 3. Subline â€” context-aware subtext (override p.subline)
     overrideSubline  = ctx.subtext;
-    // 4. Scenarios — generated from their actual problem/emotion (replaces niche defaults)
+    // 4. Scenarios â€” generated from their actual problem/emotion (replaces niche defaults)
     leadScenarios    = ctx.scenarios;
     overrideScenariosLabel = 'Does this sound like you?';
-    // 5. CTA — personal, built-for-them
+    // 5. CTA â€” personal, built-for-them
     overrideCta    = lc.forcedCta
       || (lc.demoFocus
-        ? `I mocked up a ${lc.demoFocus} for this — want to see it?`
-        : 'I built this based on your post — want to see it?');
+        ? `I mocked up a ${lc.demoFocus} for this â€” want to see it?`
+        : 'I built this based on your post â€” want to see it?');
     overrideCtaLow = lc.forcedCtaLow
       || 'Want to see how this would work for your specific situation?';
   } else if (lc) {
@@ -1472,7 +1612,7 @@ function buildLandingPage({ name, niche, offer, goal, loc, profile, style, targe
     if (lc.angle) overrideHeadline = lc.angle;
     if (lc.problem) overrideEyebrow = `Solving: ${lc.problem}`;
     if (lc.pain) { leadScenarios = [lc.pain, ...leadScenarios].slice(0, 4); overrideScenariosLabel = 'Does this sound like you?'; }
-    overrideCta = lc.forcedCta || (lc.demoFocus ? `I mocked up a ${lc.demoFocus} for this — want to see it?` : 'I built this based on your post — want to see it?');
+    overrideCta = lc.forcedCta || (lc.demoFocus ? `I mocked up a ${lc.demoFocus} for this â€” want to see it?` : 'I built this based on your post â€” want to see it?');
     overrideCtaLow = lc.forcedCtaLow || 'Want to see how this would work for your specific situation?';
   }
 
@@ -1482,13 +1622,13 @@ function buildLandingPage({ name, niche, offer, goal, loc, profile, style, targe
   const priceLabel  = { budget:'Affordable Pricing', mid:'Professional Service', premium:'Premium Service' }[price] || 'Professional Service';
   const stageLine   = { new:'New & Already Delivering Results', growing:'Trusted & Growing Fast', established:'Established. Proven. Trusted.' }[stage] || '';
   const heroUsp     = `<div class="eyebrow">${esc(overrideEyebrow)}</div>`;
-  const targetBadge = target ? `<div class="proof-item"><span class="proof-dot">●</span>Serving ${esc(target)}</div>` : '';
-  const stageBadge  = stageLine ? `<div class="proof-item"><span class="proof-dot">●</span>${esc(stageLine)}</div>` : '';
-  const priceBadge  = `<div class="proof-item"><span class="proof-dot">●</span>${esc(priceLabel)}</div>`;
+  const targetBadge = target ? `<div class="proof-item"><span class="proof-dot">â—</span>Serving ${esc(target)}</div>` : '';
+  const stageBadge  = stageLine ? `<div class="proof-item"><span class="proof-dot">â—</span>${esc(stageLine)}</div>` : '';
+  const priceBadge  = `<div class="proof-item"><span class="proof-dot">â—</span>${esc(priceLabel)}</div>`;
   const th = THEMES[st.theme] || THEMES.dark;
   const imgSrc = getNicheImage(niche, offer, st.imgStyle, st.imgUrl, profile.type);
 
-  // When lead context exists — use context engine for ALL content blocks
+  // When lead context exists â€” use context engine for ALL content blocks
   const ctx            = lc && lc.ctx;
   const activePain     = ctx ? ctx.painPoints : p.painPoints;
   const activeOutcomes = ctx ? ctx.outcomes   : p.outcomes;
@@ -1496,11 +1636,11 @@ function buildLandingPage({ name, niche, offer, goal, loc, profile, style, targe
   const activeForm     = ctx ? ctx.formQs     : p.form;
 
   const painHTML  = activePain.map(pt =>
-    `<li><span class="x">✕</span> ${esc(pt)}</li>`).join('');
+    `<li><span class="x">âœ•</span> ${esc(pt)}</li>`).join('');
   const outHTML   = activeOutcomes.map(ot =>
-    `<li><span class="chk">✓</span> ${esc(ot)}</li>`).join('');
+    `<li><span class="chk">âœ“</span> ${esc(ot)}</li>`).join('');
   const proofHTML = activeProof.map(pr =>
-    `<div class="proof-item"><span class="proof-dot">●</span>${esc(pr)}</div>`).join('');
+    `<div class="proof-item"><span class="proof-dot">â—</span>${esc(pr)}</div>`).join('');
   const scenariosHTML = leadScenarios.map(s =>
     `<div class="scenario"><span class="sc-q">"</span>${esc(s)}<span class="sc-q">"</span></div>`).join('');
 
@@ -1615,7 +1755,7 @@ ${scenariosHTML ? `<section class="scenarios"><div class="scenarios-inner"><h2>$
 
 <section class="section" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
   <div class="section-inner">
-    <h2>${ctx ? 'Here\'s what\'s happening — and what changes' : 'What\'s broken — and what changes'}</h2>
+    <h2>${ctx ? 'Here\'s what\'s happening â€” and what changes' : 'What\'s broken â€” and what changes'}</h2>
     <div class="two-col">
       <div class="box pain">
         <h3>Right now</h3>
@@ -1631,7 +1771,7 @@ ${scenariosHTML ? `<section class="scenarios"><div class="scenarios-inner"><h2>$
 
 <section class="form-section" id="capture">
   <h2>${esc(overrideCtaLow || 'Let\'s map it out.')}</h2>
-  <p>Two quick questions. Then a free 30-minute call where we build the plan — specific to your business, not a template.</p>
+  <p>Two quick questions. Then a free 30-minute call where we build the plan â€” specific to your business, not a template.</p>
   <div class="form-wrap">
     <div>
       <label>${esc(activeForm.q1)}</label>
@@ -1643,7 +1783,7 @@ ${scenariosHTML ? `<section class="scenarios"><div class="scenarios-inner"><h2>$
     </div>
     <div>
       <label>Your name &amp; best contact number</label>
-      <input type="text" placeholder="Name · Phone / WhatsApp">
+      <input type="text" placeholder="Name Â· Phone / WhatsApp">
     </div>
     <a class="btn" href="https://calendly.com/thesaassin/build-your-system" target="_blank" rel="noopener">${esc(overrideCta)}</a>
     <p class="form-note">No spam. No hard sell. Just a 30-minute call with a clear plan.</p>
@@ -1657,7 +1797,7 @@ ${scenariosHTML ? `<section class="scenarios"><div class="scenarios-inner"><h2>$
 </html>`;
 }
 
-/* ── OUTREACH SEQUENCE GENERATOR (5 messages) ── */
+/* â”€â”€ OUTREACH SEQUENCE GENERATOR (5 messages) â”€â”€ */
 function buildOutreachSequence({ name, niche, offer, loc, profile, style }) {
   const p      = profile;
   const tone   = (style && style.tone) || 'professional';
@@ -1669,108 +1809,108 @@ function buildOutreachSequence({ name, niche, offer, loc, profile, style }) {
 
   // Opener CTA line varies by tone
   const opener_close = tone === 'friendly'
-    ? `I'd love to show you what a system built for your setup would look like — no pressure, just a quick look.\n\n15 min? → https://calendly.com/thesaassin/build-your-system`
+    ? `I'd love to show you what a system built for your setup would look like â€” no pressure, just a quick look.\n\n15 min? â†’ https://calendly.com/thesaassin/build-your-system`
     : tone === 'aggressive'
-    ? `If you want to fix that this month — reply and I'll send you a preview built specifically for ${name}.\n\nSlot: https://calendly.com/thesaassin/build-your-system`
-    : `Worth a 15-min call to see if there's a fit?\n\n→ https://calendly.com/thesaassin/build-your-system`;
+    ? `If you want to fix that this month â€” reply and I'll send you a preview built specifically for ${name}.\n\nSlot: https://calendly.com/thesaassin/build-your-system`
+    : `Worth a 15-min call to see if there's a fit?\n\nâ†’ https://calendly.com/thesaassin/build-your-system`;
 
   const followup_close = tone === 'friendly'
-    ? `Happy to just take a look and tell you honestly what I'd tweak. No prep needed.\n\n→ https://calendly.com/thesaassin/build-your-system`
+    ? `Happy to just take a look and tell you honestly what I'd tweak. No prep needed.\n\nâ†’ https://calendly.com/thesaassin/build-your-system`
     : tone === 'aggressive'
-    ? `Free audit. 30 minutes. You walk away with a plan either way.\n\nClaim it → https://calendly.com/thesaassin/build-your-system`
-    : `30 minutes → https://calendly.com/thesaassin/build-your-system`;
+    ? `Free audit. 30 minutes. You walk away with a plan either way.\n\nClaim it â†’ https://calendly.com/thesaassin/build-your-system`
+    : `30 minutes â†’ https://calendly.com/thesaassin/build-your-system`;
 
   return [
     {
-      label: '1 — Opener',
+      label: '1 â€” Opener',
       body:
-`[First Name] — quick one.
+`[First Name] â€” quick one.
 
 Are enquiries coming in consistently${at}, or is it still hit and miss month to month?
 
-I build client acquisition systems for ${niche} businesses — and the most common thing I see is: ${pain0.toLowerCase()}.
+I build client acquisition systems for ${niche} businesses â€” and the most common thing I see is: ${pain0.toLowerCase()}.
 
 ${scene ? 'Sound familiar?\n\n"' + scene + '"\n\n' : ''}${opener_close}
 
-— TheSaaSsin`
+â€” TheSaaSsin`
     },
     {
-      label: '2 — Value',
+      label: '2 â€” Value',
       body:
-`[First Name] — following up.
+`[First Name] â€” following up.
 
 Here's what I actually build for ${niche} businesses like ${name}:
 
-→ ${win0}
-→ ${p.outcomes[1]}
-→ ${p.outcomes[2] || 'A system that works without you manually chasing it'}
+â†’ ${win0}
+â†’ ${p.outcomes[1]}
+â†’ ${p.outcomes[2] || 'A system that works without you manually chasing it'}
 
 The whole thing is live in 14 days. No retainers, no lock-in.
 
 ${tone === 'friendly' ? 'Want me to show you what it looks like for your setup? No obligation.' : tone === 'aggressive' ? 'This is what your competitors are missing. Don\'t wait on it.' : p.ctaLow || 'Want me to show you what it looks like for your setup?'}
 
-→ https://calendly.com/thesaassin/build-your-system
+â†’ https://calendly.com/thesaassin/build-your-system
 
-— TheSaaSsin`
+â€” TheSaaSsin`
     },
     {
-      label: '3 — System Preview',
+      label: '3 â€” System Preview',
       body:
 `[First Name].
 
-I've built a system preview specifically for a ${niche} business${at}. Takes me about 20 minutes to put together — I did one for yours.
+I've built a system preview specifically for a ${niche} business${at}. Takes me about 20 minutes to put together â€” I did one for yours.
 
 It includes:
-· A landing page written around your actual offer
-· A 5-step outreach sequence
-· A CRM pipeline with lead scoring
-· Automated follow-up that contacts every lead within 5 minutes
+Â· A landing page written around your actual offer
+Â· A 5-step outreach sequence
+Â· A CRM pipeline with lead scoring
+Â· Automated follow-up that contacts every lead within 5 minutes
 
 I can walk you through the whole thing in 30 minutes. No prep needed from you.
 
 ${tone === 'friendly' ? 'If you like it, we can talk next steps. If not, you keep the preview.' : tone === 'aggressive' ? 'This is what\'s currently missing from your pipeline. Let me show you.' : 'If it\'s useful, great. If not, you leave with something concrete either way.'}
 
-→ https://calendly.com/thesaassin/build-your-system
+â†’ https://calendly.com/thesaassin/build-your-system
 
-— TheSaaSsin`
+â€” TheSaaSsin`
     },
     {
-      label: '4 — Follow-Up',
+      label: '4 â€” Follow-Up',
       body:
-`[First Name] — haven't heard back, which is fine.
+`[First Name] â€” haven't heard back, which is fine.
 
-One thing I've noticed with ${niche} businesses${at}: ${pain1.toLowerCase()} — and most people either don't know it's fixable, or they've tried something before that didn't work.
+One thing I've noticed with ${niche} businesses${at}: ${pain1.toLowerCase()} â€” and most people either don't know it's fixable, or they've tried something before that didn't work.
 
-${tone === 'aggressive' ? 'I\'m not here to waste your time — but if this is a real problem, let\'s solve it. 30 minutes is all it takes.' : 'I\'m not going to pitch you. But if you want a second opinion on your current setup, I\'ll give you one for free.'}
+${tone === 'aggressive' ? 'I\'m not here to waste your time â€” but if this is a real problem, let\'s solve it. 30 minutes is all it takes.' : 'I\'m not going to pitch you. But if you want a second opinion on your current setup, I\'ll give you one for free.'}
 
 ${followup_close}
 
-— TheSaaSsin`
+â€” TheSaaSsin`
     },
     {
-      label: '5 — Final Nudge',
+      label: '5 â€” Final Nudge',
       body:
-`[First Name] — last message from me.
+`[First Name] â€” last message from me.
 
 One question: is getting consistent clients for ${name} a priority right now, or is the focus elsewhere?
 
-If it is — I can help, and I can show you exactly how in 30 minutes.
+If it is â€” I can help, and I can show you exactly how in 30 minutes.
 
-If it's not the right time — no problem at all. I'll leave you to it.
+If it's not the right time â€” no problem at all. I'll leave you to it.
 
 ${tone === 'friendly' ? 'Either way, best of luck with it.' : 'Either way:'} https://calendly.com/thesaassin/build-your-system
 
-— TheSaaSsin`
+â€” TheSaaSsin`
     }
   ];
 }
 
-/* ── PACKAGE SUMMARY ── */
+/* â”€â”€ PACKAGE SUMMARY â”€â”€ */
 function buildPackageSummary({ name, profile, style }) {
   const s = style.systems || {};
   const tone = style.tone || 'professional';
   const outcome = profile.outcomes[0];
-  const toneLabel = { aggressive: '⚡ Aggressive', professional: '◼ Professional', friendly: '● Friendly' }[tone] || 'Professional';
+  const toneLabel = { aggressive: 'âš¡ Aggressive', professional: 'â—¼ Professional', friendly: 'â— Friendly' }[tone] || 'Professional';
 
   const components = [
     { id: 'landing',  label: 'Landing Page',        on: s.landing  !== false, icon: 'fa-file-code'      },
@@ -1782,9 +1922,9 @@ function buildPackageSummary({ name, profile, style }) {
 
   const countOn = components.filter(c => c.on).length;
   const expectedResult = countOn >= 4
-    ? '5–15 qualified leads/week within 14 days'
+    ? '5â€“15 qualified leads/week within 14 days'
     : countOn >= 3
-    ? '3–8 qualified leads/week within 21 days'
+    ? '3â€“8 qualified leads/week within 21 days'
     : 'Improved online conversion within 14 days';
 
   return { name, components, outcome, expectedResult, tone, toneLabel, countOn };
@@ -1803,14 +1943,14 @@ function showPackageSummary({ name, components, outcome, expectedResult, tone, t
   bar.innerHTML = `
     <div class="pkg-header" onclick="togglePkgBar()">
       <span class="pkg-label">System Package</span>
-      <span class="pkg-toggle-hint" id="pkg-toggle-hint">${wasCollapsed ? '▶ Show' : '▼ Hide'}</span>
+      <span class="pkg-toggle-hint" id="pkg-toggle-hint">${wasCollapsed ? 'â–¶ Show' : 'â–¼ Hide'}</span>
     </div>
     <div class="pkg-body" id="pkg-body">
-      <div class="pkg-name"><i class="fas fa-bolt"></i> ${esc(name)} — ${countOn} component${countOn !== 1 ? 's' : ''}</div>
+      <div class="pkg-name"><i class="fas fa-bolt"></i> ${esc(name)} â€” ${countOn} component${countOn !== 1 ? 's' : ''}</div>
       <div class="pkg-grid">${compHTML}</div>
       <div class="pkg-result">
         Expected: <strong>${expectedResult}</strong>
-        <div class="pkg-meta">Tone: ${toneLabel} &nbsp;·&nbsp; Outcome: ${esc(outcome)}</div>
+        <div class="pkg-meta">Tone: ${toneLabel} &nbsp;Â·&nbsp; Outcome: ${esc(outcome)}</div>
       </div>
     </div>`;
   bar.classList.add('visible');
@@ -1823,10 +1963,10 @@ function togglePkgBar() {
   const hint = document.getElementById('pkg-toggle-hint');
   if (!bar) return;
   const collapsed = bar.classList.toggle('pkg-collapsed');
-  if (hint) hint.textContent = collapsed ? '▶ Show' : '▼ Hide';
+  if (hint) hint.textContent = collapsed ? 'â–¶ Show' : 'â–¼ Hide';
 }
 
-/* ── CRM STRUCTURE GENERATOR ── */
+/* â”€â”€ CRM STRUCTURE GENERATOR â”€â”€ */
 function buildCRMStructure({ name, niche, offer, goal, profile }) {
   return {
     client: name,
@@ -1851,7 +1991,7 @@ function buildCRMStructure({ name, niche, offer, goal, profile }) {
   };
 }
 
-/* ── OFFER DEFINITION GENERATOR ── */
+/* â”€â”€ OFFER DEFINITION GENERATOR â”€â”€ */
 function buildOfferDefinition({ name, niche, offer, goal, loc, profile }) {
   return {
     client:      name,
@@ -1862,15 +2002,15 @@ function buildOfferDefinition({ name, niche, offer, goal, loc, profile }) {
     mechanism:   'Full done-for-you system: landing page + CRM + automation + outreach',
     timeframe:   '14 days to live',
     guarantee:   'If it\'s not live in 14 days, you don\'t pay',
-    price:       goal === 'bookings' ? '£597/mo (Growth) or £247 one-off (Starter)' : '£97–£1,197 depending on scope',
+    price:       goal === 'bookings' ? 'Â£597/mo (Growth) or Â£247 one-off (Starter)' : 'Â£97â€“Â£1,197 depending on scope',
     positioning: `"I don't build websites. I build systems that fill your calendar."`,
-    pitch:       `${name} is a ${niche} business struggling with ${profile.painPoints[0].toLowerCase()}. We solve that in 14 days with a full system. Priced from £97.`
+    pitch:       `${name} is a ${niche} business struggling with ${profile.painPoints[0].toLowerCase()}. We solve that in 14 days with a full system. Priced from Â£97.`
   };
 }
 
-/* ══════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    CRM / LEADS
-══════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 async function loadLeads() {
   try {
     const res  = await fetch(API + '/leads');
@@ -1887,7 +2027,7 @@ function renderLeads(leads) {
   document.getElementById('stat-closed').textContent    = leads.filter(l => l.status === 'closed').length;
 
   if (!leads.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted);font-size:.8rem">No leads yet — add your first one</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted);font-size:.8rem">No leads yet â€” add your first one</td></tr>';
     return;
   }
   tbody.innerHTML = leads.map(l => {
@@ -1899,11 +2039,11 @@ function renderLeads(leads) {
       contacted: '<span class="badge badge-pending">contacted</span>',
       qualified: '<span class="badge badge-active">qualified</span>',
       closed:    '<span class="badge badge-active">closed</span>'
-    }[l.status] || '<span class="badge">—</span>';
-    const date = l.createdAt ? new Date(l.createdAt).toLocaleDateString('en-GB') : '—';
+    }[l.status] || '<span class="badge">â€”</span>';
+    const date = l.createdAt ? new Date(l.createdAt).toLocaleDateString('en-GB') : 'â€”';
     return `<tr>
-      <td>${esc(l.name || '—')}</td>
-      <td>${esc(l.business || '—')}</td>
+      <td>${esc(l.name || 'â€”')}</td>
+      <td>${esc(l.business || 'â€”')}</td>
       <td>${statusBadge}</td>
       <td>
         ${score}
@@ -1931,12 +2071,12 @@ function openCrmLeadDetail(id) {
   const lead = (window._crmLeads || {})[id];
   if (!lead) return;
   const modal = document.getElementById('modal-lead-detail') || createLeadDetailModal();
-  document.getElementById('lead-detail-name').textContent = esc(lead.name || '—');
-  document.getElementById('lead-detail-business').textContent = esc(lead.business || '—');
-  document.getElementById('lead-detail-status').textContent = (lead.status || '—').toUpperCase();
+  document.getElementById('lead-detail-name').textContent = esc(lead.name || 'â€”');
+  document.getElementById('lead-detail-business').textContent = esc(lead.business || 'â€”');
+  document.getElementById('lead-detail-status').textContent = (lead.status || 'â€”').toUpperCase();
   document.getElementById('lead-detail-score').textContent = Math.min(100, Math.max(0, lead.score || 0));
-  document.getElementById('lead-detail-added').textContent = lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : '—';
-  document.getElementById('lead-detail-source').textContent = esc(lead.source || '—');
+  document.getElementById('lead-detail-added').textContent = lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'â€”';
+  document.getElementById('lead-detail-source').textContent = esc(lead.source || 'â€”');
   document.getElementById('btn-remove-lead').dataset.leadId = id;
   modal.style.display = 'flex';
 }
@@ -1951,30 +2091,30 @@ function createLeadDetailModal() {
       <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:20px">
         <div style="display:flex;flex-direction:column;gap:8px">
           <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;font-weight:600">Name</label>
-          <div id="lead-detail-name" style="font-size:1.1rem;color:var(--text)">—</div>
+          <div id="lead-detail-name" style="font-size:1.1rem;color:var(--text)">â€”</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;font-weight:600">Business</label>
-          <div id="lead-detail-business" style="font-size:.95rem;color:var(--text)">—</div>
+          <div id="lead-detail-business" style="font-size:.95rem;color:var(--text)">â€”</div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
           <div style="display:flex;flex-direction:column;gap:8px">
             <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;font-weight:600">Status</label>
-            <div id="lead-detail-status" style="font-size:.95rem;color:var(--accent)">—</div>
+            <div id="lead-detail-status" style="font-size:.95rem;color:var(--accent)">â€”</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:8px">
             <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;font-weight:600">Score</label>
-            <div id="lead-detail-score" style="font-size:.95rem;color:var(--text)">—</div>
+            <div id="lead-detail-score" style="font-size:.95rem;color:var(--text)">â€”</div>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
           <div style="display:flex;flex-direction:column;gap:8px">
             <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;font-weight:600">Added</label>
-            <div id="lead-detail-added" style="font-size:.85rem;color:var(--text)">—</div>
+            <div id="lead-detail-added" style="font-size:.85rem;color:var(--text)">â€”</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:8px">
             <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;font-weight:600">Source</label>
-            <div id="lead-detail-source" style="font-size:.85rem;color:var(--text)">—</div>
+            <div id="lead-detail-source" style="font-size:.85rem;color:var(--text)">â€”</div>
           </div>
         </div>
       </div>
@@ -2050,9 +2190,9 @@ document.getElementById('btn-export-csv').addEventListener('click', async () => 
   } catch { toast('Export failed', 'err'); }
 });
 
-/* ══════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    OUTREACH QUEUE
-══════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 let currentOutreachTab = 'pending';
 
 document.querySelectorAll('.out-tab').forEach(tab => {
@@ -2110,18 +2250,18 @@ async function updateOutreach(id, status) {
   } catch { toast('Update failed', 'err'); }
 }
 
-/* ── HELPERS ── */
+/* â”€â”€ HELPERS â”€â”€ */
 function esc(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ══════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    LEAD FEED
-══════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* ── LEAD QUALITY FILTERS ── */
+/* â”€â”€ LEAD QUALITY FILTERS â”€â”€ */
 
-// Tier 1 — Desperation: existential business pain, highest urgency
+// Tier 1 â€” Desperation: existential business pain, highest urgency
 const DESPERATION_SIGNALS = [
   'about to give up','considering quitting','about to quit','about to close',
   'going under','on the verge of closing','thinking of shutting down','closing down',
@@ -2141,7 +2281,7 @@ const DESPERATION_SIGNALS = [
   'negative roi','no roi','money pit','hemorrhaging money'
 ];
 
-// Tier 2 — Real intent: explicit, direct pain language
+// Tier 2 â€” Real intent: explicit, direct pain language
 const REAL_INTENT = [
   // Zero clients
   'no clients','zero clients','no customers','no work','no jobs',
@@ -2191,7 +2331,7 @@ const REAL_INTENT = [
   'big client left','lost a major client'
 ];
 
-// Tier 3 — Soft intent: less explicit but relevant when paired with buyer context
+// Tier 3 â€” Soft intent: less explicit but relevant when paired with buyer context
 const SOFT_INTENT = [
   'how do i','how can i','any advice','struggling with','not getting',
   'need help with','what should i do','why am i not','anyone else struggle',
@@ -2221,7 +2361,7 @@ const PRESENCE_GAP_INTENT = [
   'google maps listing','facebook page','instagram page'
 ];
 
-// Buyer context — confirms they\'re a business operator
+// Buyer context â€” confirms they\'re a business operator
 const BUYER_SIGNALS = [
   'clients','customers','leads','bookings','sales','revenue','enquiries',
   'appointments','contracts','jobs','business','freelance','my business',
@@ -2238,7 +2378,7 @@ const BUSINESS_SIGNALS = [
   'google maps listing','listing','facebook page','instagram page'
 ];
 
-// Financial pressure — amplifies urgency when detected alongside pain
+// Financial pressure â€” amplifies urgency when detected alongside pain
 const FINANCIAL_PRESSURE = [
   'can\'t pay','can\'t afford','struggling financially','financial pressure',
   'burning money','burning savings','burning cash','negative cash flow',
@@ -2250,7 +2390,7 @@ const FINANCIAL_PRESSURE = [
   'in the hole','operating at a loss','can\'t sustain','unsustainable'
 ];
 
-// Time pressure — shows urgency window is closing
+// Time pressure â€” shows urgency window is closing
 const TIME_PRESSURE = [
   'this month','end of month','by end of','before the end',
   'need it now','need this asap','asap','right now','immediately',
@@ -2261,7 +2401,7 @@ const TIME_PRESSURE = [
   'urgent','urgently','desperate','desperately'
 ];
 
-// Hard excludes — disqualify immediately
+// Hard excludes â€” disqualify immediately
 const HARD_EXCLUDE = [
   // Job hunting / employment
   'looking for a job','job posting','job offer','hiring manager','apply for',
@@ -2269,7 +2409,7 @@ const HARD_EXCLUDE = [
   // Mental health (therapy client context)
   'therapist','therapy session','mental health client','counselling client',
   'my therapist','seeing a therapist',
-  // Success posts — already solved it
+  // Success posts â€” already solved it
   'i got a client','landed a client','just closed','i closed a deal',
   'signed a client','won a client','got my first client','finally got clients',
   'i made it','hit my goal','reached my target','celebrating',
@@ -2292,7 +2432,7 @@ function hasBusinessContext(t) {
 function scorePost(title, text, isComment = false) {
   const raw = (title + ' ' + text).toLowerCase();
 
-  // Hard excludes — reject immediately
+  // Hard excludes â€” reject immediately
   if (HARD_EXCLUDE.some(k => raw.includes(k))) return 0;
 
   // Must have business context (comments already adjacent)
@@ -2306,28 +2446,28 @@ function scorePost(title, text, isComment = false) {
   const hasWebPresence = WEB_PRESENCE_SIGNALS.some(k => raw.includes(k));
   const hasPresenceGap = PRESENCE_GAP_INTENT.some(k => raw.includes(k));
 
-  // ── Tier 1: Desperation — near-certain high-priority lead
+  // â”€â”€ Tier 1: Desperation â€” near-certain high-priority lead
   if (hasDesper) {
     score += 75;
   }
-  // ── Tier 2: Real explicit pain
+  // â”€â”€ Tier 2: Real explicit pain
   else if (REAL_INTENT.some(k => raw.includes(k))) {
     score += 50;
   }
-  // ── Tier 3: Soft intent (only with buyer signal)
+  // â”€â”€ Tier 3: Soft intent (only with buyer signal)
   else if (SOFT_INTENT.some(k => raw.includes(k)) && hasBuyer) {
     score += 25;
   }
-  // ── Tier 4: Web presence pain for business owners
+  // â”€â”€ Tier 4: Web presence pain for business owners
   else if (hasWebPresence && (hasBuyer || /small business|business owner|local business|my business|company|shop|service/.test(raw))) {
     score += hasPresenceGap ? 42 : 28;
   }
-  // No detectable pain/intent → not a lead
+  // No detectable pain/intent â†’ not a lead
   else {
     return 0;
   }
 
-  // Amplifiers — stack on top of base
+  // Amplifiers â€” stack on top of base
   if (hasBuyer)       score += 10;  // confirmed business context
   if (hasFinancial)   score += 12;  // financial pressure = urgency
   if (hasTimePressure) score += 10; // time pressure = urgency
@@ -2343,29 +2483,29 @@ function scorePost(title, text, isComment = false) {
     DESPERATION_SIGNALS.some(k => raw.includes(k)),
     hasFinancial,
     hasTimePressure,
-    /spent|wasted|burned/.test(raw) && /\$|£|€|\d+k|\d+ (hundred|thousand)/.test(raw)
+    /spent|wasted|burned/.test(raw) && /\$|Â£|â‚¬|\d+k|\d+ (hundred|thousand)/.test(raw)
   ].filter(Boolean).length;
   if (painCount >= 3) score += 10; // multi-dimensional pain = very hot lead
   if (painCount >= 4) score += 5;  // extreme stacking bonus
 
-  // Post length signal — longer = more genuine, not a throwaway post
+  // Post length signal â€” longer = more genuine, not a throwaway post
   if (raw.length > 400) score += 5;
   if (raw.length > 800) score += 5;
 
   return Math.max(0, Math.min(score, 100));
 }
 
-/* ── ANALYSIS ENGINE ── */
+/* â”€â”€ ANALYSIS ENGINE â”€â”€ */
 function analyzePost(title, text, preScore) {
   const t = (title + ' ' + text).toLowerCase();
   const urgency = preScore !== undefined ? preScore : scorePost(title, text);
 
-  // ── Desperation tier check (drives opener + tip tone)
+  // â”€â”€ Desperation tier check (drives opener + tip tone)
   const isDesparate = DESPERATION_SIGNALS.some(k => t.includes(k)) || urgency >= 85;
   const hasFinancialPain = FINANCIAL_PRESSURE.some(k => t.includes(k));
   const hasTimePain = TIME_PRESSURE.some(k => t.includes(k));
 
-  // ── Niche detection — expanded patterns (40+ niches)
+  // â”€â”€ Niche detection â€” expanded patterns (40+ niches)
   const niche = /plumb|pipe|boiler|heating|gas safe|water|sanitation/.test(t)            ? 'Plumber'
     : /electrician|wiring|fuse|eicr|niceic|sparky|electrics|commercial electrics/.test(t)             ? 'Electrician'
     : /builder|construction|renovation|extension|loft|joiner|carpenter|new build|bricklayer/.test(t) ? 'Builder'
@@ -2406,9 +2546,9 @@ function analyzePost(title, text, preScore) {
     : /consultant|specialisty|niche|industry specific|niche market/.test(t)          ? 'Specialist Consultant'
     : 'Business Owner';
 
-  // ── Problem type detection — specific language, not generic labels
+  // â”€â”€ Problem type detection â€” specific language, not generic labels
   const problem = /ads|paid|ppc|facebook ad|google ad|instagram ad|meta ad/.test(t)
-    ? /spend|wast|burn|£|€|\$|money|budget/.test(t)
+    ? /spend|wast|burn|Â£|â‚¬|\$|money|budget/.test(t)
       ? 'Spending money on ads but not getting clients from it'
       : 'Running ads but not seeing any results'
     : /cold (email|outreach|dm|message)|no (reply|response|replies)/.test(t)
@@ -2418,7 +2558,7 @@ function analyzePost(title, text, preScore) {
     : /social media|post(ing)?|content|instagram|tiktok|reels|shorts/.test(t)
     ? 'Posting content every day but it\'s not bringing in clients'
     : /referral|word of mouth|dried up/.test(t)
-    ? 'Referrals have dried up — no consistent way to get new work'
+    ? 'Referrals have dried up â€” no consistent way to get new work'
     : /proposal|quote|follow.?up|ghost/.test(t)
     ? 'Sending quotes and proposals but prospects go cold or ghost'
     : /network(ing)?|event|chamber|bni/.test(t)
@@ -2428,98 +2568,98 @@ function analyzePost(title, text, preScore) {
     : /no (clients|customers|work|bookings|enquiries|leads|sales)/.test(t)
     ? 'No consistent flow of new clients or enquiries'
     : /slow|quiet|dead|dry/.test(t)
-    ? 'Things have gone quiet — not enough work coming in'
+    ? 'Things have gone quiet â€” not enough work coming in'
     : /feast|famine|inconsistent/.test(t)
-    ? 'Boom and bust — great months followed by nothing'
+    ? 'Boom and bust â€” great months followed by nothing'
     : /tried|wasted|nothing work/.test(t)
     ? 'Tried different things but nothing\'s actually working'
     : hasFinancialPain
-    ? 'Financial pressure building — the current approach isn\'t bringing in enough'
+    ? 'Financial pressure building â€” the current approach isn\'t bringing in enough'
     : 'Struggling to get a consistent flow of new clients';
 
-  // ── Root cause
+  // â”€â”€ Root cause
   const cause = /ads|paid|ppc/.test(t)
-    ? 'Traffic without a conversion system — clicks disappear with nothing captured'
+    ? 'Traffic without a conversion system â€” clicks disappear with nothing captured'
     : /cold|outreach|dm/.test(t)
-    ? 'Generic messages with no personalisation or follow-up — easy to ignore'
+    ? 'Generic messages with no personalisation or follow-up â€” easy to ignore'
     : /website|landing|traffic/.test(t)
     ? 'No clear offer, no trust signals, no way to capture interest'
     : /social|content|post/.test(t)
-    ? 'Content builds an audience, not a pipeline — the bridge between them is missing'
+    ? 'Content builds an audience, not a pipeline â€” the bridge between them is missing'
     : /referral/.test(t)
-    ? 'One channel means one point of failure — nothing to fall back on'
+    ? 'One channel means one point of failure â€” nothing to fall back on'
     : /proposal|quote|ghost/.test(t)
-    ? 'No follow-up sequence — the decision window closes and they move on'
+    ? 'No follow-up sequence â€” the decision window closes and they move on'
     : /network/.test(t)
     ? 'Networking generates awareness but there\'s no system to turn it into booked work'
     : hasFinancialPain
-    ? 'The spend is outpacing the revenue — no acquisition system means costs compound'
-    : 'No system — relying on luck, timing, and word of mouth';
+    ? 'The spend is outpacing the revenue â€” no acquisition system means costs compound'
+    : 'No system â€” relying on luck, timing, and word of mouth';
 
-  // ── Pitch angle — direct, no wrapper quotes
+  // â”€â”€ Pitch angle â€” direct, no wrapper quotes
   const angle = isDesparate
-    ? `This is exactly the situation that a proper acquisition system fixes — and fast. The good news is the work is already there, it just isn't being captured.`
+    ? `This is exactly the situation that a proper acquisition system fixes â€” and fast. The good news is the work is already there, it just isn't being captured.`
     : /ads|paid/.test(t)
     ? /spend|wast|burn|money/.test(t)
       ? 'Spending money on ads without a system to convert them is just burning cash'
-      : 'You don\'t need more ad spend — you need a system that converts what you already have'
+      : 'You don\'t need more ad spend â€” you need a system that converts what you already have'
     : /cold|outreach/.test(t)
-    ? 'Cold messaging doesn\'t convert anymore — here\'s what does'
+    ? 'Cold messaging doesn\'t convert anymore â€” here\'s what does'
     : /website|landing/.test(t)
-    ? 'Getting traffic but losing every visitor — here\'s why and how to fix it'
+    ? 'Getting traffic but losing every visitor â€” here\'s why and how to fix it'
     : /social|content/.test(t)
     ? 'Posting every day without a capture system is just content with no pipeline'
     : /referral/.test(t)
     ? 'Referrals drying up means you need a system that doesn\'t rely on luck'
     : /no client|no work|no lead|no book/.test(t)
-    ? 'No clients usually means one thing — no system to attract and convert them'
+    ? 'No clients usually means one thing â€” no system to attract and convert them'
     : /slow|quiet|dry/.test(t)
-    ? 'A quiet month isn\'t bad luck — it\'s a gap in the system'
-    : 'The issue isn\'t your service — it\'s that the right people can\'t find and trust you yet';
+    ? 'A quiet month isn\'t bad luck â€” it\'s a gap in the system'
+    : 'The issue isn\'t your service â€” it\'s that the right people can\'t find and trust you yet';
 
-  // ── Demo focus — what to actually show them
+  // â”€â”€ Demo focus â€” what to actually show them
   const demoFocus = /ads|paid/.test(t)
     ? 'lead capture page + follow-up sequence to stop losing clicks'
     : /cold|outreach/.test(t)
-    ? 'landing page they can review before replying — personalised to their sector'
+    ? 'landing page they can review before replying â€” personalised to their sector'
     : /website|landing/.test(t)
     ? 'rebuilt landing page with offer clarity and a real CTA'
     : /social|content/.test(t)
     ? 'lead magnet page + CRM to turn followers into actual enquiries'
     : /referral/.test(t)
-    ? 'full inbound pipeline — page, outreach, and follow-up'
+    ? 'full inbound pipeline â€” page, outreach, and follow-up'
     : isDesparate
-    ? 'full acquisition system — fast-track setup to get leads coming in immediately'
-    : 'client acquisition system — page, CRM, and outreach';
+    ? 'full acquisition system â€” fast-track setup to get leads coming in immediately'
+    : 'client acquisition system â€” page, CRM, and outreach';
 
-  // ── Opener — tiered by desperation/urgency level
+  // â”€â”€ Opener â€” tiered by desperation/urgency level
   const opener = isDesparate
-    ? `Read your post — I work specifically with ${niche.toLowerCase()} owners in this exact situation. I've fixed this before and I can show you what needs to change. No pitch, just a straight look at what's missing. Want me to break it down?`
+    ? `Read your post â€” I work specifically with ${niche.toLowerCase()} owners in this exact situation. I've fixed this before and I can show you what needs to change. No pitch, just a straight look at what's missing. Want me to break it down?`
     : urgency >= 70
-    ? `Saw your post — I build acquisition systems for ${niche.toLowerCase()} businesses and this is exactly what I fix. I can put together a preview for your setup today. Worth a look?`
-    : `Saw this and recognised it — the problem usually isn't the service, it's the system behind it. I map this out for free. Want to see what that would look like for you?`;
+    ? `Saw your post â€” I build acquisition systems for ${niche.toLowerCase()} businesses and this is exactly what I fix. I can put together a preview for your setup today. Worth a look?`
+    : `Saw this and recognised it â€” the problem usually isn't the service, it's the system behind it. I map this out for free. Want to see what that would look like for you?`;
 
-  // ── Urgency reason — why this score (shown in tip)
+  // â”€â”€ Urgency reason â€” why this score (shown in tip)
   const urgencyReason = isDesparate   ? 'Desperation signal detected'
     : hasFinancialPain                ? 'Financial pressure language detected'
     : hasTimePain                     ? 'Time-pressure language detected'
     : urgency >= 60                   ? 'Strong direct pain signal'
     : urgency >= 40                   ? 'Clear business pain + buyer context'
-    :                                   'Soft intent — qualify before pitching';
+    :                                   'Soft intent â€” qualify before pitching';
 
-  // ── Tip — action-oriented, tiered
+  // â”€â”€ Tip â€” action-oriented, tiered
   const tip = isDesparate
-    ? `🔥 Desperation signal — message NOW, this closes fast. Lead with empathy: "I've fixed this exact situation before"`
+    ? `ðŸ”¥ Desperation signal â€” message NOW, this closes fast. Lead with empathy: "I've fixed this exact situation before"`
     : urgency >= 70
-    ? `⚡ High intent — message within the hour. ${hasTimePain ? 'Time pressure detected — they need this urgently.' : 'Window closes fast on hot posts.'}`
+    ? `âš¡ High intent â€” message within the hour. ${hasTimePain ? 'Time pressure detected â€” they need this urgently.' : 'Window closes fast on hot posts.'}`
     : urgency >= 40
-    ? `💬 Empathy first — acknowledge the pain before any pitch. ${hasFinancialPain ? 'Financial pressure detected — speed and ROI matter.' : ''}`
-    : `🔍 Qualify first — ask one specific question before investing time`;
+    ? `ðŸ’¬ Empathy first â€” acknowledge the pain before any pitch. ${hasFinancialPain ? 'Financial pressure detected â€” speed and ROI matter.' : ''}`
+    : `ðŸ” Qualify first â€” ask one specific question before investing time`;
 
   const urgencyLabel = urgency >= 85 ? 'Critical' : urgency >= 70 ? 'High' : urgency >= 40 ? 'Medium' : 'Low';
   const urgencyColor = urgency >= 85 ? '#ef4444' : urgency >= 70 ? '#22c55e' : urgency >= 40 ? '#f59e0b' : '#8888a0';
 
-  // ── Lead Type — Direct / Operator / Partner ──
+  // â”€â”€ Lead Type â€” Direct / Operator / Partner â”€â”€
   const leadType = detectLeadType(title, text, '', urgency);
   const painProfile = detectPainProfile(title, text, problem, cause);
 
@@ -2590,37 +2730,37 @@ function detectPainProfile(title, text, problem, cause) {
   };
 }
 
-/* ══════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    LEAD TYPE DETECTION
    Direct Client | Operator/Agency | Strategic Partner
-══════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 const LEAD_TYPES = {
   direct: {
     key:     'direct',
     label:   'Direct Client',
-    badge:   '💰',
+    badge:   'ðŸ’°',
     color:   '#22c55e',
     bg:      'rgba(34,197,94,.12)',
     tagline: 'Money Now',
-    pitch:   'Landing page · CRM · Outreach · Follow-up'
+    pitch:   'Landing page Â· CRM Â· Outreach Â· Follow-up'
   },
   operator: {
     key:     'operator',
     label:   'Potential Partner',
-    badge:   '⚡',
+    badge:   'âš¡',
     color:   '#f59e0b',
     bg:      'rgba(245,158,11,.12)',
     tagline: 'Partner Fit',
-    pitch:   'White-label backend — you bring clients, I build the system'
+    pitch:   'White-label backend â€” you bring clients, I build the system'
   },
   partner: {
     key:     'partner',
     label:   'Larger Distribution',
-    badge:   '🚀',
+    badge:   'ðŸš€',
     color:   '#a855f7',
     bg:      'rgba(168,85,247,.12)',
     tagline: 'Scale Channel',
-    pitch:   'Integration · White-label · Scale layer'
+    pitch:   'Integration Â· White-label Â· Scale layer'
   }
 };
 
@@ -2628,7 +2768,7 @@ function detectLeadType(title, text, subreddit, urgency) {
   const full = (title + ' ' + text).toLowerCase();
   const sub  = (subreddit || '').toLowerCase();
 
-  // ── Partner signals ──
+  // â”€â”€ Partner signals â”€â”€
   const partnerWords = [
     'saas','software platform','marketplace','app for businesses','white.?label',
     'integration','reseller','franchise','enterprise','b2b platform',
@@ -2640,7 +2780,7 @@ function detectLeadType(title, text, subreddit, urgency) {
   let pScore = partnerWords.filter(w => new RegExp(w).test(full)).length * 3
              + (partnerSubs.includes(sub) ? 4 : 0);
 
-  // ── Operator/Agency signals ──
+  // â”€â”€ Operator/Agency signals â”€â”€
   const operatorWords = [
     'web design','web designer','website designer','digital agency',
     'marketing agency','seo agency','social media agency','ppc agency',
@@ -2663,7 +2803,7 @@ function detectLeadType(title, text, subreddit, urgency) {
   // LinkedIn posts skew heavily operator/partner
   if (sub === '' && /linkedin/.test(full)) oScore += 3;
 
-  // ── Decide ──
+  // â”€â”€ Decide â”€â”€
   if (pScore >= 5) return LEAD_TYPES.partner;
   if (oScore >= 4) return LEAD_TYPES.operator;
   if (oScore >= 2 && oScore > pScore) return LEAD_TYPES.operator;
@@ -2732,9 +2872,9 @@ function buildFeedAnalysis(post) {
   };
 }
 
-/* ── KEYWORD POOL ── */
+/* â”€â”€ KEYWORD POOL â”€â”€ */
 const KW_POOL = [
-  // ── Universal desperation / existential pain ──
+  // â”€â”€ Universal desperation / existential pain â”€â”€
   'about to give up','considering quitting','thinking of shutting down',
   'running out of money','burning through savings','cant pay myself',
   'desperate for clients','need clients urgently','business failing',
@@ -2743,26 +2883,26 @@ const KW_POOL = [
   'wasted my budget on ads','negative roi','burning cash',
   'going under','seriously considering closing','not sure i can continue',
 
-  // ── Universal no-client pain ──
+  // â”€â”€ Universal no-client pain â”€â”€
   'no clients','zero clients','no customers','no enquiries','no leads',
   'no sales','no bookings','no work','no jobs','no revenue',
   'zero leads','zero sales','zero bookings','0 clients','0 leads',
 
-  // ── Business slow ──
+  // â”€â”€ Business slow â”€â”€
   'dead month','slow month','quiet month','feast or famine',
   'referrals dried up','business is slow','clients dried up','dry spell',
   'no work coming in','losing clients','clients ghosting',
   'been slow for months','extremely slow','painfully slow','barely any work',
   'nothing coming in','a trickle of work','almost no enquiries',
 
-  // ── Tried and failed ──
+  // â”€â”€ Tried and failed â”€â”€
   'tried everything','nothing is working','nothing working','tried multiple things',
   'tried different approaches','spent months trying','been at this for months',
   'a year in and nothing','six months of nothing','three months no clients',
   'what am i doing wrong','not sure what im doing wrong',
   'any advice on getting clients','what actually works for getting clients',
 
-  // ── Marketing / ads not working ──
+  // â”€â”€ Marketing / ads not working â”€â”€
   'ads not working','ads not converting','facebook ads not working',
   'google ads wasting money','instagram ads no results','meta ads failing',
   'cold outreach no response','cold email not working','no replies to outreach',
@@ -2775,7 +2915,7 @@ const KW_POOL = [
   'proposals not converting','getting ghosted after quotes','quotes ignored',
   'sending proposals hearing nothing','follow ups going nowhere',
 
-  // ── Specific questions Reddit users ask ──
+  // â”€â”€ Specific questions Reddit users ask â”€â”€
   'how do i get clients','how to get clients','best way to find clients',
   'where do i find clients','where to find clients',
   'how to get my first client','struggling to get first client',
@@ -2786,14 +2926,14 @@ const KW_POOL = [
   'how to stop feast and famine','how to get steady work',
   'how to build a client base','how to fill my calendar',
 
-  // ── Photography & videography ──
+  // â”€â”€ Photography & videography â”€â”€
   'need more photography clients','photography business slow',
   'wedding photography clients','struggling photographer',
   'photography marketing','get more wedding bookings',
   'videographer clients','video business slow','no photo bookings',
   'photographer no work','slow season photography',
 
-  // ── Trades & home services ──
+  // â”€â”€ Trades & home services â”€â”€
   'plumber marketing','electrician getting clients','hvac marketing',
   'landscaping clients','cleaning business clients','tradesman no work',
   'builder slow','no plumbing jobs','how to get more jobs trades',
@@ -2801,13 +2941,13 @@ const KW_POOL = [
   'roofer getting clients','joiner no work','carpenter clients',
   'no building jobs','how to get more jobs as a tradesman',
 
-  // ── Fitness & health ──
+  // â”€â”€ Fitness & health â”€â”€
   'personal trainer clients','gym clients','fitness coach marketing',
   'no personal training clients','online fitness coaching',
   'health coach clients','nutritionist clients','no pt clients',
   'struggling personal trainer','fitness business slow',
 
-  // ── Marketing agencies & freelance ──
+  // â”€â”€ Marketing agencies & freelance â”€â”€
   'freelance clients','agency clients','web design clients',
   'graphic design clients','no design work','copywriting clients',
   'social media agency clients','seo clients','ppc clients',
@@ -2815,42 +2955,42 @@ const KW_POOL = [
   'no freelance work','agency not growing','struggling agency',
   'digital agency slow','web design business slow',
 
-  // ── Real estate ──
+  // â”€â”€ Real estate â”€â”€
   'real estate leads','realtor clients','estate agent marketing',
   'property leads','real estate slow','landlord finding tenants',
   'no property viewings','estate agent struggling',
 
-  // ── Ecommerce & retail ──
+  // â”€â”€ Ecommerce & retail â”€â”€
   'shopify store no sales','ecommerce not selling','dropshipping no sales',
   'amazon seller slow','online store no traffic','product not selling',
   'store getting traffic no conversions','ecommerce conversion problem',
 
-  // ── Coaching & consulting ──
+  // â”€â”€ Coaching & consulting â”€â”€
   'business coach clients','life coach clients','consulting clients',
   'coaching business slow','no consulting work','executive coach clients',
   'coach no clients','consultant slow','struggling coach',
 
-  // ── Restaurants & food ──
+  // â”€â”€ Restaurants & food â”€â”€
   'restaurant slow','cafe not busy','food business clients',
   'catering no bookings','restaurant marketing','hospitality slow',
   'cafe struggling','restaurant not busy','catering no work',
 
-  // ── Tech / SaaS ──
+  // â”€â”€ Tech / SaaS â”€â”€
   'saas no customers','startup no users','app no downloads',
   'no b2b clients','software company slow','mvp no signups',
   'saas churn','losing saas customers','startup getting no traction',
   'product no users','b2b no demos','no demo bookings',
 
-  // ── Financial advisors / professionals ──
+  // â”€â”€ Financial advisors / professionals â”€â”€
   'financial advisor clients','mortgage broker clients',
   'accountant getting clients','bookkeeper clients',
   'no accounting clients','financial planner clients',
 
-  // ── Virtual assistants & admin ──
+  // â”€â”€ Virtual assistants & admin â”€â”€
   'virtual assistant clients','va clients','no va work',
   'remote work clients','online business clients',
 
-  // ── Lead gen / general growth ──
+  // â”€â”€ Lead gen / general growth â”€â”€
   'struggling to scale','how to grow my business',
   'need more leads','lead generation help',
   'client acquisition strategy','getting consistent leads',
@@ -2942,7 +3082,7 @@ function ensureFeedSocket() {
       _feedLiveState.xConfigured = !!data.xConfigured;
       _feedLiveState.googleConfigured = !!data.googleConfigured;
       _feedLiveState.completed = true;
-      updateLiveFeedStatus(`Live scan complete · ${_feedLiveBuffer.length} leads streamed`);
+      updateLiveFeedStatus(`Live scan complete Â· ${_feedLiveBuffer.length} leads streamed`);
       return;
     }
 
@@ -2981,23 +3121,15 @@ function upsertLiveLead(list, lead) {
 function updateLiveFeedStatus(text) {
   const meta = document.getElementById('feed-meta');
   if (!meta) return;
-  if (text) meta.innerHTML = `<span style="color:var(--accent)">Live</span> · ${esc(text)}`;
+  if (text) meta.innerHTML = `<span style="color:var(--accent)">Live</span> Â· ${esc(text)}`;
 }
 
 function buildFeedResults(data) {
   const posts = data && Array.isArray(data.posts) ? data.posts : [];
-  const REDDIT_SUBS = new Set([
-    'smallbusiness','entrepreneur','sidehustle','freelance','sales',
-    'startups','sweatystartup','entrepreneurridealong','forhire',
-    'entrepreneur_ride_along','businessowners','growmybusiness',
-    'digital_marketing','marketinghelp','agency','solopreneur',
-    'web_design','webdev','photography','weddingphotography','videography',
-    'graphic_design','homeimprovement','plumbing','hvac','landscaping',
-    'cleaning_business','ecommerce','shopify','amazonseller',
-    'personaltraining','fitness','realestate','realtors',
-    'financialplanning','consulting','coaching','seo','ppc','copywriting',
-    'socialmediamarketing','workonline','hiring'
-  ]);
+  // Use the user's active subreddit selection as the client-side filter so
+  // custom subs they add via the picker survive the sanity check here.
+  const activeSubs = getActiveSubs().map(s => s.toLowerCase());
+  const REDDIT_SUBS = new Set(activeSubs.length ? activeSubs : DEFAULT_FEED_SUBS.map(s => s.toLowerCase()));
 
   const businessPosts = posts.filter(p =>
     p.platform !== 'reddit' || REDDIT_SUBS.has((p.subreddit || '').toLowerCase())
@@ -3066,7 +3198,7 @@ function renderFeedResults(keyword, data, options = {}) {
   if (!posts.length) {
     grid.innerHTML = options.live
       ? `<div class="feed-loading"><i class="fas fa-circle-notch"></i>${esc(options.statusText || 'Waiting for live results...')}</div>`
-      : '<div class="feed-empty"><i class="fas fa-inbox"></i><p>No posts found — try a different keyword</p></div>';
+      : '<div class="feed-empty"><i class="fas fa-inbox"></i><p>No posts found â€” try a different keyword</p></div>';
     if (!options.live) meta.textContent = '';
     return result;
   }
@@ -3074,10 +3206,10 @@ function renderFeedResults(keyword, data, options = {}) {
   if (!allLeads.length) {
     grid.innerHTML = options.live
       ? `<div class="feed-loading"><i class="fas fa-circle-notch"></i>${esc(options.statusText || 'Scanning for high-intent leads...')}</div>`
-      : '<div class="feed-empty"><i class="fas fa-filter"></i><p>No high-intent leads in this batch — try "no clients" or "need more bookings"</p></div>';
+      : '<div class="feed-empty"><i class="fas fa-filter"></i><p>No high-intent leads in this batch â€” try "no clients" or "need more bookings"</p></div>';
     meta.innerHTML = options.live
-      ? `<span style="color:var(--accent)">Live</span> · ${esc(options.statusText || 'Filtering incoming results...')}`
-      : `${posts.length} posts fetched · ${businessPosts.length} from target subs · 0 passed quality filter`;
+      ? `<span style="color:var(--accent)">Live</span> Â· ${esc(options.statusText || 'Filtering incoming results...')}`
+      : `${posts.length} posts fetched Â· ${businessPosts.length} from target subs Â· 0 passed quality filter`;
     return result;
   }
 
@@ -3086,35 +3218,221 @@ function renderFeedResults(keyword, data, options = {}) {
   const fbCount = allLeads.filter(l => l.platform === 'facebook').length;
   const liCount = allLeads.filter(l => l.platform === 'linkedin').length;
   const widerWebCount = allLeads.filter(l => ['quora','indiehackers','producthunt','instagram','upwork','fiverr','maps','directory','web'].includes(l.platform)).length;
-  const xNote   = xCount  ? ` · ${xCount} 𝕏`  : (!data.xConfigured      ? ' · <a href="#" onclick="showXSetup()" style="color:var(--accent);text-decoration:none">+ 𝕏</a>' : '');
-  const gNote   = (fbCount||liCount||widerWebCount) ? ` · ${fbCount + liCount + widerWebCount} web` : (!data.googleConfigured ? ' · <a href="#" onclick="showGoogleSetup()" style="color:var(--accent);text-decoration:none">+ Web sources</a>' : '');
-  const hnNote  = hnCount ? ` · ${hnCount} HN` : '';
-  const aiNote  = _aiEnabled ? ' · <span style="color:var(--accent);font-size:.72rem">⚡ AI</span>' : ' · <a href="#" onclick="showAISetup()" style="color:var(--muted);text-decoration:none;font-size:.72rem">+ AI Assist</a>';
+  const xNote   = xCount  ? ` Â· ${xCount} ð•`  : (!data.xConfigured      ? ' Â· <a href="#" onclick="showXSetup()" style="color:var(--accent);text-decoration:none">+ ð•</a>' : '');
+  const gNote   = (fbCount||liCount||widerWebCount) ? ` Â· ${fbCount + liCount + widerWebCount} web` : (!data.googleConfigured ? ' Â· <a href="#" onclick="showGoogleSetup()" style="color:var(--accent);text-decoration:none">+ Web sources</a>' : '');
+  const hnNote  = hnCount ? ` Â· ${hnCount} HN` : '';
+  const aiNote  = _aiEnabled ? ' Â· <span style="color:var(--accent);font-size:.72rem">âš¡ AI</span>' : ' Â· <a href="#" onclick="showAISetup()" style="color:var(--muted);text-decoration:none;font-size:.72rem">+ AI Assist</a>';
   const rdCount = allLeads.filter(l => l.platform === 'reddit').length;
   const directCount   = allLeads.filter(l => getLeadTypeKey(l) === 'direct').length;
   const operatorCount = allLeads.filter(l => getLeadTypeKey(l) === 'operator').length;
   const partnerCount  = allLeads.filter(l => getLeadTypeKey(l) === 'partner').length;
-  const typeNote = ` · <span style="color:#22c55e">💰${directCount}</span> <span style="color:#f59e0b">⚡${operatorCount}</span> <span style="color:#a855f7">🚀${partnerCount}</span>`;
-  const liveNote = options.live ? ' · <span style="color:var(--accent)">Live</span>' : '';
+  const typeNote = ` Â· <span style="color:#22c55e">ðŸ’°${directCount}</span> <span style="color:#f59e0b">âš¡${operatorCount}</span> <span style="color:#a855f7">ðŸš€${partnerCount}</span>`;
+  const liveNote = options.live ? ' Â· <span style="color:var(--accent)">Live</span>' : '';
 
-  meta.innerHTML = `${allLeads.length} quality leads · ${rdCount} Reddit${xNote}${hnNote}${gNote}${typeNote}${aiNote}${liveNote} · "${keyword}"`;
-  grid.innerHTML = allLeads.map(p => renderFeedCard(p)).join('');
+  meta.innerHTML = `${allLeads.length} quality leads Â· ${rdCount} Reddit${xNote}${hnNote}${gNote}${typeNote}${aiNote}${liveNote} Â· "${keyword}"`;
+  applyFeedGridDiff(grid, allLeads);
   const filterBar = document.getElementById('lead-type-filters');
   if (filterBar) filterBar.style.display = 'flex';
   return result;
 }
 
+// Diff-based grid update: keeps existing card DOM, only adds new cards and reorders.
+// Prevents live-stream rerenders from destroying cards mid-interaction (the shrink/flicker bug).
+function applyFeedGridDiff(grid, allLeads) {
+  const desired = new Set(allLeads.map(p => 'fc-' + p.id));
+  // Drop stale cards + any non-card children (loading/empty states)
+  Array.from(grid.children).forEach(child => {
+    if (!child.id || !child.id.startsWith('fc-') || !desired.has(child.id)) {
+      child.remove();
+    }
+  });
+  const existing = new Map();
+  Array.from(grid.children).forEach(c => existing.set(c.id, c));
+  let lastPlaced = null;
+  for (const p of allLeads) {
+    const id = 'fc-' + p.id;
+    let card = existing.get(id);
+    if (!card) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = renderFeedCard(p);
+      card = tmp.firstElementChild;
+      if (!card) continue;
+      if (lastPlaced) lastPlaced.after(card);
+      else grid.prepend(card);
+    } else {
+      // Reorder in place if position changed â€” no DOM rebuild of the card itself
+      const shouldFollow = lastPlaced ? lastPlaced.nextElementSibling : grid.firstElementChild;
+      if (shouldFollow !== card) {
+        if (lastPlaced) lastPlaced.after(card);
+        else grid.prepend(card);
+      }
+    }
+    lastPlaced = card;
+  }
+}
+
 shuffleKws(); // init on load
 
+/* â”€â”€ SUBREDDIT PICKER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   Mirrors the server's DEFAULT_SUBS list. The user can toggle any of
+   them, add custom subs (e.g. r/AskMarketing), and the selection rides
+   along to /api/feed via &subs=. Selection persists in localStorage so
+   it survives reloads. If the user has "all defaults" checked and no
+   extras, we omit the param so the server uses its own default list.
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+const DEFAULT_FEED_SUBS = [
+  'smallbusiness','Entrepreneur','EntrepreneurRideAlong','sweatystartup',
+  'sidehustle','solopreneur','BusinessOwners','growmybusiness',
+  'freelance','sales','forhire','WorkOnline','hiring',
+  'digital_marketing','agency','SEO','PPC','copywriting','socialmediamarketing',
+  'photography','weddingphotography','videography','graphic_design','web_design',
+  'HomeImprovement','Plumbing','HVAC','landscaping','cleaning_business',
+  'webdev','startups',
+  'ecommerce','shopify','AmazonSeller',
+  'personaltraining','fitness',
+  'realestate','realtors','FinancialPlanning','personalfinance',
+  'consulting','Coaching'
+];
+const SUBS_STORAGE_KEY = 'tss.feed.subs.v1';
+
+function loadSubsSelection() {
+  try {
+    const raw = localStorage.getItem(SUBS_STORAGE_KEY);
+    if (!raw) return { active: new Set(DEFAULT_FEED_SUBS), extras: [] };
+    const parsed = JSON.parse(raw);
+    return {
+      active: new Set(Array.isArray(parsed.active) ? parsed.active : DEFAULT_FEED_SUBS),
+      extras: Array.isArray(parsed.extras) ? parsed.extras : []
+    };
+  } catch {
+    return { active: new Set(DEFAULT_FEED_SUBS), extras: [] };
+  }
+}
+let _subsState = loadSubsSelection();
+function saveSubsSelection() {
+  try {
+    localStorage.setItem(SUBS_STORAGE_KEY, JSON.stringify({
+      active: Array.from(_subsState.active),
+      extras: _subsState.extras
+    }));
+  } catch {}
+}
+
+function allSubsList() {
+  // Defaults + any user-added extras (deduped, preserving extras order at end)
+  const seen = new Set(DEFAULT_FEED_SUBS.map(s => s.toLowerCase()));
+  const extrasFiltered = _subsState.extras.filter(s => {
+    const l = s.toLowerCase();
+    if (seen.has(l)) return false;
+    seen.add(l);
+    return true;
+  });
+  return [...DEFAULT_FEED_SUBS, ...extrasFiltered];
+}
+function getActiveSubs() {
+  return allSubsList().filter(s => _subsState.active.has(s));
+}
+function allSubsSelected() {
+  // "All selected" means every default is active AND there are no extras
+  // â†’ we don't need to send &subs=, let the server use its own default.
+  if (_subsState.extras.length) return false;
+  for (const s of DEFAULT_FEED_SUBS) if (!_subsState.active.has(s)) return false;
+  return true;
+}
+function updateSubsCountBadge() {
+  const el = document.getElementById('subs-count');
+  if (!el) return;
+  const total = allSubsList().length;
+  const active = getActiveSubs().length;
+  el.textContent = active === total ? `(${total})` : `(${active}/${total})`;
+}
+function renderSubsChips() {
+  const host = document.getElementById('feed-subs-chips');
+  if (!host) return;
+  const isExtra = new Set(_subsState.extras.map(s => s.toLowerCase()));
+  host.innerHTML = allSubsList().map(s => {
+    const active = _subsState.active.has(s);
+    const extra = isExtra.has(s.toLowerCase());
+    return `<span class="feed-sub-chip${active ? ' active' : ''}" data-sub="${s}" title="${active ? 'Included in scan' : 'Excluded'}">
+      r/${s}${extra ? `<span class="sub-close" data-remove="${s}" title="Remove custom sub">Ã—</span>` : ''}
+    </span>`;
+  }).join('');
+  updateSubsCountBadge();
+}
+function wireSubsPicker() {
+  const toggle = document.getElementById('btn-subs-toggle');
+  const picker = document.getElementById('feed-subs-picker');
+  const chips  = document.getElementById('feed-subs-chips');
+  const addIn  = document.getElementById('feed-subs-add');
+  const allBtn = document.getElementById('btn-subs-all');
+  const noneBtn= document.getElementById('btn-subs-none');
+  if (!toggle || !picker || !chips) return;
+
+  toggle.addEventListener('click', () => {
+    picker.style.display = picker.style.display === 'none' ? 'flex' : 'none';
+    if (picker.style.display === 'flex') renderSubsChips();
+  });
+
+  chips.addEventListener('click', (e) => {
+    const rm = e.target.closest('[data-remove]');
+    if (rm) {
+      e.stopPropagation();
+      const sub = rm.dataset.remove;
+      _subsState.extras = _subsState.extras.filter(s => s.toLowerCase() !== sub.toLowerCase());
+      _subsState.active.delete(sub);
+      saveSubsSelection();
+      renderSubsChips();
+      return;
+    }
+    const chip = e.target.closest('[data-sub]');
+    if (!chip) return;
+    const sub = chip.dataset.sub;
+    if (_subsState.active.has(sub)) _subsState.active.delete(sub);
+    else _subsState.active.add(sub);
+    saveSubsSelection();
+    renderSubsChips();
+  });
+
+  if (allBtn) allBtn.addEventListener('click', () => {
+    _subsState.active = new Set(allSubsList());
+    saveSubsSelection();
+    renderSubsChips();
+  });
+  if (noneBtn) noneBtn.addEventListener('click', () => {
+    _subsState.active = new Set();
+    saveSubsSelection();
+    renderSubsChips();
+  });
+  if (addIn) addIn.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const name = addIn.value.trim().replace(/^r\//i, '');
+    if (!/^[A-Za-z0-9_]{2,30}$/.test(name)) {
+      toast('Sub names must be 2-30 chars (letters, numbers, underscore)', 'err');
+      return;
+    }
+    const lower = name.toLowerCase();
+    const exists = allSubsList().some(s => s.toLowerCase() === lower);
+    if (!exists) _subsState.extras.push(name);
+    _subsState.active.add(name);
+    addIn.value = '';
+    saveSubsSelection();
+    renderSubsChips();
+  });
+
+  updateSubsCountBadge();
+}
+wireSubsPicker();
+
 document.getElementById('btn-feed-shuffle').addEventListener('click', () => {
-  shuffleKws(); // rotate keywords — tap a pill to fetch
+  shuffleKws(); // rotate keywords â€” tap a pill to fetch
 });
 
-/* ── ENRICHMENT SETTINGS PANEL ── */
+/* â”€â”€ ENRICHMENT SETTINGS PANEL â”€â”€ */
 const PROVIDER_DESCRIPTIONS = {
   apollo:         { group: 'firmographics', label: 'Apollo.io',     note: 'Organization enrich by domain'     },
   clearbit:       { group: 'firmographics', label: 'Clearbit',      note: 'Company find by domain'            },
-  company_enrich: { group: 'firmographics', label: 'CompanyEnrich', note: 'Domain → firmographic profile'     },
+  company_enrich: { group: 'firmographics', label: 'CompanyEnrich', note: 'Domain â†’ firmographic profile'     },
   infobel:        { group: 'firmographics', label: 'Infobel Pro',   note: 'Global company directory'          },
   factors:        { group: 'intent',        label: 'Factors.ai',    note: 'Account intent topics + stage'     },
   coresignal:     { group: 'intent',        label: 'Coresignal',    note: 'Growth + hiring signals'           },
@@ -3138,14 +3456,14 @@ async function loadEnrichmentStatus() {
   const globalEnabled = document.getElementById('enrichment-enabled');
   const globalTimeout = document.getElementById('enrichment-timeout');
   if (!container) return;
-  container.innerHTML = '<div class="enrichment-loading">Loading providers…</div>';
+  container.innerHTML = '<div class="enrichment-loading">Loading providersâ€¦</div>';
   try {
     const res = await fetch(API + '/enrichment/status');
-    if (!res.ok) throw new Error(`server returned ${res.status} — restart node server.js to pick up new routes`);
+    if (!res.ok) throw new Error(`server returned ${res.status} â€” restart node server.js to pick up new routes`);
     const text = await res.text();
     let data;
     try { data = JSON.parse(text); }
-    catch { throw new Error('server returned non-JSON — restart node server.js'); }
+    catch { throw new Error('server returned non-JSON â€” restart node server.js'); }
     if (!data.ok) throw new Error('bad response');
     _enrichmentStatusCache = data;
     globalEnabled.checked = data.enabled !== false;
@@ -3165,9 +3483,9 @@ async function loadEnrichmentStatus() {
             <input type="checkbox" class="enrichment-prov-enabled" ${p.enabled ? 'checked' : ''} title="Enable provider">
             <div class="enrichment-provider-name">
               <span>${esc(desc.label)}</span>
-              <span class="enrichment-provider-meta">${esc(desc.note)}${p.hasAdapter ? '' : ' · adapter pending'}</span>
+              <span class="enrichment-provider-meta">${esc(desc.note)}${p.hasAdapter ? '' : ' Â· adapter pending'}</span>
             </div>
-            <input type="password" class="enrichment-prov-key" placeholder="${p.hasKey ? '•••••• (saved)' : 'API key'}" autocomplete="new-password">
+            <input type="password" class="enrichment-prov-key" placeholder="${p.hasKey ? 'â€¢â€¢â€¢â€¢â€¢â€¢ (saved)' : 'API key'}" autocomplete="new-password">
             <input type="text" class="enrichment-prov-base" placeholder="Custom API base (optional)">
             <span class="enrichment-status ${p.status}">${esc(enrichmentStatusLabel(p.status))}</span>
           </div>`;
@@ -3193,7 +3511,7 @@ async function loadEnrichmentStatus() {
       .filter(p => p.status === 'live_ready').length;
     footnote.textContent = liveCount
       ? `${liveCount} provider${liveCount === 1 ? '' : 's'} wired live. Missing-key or disabled providers fall back to synthesized data.`
-      : 'No live providers yet — add a key to light one up. Until then, enrichment uses the synthesized fallback layer.';
+      : 'No live providers yet â€” add a key to light one up. Until then, enrichment uses the synthesized fallback layer.';
   } catch (e) {
     container.innerHTML = `<div class="enrichment-loading">Failed to load providers: ${esc(e.message || 'unknown')}</div>`;
   }
@@ -3229,7 +3547,7 @@ async function saveEnrichmentProviders() {
   const saveBtn = document.getElementById('btn-enrichment-save');
   const originalHTML = saveBtn.innerHTML;
   saveBtn.disabled = true;
-  saveBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Saving…';
+  saveBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Savingâ€¦';
   try {
     const res = await fetch(API + '/enrichment/providers', {
       method: 'POST',
@@ -3268,7 +3586,7 @@ async function saveEnrichmentProviders() {
   saveBtn?.addEventListener('click', saveEnrichmentProviders);
 })();
 
-/* ── FETCH + RENDER ── */
+/* â”€â”€ FETCH + RENDER â”€â”€ */
 async function fetchFeed(keyword) {
   const grid    = document.getElementById('feed-grid');
   const meta    = document.getElementById('feed-meta');
@@ -3288,19 +3606,20 @@ async function fetchFeed(keyword) {
   updateLiveFeedStatus(`Preparing live scan for "${keyword}"...`);
   if (refreshBtn) refreshBtn.classList.add('spinning');
   try {
-    const res  = await fetch(API + '/feed?q=' + encodeURIComponent(keyword) + '&sessionId=' + encodeURIComponent(getFeedSessionId()) + '&scanId=' + encodeURIComponent(scanId));
+    const subsParam = getActiveSubs().length && !allSubsSelected() ? '&subs=' + encodeURIComponent(getActiveSubs().join(',')) : '';
+    const res  = await fetch(API + '/feed?q=' + encodeURIComponent(keyword) + '&sessionId=' + encodeURIComponent(getFeedSessionId()) + '&scanId=' + encodeURIComponent(scanId) + subsParam);
     const data = await res.json();
     if (_feedActiveScanId !== scanId) return;
     _feedLiveState.xConfigured = !!data.xConfigured;
     _feedLiveState.googleConfigured = !!data.googleConfigured;
     if (!data.ok) {
-      grid.innerHTML = '<div class="feed-empty"><i class="fas fa-triangle-exclamation"></i><p>Could not fetch — check server is running</p></div>';
+      grid.innerHTML = '<div class="feed-empty"><i class="fas fa-triangle-exclamation"></i><p>Could not fetch â€” check server is running</p></div>';
       return;
     }
     const result = renderFeedResults(keyword, data);
     logFeedScan(keyword, result.allLeads.length, result.allLeads);
   } catch (e) {
-    grid.innerHTML = '<div class="feed-empty"><i class="fas fa-triangle-exclamation"></i><p>Could not fetch — check server is running</p></div>';
+    grid.innerHTML = '<div class="feed-empty"><i class="fas fa-triangle-exclamation"></i><p>Could not fetch â€” check server is running</p></div>';
   } finally {
     if (refreshBtn) refreshBtn.classList.remove('spinning');
     if (grid) grid.classList.remove('feed-grid-loading');
@@ -3314,11 +3633,11 @@ function timeAgo(utc) {
   return Math.floor(diff/86400) + 'd ago';
 }
 
-// Global post data store — avoids all string-escaping issues in onclick attributes
+// Global post data store â€” avoids all string-escaping issues in onclick attributes
 window._feedData = window._feedData || {};
 
 function buildPlatformBadge(post) {
-  return post.platform === 'x'           ? `<span class="feed-platform feed-platform-x" title="X / Twitter">𝕏</span>`
+  return post.platform === 'x'           ? `<span class="feed-platform feed-platform-x" title="X / Twitter">ð•</span>`
     : post.platform === 'hn'             ? `<span class="feed-platform feed-platform-hn" title="Hacker News">HN</span>`
     : post.platform === 'facebook'       ? `<span class="feed-platform feed-platform-fb" title="Facebook">FB</span>`
     : post.platform === 'linkedin'       ? `<span class="feed-platform feed-platform-li" title="LinkedIn">in</span>`
@@ -3355,8 +3674,8 @@ function renderFeedCard(post) {
 
   const intentData = enrichment.intent && enrichment.intent[0];
   const intentChip = intentData
-    ? `${esc(intentData.buyingStage || 'active')} · ${intentData.intentScore || '?'}/100`
-    : signals.buyerIntent >= 45 ? 'WARM — active intent' : 'COLD — passive';
+    ? `${esc(intentData.buyingStage || 'active')} Â· ${intentData.intentScore || '?'}/100`
+    : signals.buyerIntent >= 45 ? 'WARM â€” active intent' : 'COLD â€” passive';
 
   const firmographic = enrichment.firmographics && enrichment.firmographics[0];
   const nameDisplay = esc(
@@ -3376,7 +3695,7 @@ function renderFeedCard(post) {
 
   const canAutoMsg    = tier === 'autoReady';
   const autoMsgTitle  = canAutoMsg ? 'AI drafts + you confirm to send' :
-    tier === 'replyReady' ? 'Score must be ≥85, intent ≥70, confidence ≥70 for Auto-msg' :
+    tier === 'replyReady' ? 'Score must be â‰¥85, intent â‰¥70, confidence â‰¥70 for Auto-msg' :
     'Lead score too low for automated messaging';
 
   const lt = a.leadType || {};
@@ -3433,7 +3752,7 @@ function renderFeedCard(post) {
   </div>`;
 }
 
-/* ── LEAD DETAIL DRAWER ── */
+/* â”€â”€ LEAD DETAIL DRAWER â”€â”€ */
 function openLeadDetail(postId) {
   const d = window._feedData[postId];
   if (!d) return;
@@ -3497,13 +3816,13 @@ function openLeadDetail(postId) {
       <div class="ldd-row"><span class="ldd-key">Platform</span><span class="ldd-val">${esc(source.platform || post.platform || '')}</span></div>
       ${source.subreddit ? `<div class="ldd-row"><span class="ldd-key">Community</span><span class="ldd-val">r/${esc(source.subreddit)}</span></div>` : ''}
       <div class="ldd-row"><span class="ldd-key">Signal</span><span class="ldd-val">${esc(source.platformNote || '')}</span></div>
-      <div class="ldd-row"><span class="ldd-key">Enrichment</span><span class="ldd-val"><span class="ldd-source-badge ${enrichment.sourceMix || 'synthesized'}">${enrichment.sourceMix || 'synth'}</span> · ${enrichment.providerCount || 0} provider${enrichment.providerCount !== 1 ? 's' : ''}</span></div>
+      <div class="ldd-row"><span class="ldd-key">Enrichment</span><span class="ldd-val"><span class="ldd-source-badge ${enrichment.sourceMix || 'synthesized'}">${enrichment.sourceMix || 'synth'}</span> Â· ${enrichment.providerCount || 0} provider${enrichment.providerCount !== 1 ? 's' : ''}</span></div>
     </div>`;
 
   const postHTML = `
     <div class="ldd-section">
       <div class="ldd-section-title">Original post <a href="${esc(post.url)}" target="_blank" rel="noopener" style="color:var(--accent);font-size:.65rem;font-weight:600;margin-left:6px"><i class="fas fa-arrow-up-right-from-square"></i> Open</a></div>
-      <div style="font-size:.75rem;color:var(--muted);line-height:1.55">${esc((post.text || post.title || '').substring(0, 300))}${(post.text || '').length > 300 ? '…' : ''}</div>
+      <div style="font-size:.75rem;color:var(--muted);line-height:1.55">${esc((post.text || post.title || '').substring(0, 300))}${(post.text || '').length > 300 ? 'â€¦' : ''}</div>
     </div>`;
 
   const reasonsHTML = exp.criteriaMatches && exp.criteriaMatches.length ? `
@@ -3523,7 +3842,7 @@ function openLeadDetail(postId) {
   openDrawer('lead-detail-drawer');
 }
 
-/* ── COPY HELPERS ── */
+/* â”€â”€ COPY HELPERS â”€â”€ */
 function copyOpener(pid) {
   const d = window._feedData[pid];
   if (!d) return;
@@ -3545,7 +3864,7 @@ function copyLeadIntel(pid) {
     `Niche: ${a.niche}`,
     `Lead Type: ${(a.category && a.category.label) || lt.label} (${(a.category && a.category.tagline) || lt.tagline})`,
     `Primary Pain: ${a.painProfile ? a.painProfile.label : a.problem}`,
-    `Urgency: ${a.urgencyLabel} (${a.urgency}/100) — ${a.urgencyReason}`,
+    `Urgency: ${a.urgencyLabel} (${a.urgency}/100) â€” ${a.urgencyReason}`,
     ``,
     `Problem: ${a.problem}`,
     `Root Cause: ${a.cause}`,
@@ -3562,7 +3881,7 @@ function copyLeadIntel(pid) {
     post.title,
     post.text && post.text !== post.title ? post.text : '',
     ``,
-    `Tip: ${a.tip.replace(/[🔥⚡💬🔍]/g, '').trim()}`
+    `Tip: ${a.tip.replace(/[ðŸ”¥âš¡ðŸ’¬ðŸ”]/g, '').trim()}`
   ].filter(l => l !== undefined).join('\n');
 
   navigator.clipboard.writeText(lines).then(() => {
@@ -3589,7 +3908,7 @@ function flashCopyBtn(pid, sel) {
   setTimeout(() => btn.classList.remove('copy-flash'), 1200);
 }
 
-/* ── FEED ACTIVITY TRACKER ── */
+/* â”€â”€ FEED ACTIVITY TRACKER â”€â”€ */
 function getFeedActivity() {
   try { return JSON.parse(localStorage.getItem('feedActivity') || 'null') || _defaultFeedActivity(); }
   catch { return _defaultFeedActivity(); }
@@ -3630,7 +3949,7 @@ function logFeedAction(type) {
   saveFeedActivity(fa);
 }
 
-/* ── WEAK LEAD MANAGEMENT ── */
+/* â”€â”€ WEAK LEAD MANAGEMENT â”€â”€ */
 function getWeakLeads() {
   try { return JSON.parse(localStorage.getItem('WeakLeads') || '[]'); }
   catch { return []; }
@@ -3660,10 +3979,10 @@ function markWeakLead(pid) {
     setTimeout(() => card.remove(), 300);
   }
   logFeedAction('weakMarks');
-  toast('Marked as weak — hidden from future feeds', 'ok');
+  toast('Marked as weak â€” hidden from future feeds', 'ok');
 }
 
-/* ── HOT LEAD MANAGEMENT ── */
+/* â”€â”€ HOT LEAD MANAGEMENT â”€â”€ */
 function getHotLeads() {
   try { return JSON.parse(localStorage.getItem('hotLeads') || '[]'); }
   catch { return []; }
@@ -3707,14 +4026,14 @@ function markHotLead(pid) {
     }
   }
   logFeedAction('hotMarks');
-  toast('⭐ Starred as hot lead', 'ok');
+  toast('â­ Starred as hot lead', 'ok');
 }
 
-/* ══════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    LEAD CONTEXT ENGINE
-   Converts raw post text → structured
+   Converts raw post text â†’ structured
    page copy specific to this person
-══════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 function extractLeadContext(title, text, niche) {
   const full = (title + ' ' + text).toLowerCase();
@@ -3739,7 +4058,7 @@ function lcDetectProblem(t) {
   if (/ads|paid|ppc|facebook ad|google ad/.test(t)) {
     if (/dm|messag|enquir|interest|click/.test(t) && /no (client|book|sale|conver)/.test(t))
       return 'getting attention and clicks but nobody is actually converting';
-    if (/spend|wast|burn|£|€|\$|money/.test(t))
+    if (/spend|wast|burn|Â£|â‚¬|\$|money/.test(t))
       return 'spending money on ads but getting no clients back from it';
     return 'running ads that aren\'t producing paying clients';
   }
@@ -3756,9 +4075,9 @@ function lcDetectProblem(t) {
   if (/no (clients|customers|work|bookings|enquiries|leads)/.test(t))
     return 'no consistent flow of new clients or enquiries coming in';
   if (/slow|quiet|dead|dry spell/.test(t))
-    return 'things going quiet — not enough new work coming in';
+    return 'things going quiet â€” not enough new work coming in';
   if (/feast|famine|inconsistent/.test(t))
-    return 'inconsistent months — good periods followed by nothing';
+    return 'inconsistent months â€” good periods followed by nothing';
   return 'struggling to get a reliable, consistent flow of new clients';
 }
 
@@ -3775,9 +4094,9 @@ function lcDetectFunnelGap(t) {
   if (/dm|messag|enquir/.test(t) && /no (book|client|sale|conver)/.test(t))
     return 'interest coming in but no system to convert it into paying clients';
   if (/no follow.?up|follow up|ghost|go cold|go quiet/.test(t))
-    return 'no follow-up — leads go cold before they close';
+    return 'no follow-up â€” leads go cold before they close';
   if (/no reply|no response|ignor|left on read/.test(t))
-    return 'outreach not landing — message isn\'t connecting';
+    return 'outreach not landing â€” message isn\'t connecting';
   if ((/website|traffic|visit/).test(t) && /no (lead|enquir|conver|client)/.test(t))
     return 'traffic arriving but no way to capture or convert it';
   if (/ads|paid/.test(t) && /no (client|conver|sale|return)/.test(t))
@@ -3793,7 +4112,7 @@ function lcDetectEmotion(t) {
   if (/desperate|give up|quit|failing|can\'?t keep|running out|rock bottom/.test(t)) return 'desperate';
   if (/frustrated|frustrating|annoying|sick of|fed up|done with/.test(t)) return 'frustrated';
   if (/confus|don\'?t know|no idea|not sure what|lost|nothing work/.test(t)) return 'confused and lost';
-  if (/wasted|burned|spent.*(and nothing|but no)|threw money/.test(t)) return 'burned — money wasted';
+  if (/wasted|burned|spent.*(and nothing|but no)|threw money/.test(t)) return 'burned â€” money wasted';
   if (/stressed|anxious|worry|worried|scared/.test(t)) return 'stressed';
   return 'frustrated';
 }
@@ -3801,117 +4120,117 @@ function lcDetectEmotion(t) {
 function lcGenerateAngle(t) {
   if (/ads|paid/.test(t)) {
     if (/dm|messag|enquir|click/.test(t) && /no (book|client|sale)/.test(t))
-      return 'You\'re getting attention — you just don\'t have a system to convert it';
+      return 'You\'re getting attention â€” you just don\'t have a system to convert it';
     if (/spend|wast|burn/.test(t))
-      return 'More ad spend won\'t fix it — a conversion system will';
-    return 'Traffic isn\'t the problem — converting it into clients is';
+      return 'More ad spend won\'t fix it â€” a conversion system will';
+    return 'Traffic isn\'t the problem â€” converting it into clients is';
   }
   if (/cold|outreach|dm/.test(t))
-    return 'Cold outreach works when people have somewhere to land — right now they don\'t';
+    return 'Cold outreach works when people have somewhere to land â€” right now they don\'t';
   if (/website|landing|traffic/.test(t))
-    return 'Getting traffic is the easy part — turning it into clients is the gap';
+    return 'Getting traffic is the easy part â€” turning it into clients is the gap';
   if (/social|content|post/.test(t))
-    return 'Content builds an audience — but without a pipeline it doesn\'t build a business';
+    return 'Content builds an audience â€” but without a pipeline it doesn\'t build a business';
   if (/referral/.test(t))
-    return 'Referrals are great when they come — you need something that works without them';
+    return 'Referrals are great when they come â€” you need something that works without them';
   if (/proposal|quote|ghost/.test(t))
-    return 'The sale doesn\'t happen at the proposal — it happens in the follow-up';
+    return 'The sale doesn\'t happen at the proposal â€” it happens in the follow-up';
   if (/no client|no work|no lead/.test(t))
-    return 'No clients usually means one thing — no system to attract and close them';
-  return 'The issue isn\'t your service — it\'s that the right people can\'t find and trust you yet';
+    return 'No clients usually means one thing â€” no system to attract and close them';
+  return 'The issue isn\'t your service â€” it\'s that the right people can\'t find and trust you yet';
 }
 
 function lcGenerateHeadline(t) {
   if (/ads|paid/.test(t)) {
     if (/dm|messag|enquir/.test(t) && /no (book|client|sale|conver)/.test(t))
-      return 'When you\'re getting messages but nobody actually becomes a client — this is why';
+      return 'When you\'re getting messages but nobody actually becomes a client â€” this is why';
     if (/spend|wast|burn|money/.test(t))
-      return 'When you\'re spending on ads and getting nothing back — here\'s where it\'s breaking';
-    return 'When ads are running but clients aren\'t coming — this is the missing piece';
+      return 'When you\'re spending on ads and getting nothing back â€” here\'s where it\'s breaking';
+    return 'When ads are running but clients aren\'t coming â€” this is the missing piece';
   }
   if (/cold|outreach|dm/.test(t) && /no reply|ignor|ghost|read/.test(t))
-    return 'When you\'re reaching out but nobody replies — here\'s what\'s actually happening';
+    return 'When you\'re reaching out but nobody replies â€” here\'s what\'s actually happening';
   if (/website|traffic/.test(t))
-    return 'When people visit your site but never enquire — here\'s exactly why';
+    return 'When people visit your site but never enquire â€” here\'s exactly why';
   if (/social|content|post/.test(t))
-    return 'When you\'re posting every day and still not getting clients — this is the gap';
+    return 'When you\'re posting every day and still not getting clients â€” this is the gap';
   if (/referral|dried up/.test(t))
-    return 'When referrals stop coming in and there\'s nothing to replace them — let\'s fix that';
+    return 'When referrals stop coming in and there\'s nothing to replace them â€” let\'s fix that';
   if (/proposal|quote|ghost/.test(t))
-    return 'When prospects ask for a quote then disappear — here\'s how to stop losing them';
+    return 'When prospects ask for a quote then disappear â€” here\'s how to stop losing them';
   if (/no client|no customer|no work|no booking/.test(t))
-    return 'When there\'s no consistent flow of new clients — this is why and how to fix it';
+    return 'When there\'s no consistent flow of new clients â€” this is why and how to fix it';
   if (/slow|quiet|dead/.test(t))
-    return 'When things go quiet and you\'re not sure what to do — start here';
-  return 'When getting new clients feels harder than it should — here\'s what\'s missing';
+    return 'When things go quiet and you\'re not sure what to do â€” start here';
+  return 'When getting new clients feels harder than it should â€” here\'s what\'s missing';
 }
 
 function lcGenerateSubtext(t) {
   if (/ads|paid/.test(t)) {
     if (/dm|messag|enquir/.test(t) && /no (book|client|sale)/.test(t))
-      return 'You\'re already spending and getting interest — but interest without a system to convert it just disappears. Here\'s the part that\'s missing.';
+      return 'You\'re already spending and getting interest â€” but interest without a system to convert it just disappears. Here\'s the part that\'s missing.';
     if (/spend|wast|burn/.test(t))
-      return 'Running ads without a conversion system is like filling a leaking bucket. The traffic is there — but it\'s going nowhere. Here\'s how to fix that.';
-    return 'Ads can drive traffic — but without the right system on the other end, none of it turns into clients. That\'s the gap we close.';
+      return 'Running ads without a conversion system is like filling a leaking bucket. The traffic is there â€” but it\'s going nowhere. Here\'s how to fix that.';
+    return 'Ads can drive traffic â€” but without the right system on the other end, none of it turns into clients. That\'s the gap we close.';
   }
   if (/cold|outreach|dm/.test(t))
     return 'Outreach works when people have somewhere to land that builds trust before they reply. Without that, even good messages get ignored. Here\'s what changes it.';
   if (/website|traffic/.test(t))
-    return 'Most websites explain what you do. A high-converting one makes it obvious why someone should act today — and captures them when they\'re ready. That\'s what\'s missing.';
+    return 'Most websites explain what you do. A high-converting one makes it obvious why someone should act today â€” and captures them when they\'re ready. That\'s what\'s missing.';
   if (/social|content|post/.test(t))
-    return 'Posting builds visibility — but without a system to capture interest when it peaks, you\'re growing an audience not a client list. Here\'s the bridge.';
+    return 'Posting builds visibility â€” but without a system to capture interest when it peaks, you\'re growing an audience not a client list. Here\'s the bridge.';
   if (/referral/.test(t))
-    return 'Referrals are one of the best ways to get clients — but you can\'t control when they come. This is how you build something that doesn\'t rely on that.';
+    return 'Referrals are one of the best ways to get clients â€” but you can\'t control when they come. This is how you build something that doesn\'t rely on that.';
   if (/proposal|quote|ghost/.test(t))
     return 'Most deals are lost not because the proposal was wrong, but because there was no follow-up to close while the decision window was open. Here\'s how to fix that.';
-  return 'Most service businesses have a great service — they just don\'t have a reliable way to turn interest into consistent paying clients. That\'s what this fixes.';
+  return 'Most service businesses have a great service â€” they just don\'t have a reliable way to turn interest into consistent paying clients. That\'s what this fixes.';
 }
 
 function lcGenerateScenarios(t) {
   if (/ads|paid/.test(t)) {
     if (/dm|messag|enquir/.test(t) && /no (book|client|sale)/.test(t)) return [
-      'You get DMs and enquiries from the ads — but people ask one question, you reply, and then they go completely cold',
+      'You get DMs and enquiries from the ads â€” but people ask one question, you reply, and then they go completely cold',
       'You\'re spending money every month, getting clicks and some interest, but still don\'t have consistent clients booked',
-      'You\'ve tried adjusting the ads — the creative, the audience, the budget — but the real problem is what happens after someone clicks'
+      'You\'ve tried adjusting the ads â€” the creative, the audience, the budget â€” but the real problem is what happens after someone clicks'
     ];
     return [
       'Your ads are running, you\'re paying per click, but very few of those clicks turn into actual enquiries',
-      'The ad account looks active — but your calendar is still quiet and you\'re not sure what\'s wrong',
-      'You\'ve tweaked the ads repeatedly but the issue isn\'t the ad — it\'s the system on the other side of it'
+      'The ad account looks active â€” but your calendar is still quiet and you\'re not sure what\'s wrong',
+      'You\'ve tweaked the ads repeatedly but the issue isn\'t the ad â€” it\'s the system on the other side of it'
     ];
   }
   if (/cold|outreach|dm/.test(t)) return [
-    'You send outreach messages — some get seen, most get left on read, and you\'re not sure if it\'s the message or just bad luck',
+    'You send outreach messages â€” some get seen, most get left on read, and you\'re not sure if it\'s the message or just bad luck',
     'The few who do reply ask a question or two then disappear before you can book a call',
-    'You keep reaching out because you don\'t have anything else — but each ignored message makes it harder to stay consistent'
+    'You keep reaching out because you don\'t have anything else â€” but each ignored message makes it harder to stay consistent'
   ];
   if (/website|traffic/.test(t)) return [
-    'People visit your website — you can see the traffic — but the phone doesn\'t ring and no enquiries come through',
-    'You\'ve updated the site, added more info, maybe changed the design — but it still doesn\'t seem to convert',
-    'Visitors come, look around, and leave — and you have no idea what they were looking for or why they didn\'t get in touch'
+    'People visit your website â€” you can see the traffic â€” but the phone doesn\'t ring and no enquiries come through',
+    'You\'ve updated the site, added more info, maybe changed the design â€” but it still doesn\'t seem to convert',
+    'Visitors come, look around, and leave â€” and you have no idea what they were looking for or why they didn\'t get in touch'
   ];
   if (/social|content|post/.test(t)) return [
-    'You post consistently, get likes and some comments — but nobody actually reaches out to hire you',
+    'You post consistently, get likes and some comments â€” but nobody actually reaches out to hire you',
     'Your following is growing slowly but it\'s not translating into clients or bookings',
-    'You\'re spending hours creating content every week but it\'s not building your pipeline — just your follower count'
+    'You\'re spending hours creating content every week but it\'s not building your pipeline â€” just your follower count'
   ];
   if (/referral|dried up/.test(t)) return [
-    'You\'ve had good periods when referrals were coming regularly — but they\'re completely unpredictable',
+    'You\'ve had good periods when referrals were coming regularly â€” but they\'re completely unpredictable',
     'You never know when the next client is coming, so every quiet week feels like a crisis',
-    'There\'s no way to turn the referral tap on when you need work — you just have to wait and hope'
+    'There\'s no way to turn the referral tap on when you need work â€” you just have to wait and hope'
   ];
   if (/proposal|quote|ghost/.test(t)) return [
-    'You send a detailed quote, they say they\'ll think about it — and then you never hear from them again',
+    'You send a detailed quote, they say they\'ll think about it â€” and then you never hear from them again',
     'You follow up once or twice but don\'t want to seem pushy, so you let it go and lose the deal',
     'Good leads turn into nothing and you\'re not sure if it\'s the price, the timing, or something else'
   ];
   if (/slow|quiet|dead/.test(t)) return [
-    'This month has been slow — quieter than usual — and you\'re not sure if it\'s a blip or something to worry about',
-    'You don\'t have a clear way to generate new work when things go quiet — you just wait for something to come in',
+    'This month has been slow â€” quieter than usual â€” and you\'re not sure if it\'s a blip or something to worry about',
+    'You don\'t have a clear way to generate new work when things go quiet â€” you just wait for something to come in',
     'The busy periods are great but when it slows down there\'s nothing to fall back on'
   ];
   return [
-    'Some months are great, others are nearly empty — and you can\'t predict which it\'ll be',
+    'Some months are great, others are nearly empty â€” and you can\'t predict which it\'ll be',
     'You know you need a more consistent flow of clients but you\'re not sure where to start fixing it',
     'You\'ve tried a couple of things that didn\'t work, and now you\'re not sure what to trust or prioritise'
   ];
@@ -3920,17 +4239,17 @@ function lcGenerateScenarios(t) {
 function lcGenerateOpener(t, rawTitle) {
   const angle = lcGenerateAngle(t);
   if (/desperate|give up|quit|failing|running out/.test(t))
-    return `Saw your post and wanted to reach out — ${angle.charAt(0).toLowerCase() + angle.slice(1)}. I've built systems that fix exactly this and I can put a preview together for your setup today. Worth a look?`;
+    return `Saw your post and wanted to reach out â€” ${angle.charAt(0).toLowerCase() + angle.slice(1)}. I've built systems that fix exactly this and I can put a preview together for your setup today. Worth a look?`;
   if (/ads|paid/.test(t))
-    return `Saw your post about the ads — ${angle.charAt(0).toLowerCase() + angle.slice(1)}. I build the conversion side of this for businesses like yours. I can mock something up based on your situation — want to see it?`;
-  return `Saw your post and it stood out — ${angle.charAt(0).toLowerCase() + angle.slice(1)}. I build systems that fix exactly this. Happy to put a quick preview together for your specific setup — want to take a look?`;
+    return `Saw your post about the ads â€” ${angle.charAt(0).toLowerCase() + angle.slice(1)}. I build the conversion side of this for businesses like yours. I can mock something up based on your situation â€” want to see it?`;
+  return `Saw your post and it stood out â€” ${angle.charAt(0).toLowerCase() + angle.slice(1)}. I build systems that fix exactly this. Happy to put a quick preview together for your specific setup â€” want to take a look?`;
 }
 
 function lcGeneratePainPoints(t) {
   if (/ads|paid/.test(t)) {
     if (/dm|messag|enquir/.test(t) && /no (book|client|sale|conver)/.test(t)) return [
       'You\'re getting DMs and clicks but they don\'t turn into actual bookings',
-      'Interest comes in and immediately goes cold — no system to follow it up',
+      'Interest comes in and immediately goes cold â€” no system to follow it up',
       'You\'re spending on ads every month with nothing consistent coming back',
       'No way to tell which part of the process is losing them'
     ];
@@ -3961,19 +4280,19 @@ function lcGeneratePainPoints(t) {
   ];
   if (/referral|dried up/.test(t)) return [
     'Referrals have slowed or stopped and nothing has replaced them',
-    'No control over when the next client comes — you just wait and hope',
+    'No control over when the next client comes â€” you just wait and hope',
     'Good months exist but they rely on luck, not a repeatable system',
     'Single source of clients means one point of failure'
   ];
   if (/proposal|quote|ghost/.test(t)) return [
     'Proposals go out and leads go completely cold with no explanation',
-    'No follow-up system — you chase once then let it go',
+    'No follow-up system â€” you chase once then let it go',
     'Time spent on detailed quotes for leads who never reply',
     'No way to keep the decision window open after sending the quote'
   ];
   return [
     'No consistent, predictable way to bring in new enquiries',
-    'Good months followed by quiet ones — feast or famine',
+    'Good months followed by quiet ones â€” feast or famine',
     'Tried things that didn\'t work and not sure what to trust next',
     'Growth relies on timing and luck rather than a system'
   ];
@@ -3985,20 +4304,20 @@ function lcGenerateOutcomes(t) {
       'Every enquiry that comes in gets captured and followed up automatically within minutes',
       'A conversion sequence turns interested DMs into booked clients',
       'Clear visibility on which part of the funnel is producing results',
-      'Ad spend produces measurable, trackable new clients — not just clicks'
+      'Ad spend produces measurable, trackable new clients â€” not just clicks'
     ];
     return [
       'Clicks land on a page built to convert them into real enquiries',
       'Every lead gets an immediate automated follow-up before they go cold',
-      'Measurable return on ad spend — clients, not just impressions',
-      'Full pipeline: click → enquiry → booked client, tracked end to end'
+      'Measurable return on ad spend â€” clients, not just impressions',
+      'Full pipeline: click â†’ enquiry â†’ booked client, tracked end to end'
     ];
   }
   if (/cold|outreach|dm/.test(t)) return [
     'Outreach links to a page that builds trust before they reply',
     'Automated follow-up ensures no lead goes cold after first contact',
     'Replies convert into booked calls with a clear simple path',
-    'Consistent inbound from outreach — not a numbers game'
+    'Consistent inbound from outreach â€” not a numbers game'
   ];
   if (/website|traffic/.test(t)) return [
     'Visitors have a clear reason to take action before they leave',
@@ -4008,13 +4327,13 @@ function lcGenerateOutcomes(t) {
   ];
   if (/social|content|post/.test(t)) return [
     'Content interest gets captured into a real pipeline automatically',
-    'A clear path from follower → lead → booked client',
+    'A clear path from follower â†’ lead â†’ booked client',
     'Engaged audience turns into consistent enquiries, not just likes',
     'Content works as a lead generation engine, not just brand building'
   ];
   if (/referral|dried up/.test(t)) return [
     'Consistent inbound pipeline that doesn\'t rely on referrals',
-    'New clients coming in predictably — you know where they\'re coming from',
+    'New clients coming in predictably â€” you know where they\'re coming from',
     'Quiet months become the exception, not the norm',
     'Multiple channels working together so no single point of failure'
   ];
@@ -4022,35 +4341,35 @@ function lcGenerateOutcomes(t) {
     'Every quote is followed by an automated sequence that keeps the conversation alive',
     'Warm leads get nurtured until they\'re ready to say yes',
     'Higher conversion rate on the proposals you\'re already sending',
-    'Clear system from first enquiry → proposal → closed client'
+    'Clear system from first enquiry â†’ proposal â†’ closed client'
   ];
   return [
     'Consistent, predictable enquiries coming in every week',
     'A clear system that works without relying on timing or luck',
     'Full visibility on where clients come from and what converts them',
-    'Growth that\'s repeatable — not dependent on a single good month'
+    'Growth that\'s repeatable â€” not dependent on a single good month'
   ];
 }
 
 function lcGenerateFormQuestions(t) {
   if (/ads|paid/.test(t)) return {
-    q1: 'What are you currently running ads on — and what happens after someone clicks?',
+    q1: 'What are you currently running ads on â€” and what happens after someone clicks?',
     q2: 'What does a good week look like vs where things are right now?'
   };
   if (/cold|outreach/.test(t)) return {
-    q1: 'What does your current outreach look like — and where does it tend to drop off?',
+    q1: 'What does your current outreach look like â€” and where does it tend to drop off?',
     q2: 'When someone does reply, what usually happens next?'
   };
   if (/website|traffic/.test(t)) return {
-    q1: 'How are people currently finding your site — and what do you think they\'re looking for?',
+    q1: 'How are people currently finding your site â€” and what do you think they\'re looking for?',
     q2: 'What would you want a visitor to do when they land on your page?'
   };
   if (/social|content/.test(t)) return {
     q1: 'What kind of content are you posting and where does the engagement tend to stop?',
-    q2: 'Have you had anyone reach out from your content before — and what happened?'
+    q2: 'Have you had anyone reach out from your content before â€” and what happened?'
   };
   return {
-    q1: 'What are you currently doing to get clients — and where do you think it\'s breaking down?',
+    q1: 'What are you currently doing to get clients â€” and where do you think it\'s breaking down?',
     q2: 'What would consistent new enquiries actually change for your business right now?'
   };
 }
@@ -4059,7 +4378,7 @@ function lcGenerateProof(t, niche) {
   const nicheLabel = niche && niche !== 'Business Owner' ? niche.toLowerCase() + ' businesses' : 'service businesses';
   if (/ads|paid/.test(t)) return [
     `Built for ${nicheLabel} running paid traffic`,
-    'Average 3–5x improvement in enquiry conversion',
+    'Average 3â€“5x improvement in enquiry conversion',
     'Conversion system live within 14 days',
     'Full pipeline tracking included'
   ];
@@ -4071,14 +4390,14 @@ function lcGenerateProof(t, niche) {
   ];
   if (/social|content/.test(t)) return [
     `Built for ${nicheLabel} with an active audience`,
-    'Content to client pipeline — fully automated',
+    'Content to client pipeline â€” fully automated',
     'Consistent enquiries from existing followers',
     'Up and running within 14 days'
   ];
   return [
     `Built specifically for ${nicheLabel}`,
     'Consistent results within 14 days',
-    'No retainer — you own the system',
+    'No retainer â€” you own the system',
     'Free 30-minute strategy call included'
   ];
 }
@@ -4107,7 +4426,7 @@ function generateBusinessName(niche) {
   return names[niche] || niche + ' Business';
 }
 
-/* ── AI ASSIST LAYER ── */
+/* â”€â”€ AI ASSIST LAYER â”€â”€ */
 async function enhanceWithAI(ctx, rawTitle) {
   try {
     const prompt = `You are refining a sales demo page for a service business prospect who posted on Reddit.
@@ -4120,7 +4439,7 @@ Detected context:
 - Funnel gap: ${ctx.funnelGap}
 - Emotion: ${ctx.emotion}
 
-Return ONLY a JSON object with exactly these 3 fields — no other text:
+Return ONLY a JSON object with exactly these 3 fields â€” no other text:
 {
   "headline": "A punchy, specific H1 for their situation. Start with 'When' and reference their exact problem. Under 14 words.",
   "subline": "One sentence explaining their situation and what changes. Specific, not generic. Under 25 words.",
@@ -4136,20 +4455,20 @@ Return ONLY a JSON object with exactly these 3 fields — no other text:
 
     if (!data.ok) return null;
 
-    // Confidence check — reject if any field is too short or suspiciously generic
+    // Confidence check â€” reject if any field is too short or suspiciously generic
     const score =
       (data.headline && data.headline.length > 20 ? 0.4 : 0) +
       (data.subline  && data.subline.length  > 20 ? 0.3 : 0) +
       (data.dm       && data.dm.length       > 20 ? 0.3 : 0);
 
-    if (score < 0.6) return null; // fall back to rule engine — not confident enough
+    if (score < 0.6) return null; // fall back to rule engine â€” not confident enough
     return data;
   } catch { return null; }
 }
 
 async function buildFromLead(postId) {
   const d = window._feedData && window._feedData[postId];
-  if (!d) { toast('Lead data not found — try re-fetching', 'err'); return; }
+  if (!d) { toast('Lead data not found â€” try re-fetching', 'err'); return; }
   logFeedAction('demosBuilt');
   const { post, a } = d;
   const title     = post.title  || '';
@@ -4159,13 +4478,13 @@ async function buildFromLead(postId) {
   const demoFocus = a.demoFocus;
   const urgency   = a.urgency;
 
-  // 1. Rule engine — fast, deterministic backbone
+  // 1. Rule engine â€” fast, deterministic backbone
   const ctx   = extractLeadContext(title, text, niche);
   const offer = inferOffer(niche, text);
   const bizName = generateBusinessName(niche);
 
-  // 2. AI refine — sharpens headline, subline, DM (silent fallback if no key / fails)
-  toast('Analysing lead context…', 'ok');
+  // 2. AI refine â€” sharpens headline, subline, DM (silent fallback if no key / fails)
+  toast('Analysing lead contextâ€¦', 'ok');
   const ai = await enhanceWithAI(ctx, title);
   if (ai) {
     if (ai.headline) ctx.headline = ai.headline;
@@ -4228,9 +4547,9 @@ async function buildFromLead(postId) {
   // Auto-generate then surface the edit panel + share link
   setTimeout(() => {
     document.getElementById('btn-generate').click();
-    toast(`Building demo for ${niche} lead…`, 'ok');
+    toast(`Building demo for ${niche} leadâ€¦`, 'ok');
 
-    // After generate finishes — show edit panel + try to surface ngrok share URL
+    // After generate finishes â€” show edit panel + try to surface ngrok share URL
     setTimeout(async () => {
       showEditPanel(window._lastLeadContext, niche);
 
@@ -4247,20 +4566,20 @@ async function buildFromLead(postId) {
           navigator.clipboard.writeText(dm).catch(() => {});
           showDemoShareBar(t.public_url, niche, dm, author, postUrl);
         }
-      } catch { /* ngrok not running — silently skip */ }
+      } catch { /* ngrok not running â€” silently skip */ }
     }, 1800);
   }, 200);
 }
 
-/* ── EDIT BEFORE SEND PANEL ── */
+/* â”€â”€ EDIT BEFORE SEND PANEL â”€â”€ */
 function showEditPanel(lc, niche) {
   const old = document.getElementById('edit-before-send');
   if (old) old.remove();
 
   const defaultHeadline = (lc && lc.ctx && lc.ctx.headline) || (lc && lc.angle) || '';
   const defaultCta      = lc && lc.demoFocus
-    ? `I mocked up a ${lc.demoFocus} for this — want to see it?`
-    : 'I built this based on your post — want to see it?';
+    ? `I mocked up a ${lc.demoFocus} for this â€” want to see it?`
+    : 'I built this based on your post â€” want to see it?';
   const defaultOpener   = (lc && lc.ctx && lc.ctx.opener) || (lc && lc.opener) || '';
 
   const panel = document.createElement('div');
@@ -4300,7 +4619,7 @@ function showEditPanel(lc, niche) {
 
 function regenerateWithEdits() {
   const lc = window._lastLeadContext;
-  if (!lc) { toast('No lead context — fetch a lead first', 'err'); return; }
+  if (!lc) { toast('No lead context â€” fetch a lead first', 'err'); return; }
 
   const headline = document.getElementById('ebs-headline') ? document.getElementById('ebs-headline').value.trim() : '';
   const cta      = document.getElementById('ebs-cta')      ? document.getElementById('ebs-cta').value.trim()      : '';
@@ -4315,39 +4634,39 @@ function regenerateWithEdits() {
   };
 
   document.getElementById('btn-generate').click();
-  toast('Regenerating with your edits…', 'ok');
+  toast('Regenerating with your editsâ€¦', 'ok');
 }
 
-/* ── OPENER PER LEAD TYPE ── */
+/* â”€â”€ OPENER PER LEAD TYPE â”€â”€ */
 function buildTypeOpener(typeKey, a, post) {
   if (typeKey === 'operator') {
-    return `Noticed you're doing ${a.niche.toLowerCase()} work — I build the backend systems that agencies and freelancers white-label for their clients. Landing pages, CRM, follow-up sequences — all set up under your brand. Worth a look?`;
+    return `Noticed you're doing ${a.niche.toLowerCase()} work â€” I build the backend systems that agencies and freelancers white-label for their clients. Landing pages, CRM, follow-up sequences â€” all set up under your brand. Worth a look?`;
   }
   if (typeKey === 'partner') {
-    return `Saw what you're building — I've put together a complete client acquisition stack that could sit as a layer on top of your platform. Integration, white-label, or distribution play. Worth a quick conversation?`;
+    return `Saw what you're building â€” I've put together a complete client acquisition stack that could sit as a layer on top of your platform. Integration, white-label, or distribution play. Worth a quick conversation?`;
   }
   return a.opener;
 }
 
-/* ── READY DM GENERATOR ── */
+/* â”€â”€ READY DM GENERATOR â”€â”€ */
 function generateReadyDM(ctx, author, demoUrl, leadType) {
   const opener  = (ctx && ctx.opener)  || 'Looks like a system gap more than anything else.';
   const problem = (ctx && ctx.problem) || 'getting consistent clients';
   const name    = author && author !== 'unknown' ? author : null;
-  const greet   = name ? `Hey ${name} —` : 'Hey —';
+  const greet   = name ? `Hey ${name} â€”` : 'Hey â€”';
   const lt      = leadType || 'direct';
 
   if (lt === 'operator') {
     return [
       greet,
-      `Saw your post — looks like you're running client work in this space.`,
+      `Saw your post â€” looks like you're running client work in this space.`,
       '',
-      `I build the backend systems that agencies and freelancers like you can offer their own clients — landing pages, CRM pipelines, follow-up sequences, outreach. All white-labeled to your brand.`,
+      `I build the backend systems that agencies and freelancers like you can offer their own clients â€” landing pages, CRM pipelines, follow-up sequences, outreach. All white-labeled to your brand.`,
       '',
       `Instead of building it yourself, you'd just be adding it to what you already deliver.`,
       '',
       `Put together a quick look at how it works:`,
-      `→ ${demoUrl}`,
+      `â†’ ${demoUrl}`,
       '',
       `Worth 5 minutes?`
     ].join('\n');
@@ -4356,12 +4675,12 @@ function generateReadyDM(ctx, author, demoUrl, leadType) {
   if (lt === 'partner') {
     return [
       greet,
-      `Came across what you're building — interesting.`,
+      `Came across what you're building â€” interesting.`,
       '',
-      `I've built a full client acquisition system layer — landing pages, CRM, automated follow-up, outreach sequences. The kind of thing that could sit on top of your platform as an integration, white-label feature, or distribution channel.`,
+      `I've built a full client acquisition system layer â€” landing pages, CRM, automated follow-up, outreach sequences. The kind of thing that could sit on top of your platform as an integration, white-label feature, or distribution channel.`,
       '',
       `Mocked up a quick look at what that would mean in practice:`,
-      `→ ${demoUrl}`,
+      `â†’ ${demoUrl}`,
       '',
       `If there's a fit I'd want to talk properly. Worth 15 minutes?`
     ].join('\n');
@@ -4374,13 +4693,13 @@ function generateReadyDM(ctx, author, demoUrl, leadType) {
     opener,
     '',
     `I put together a quick preview based on what you said:`,
-    `→ ${demoUrl}`,
+    `â†’ ${demoUrl}`,
     '',
     `Worth 2 minutes to look at?`
   ].join('\n');
 }
 
-/* ── ONE-CLICK SEND PACK — appears above preview after Build System ── */
+/* â”€â”€ ONE-CLICK SEND PACK â€” appears above preview after Build System â”€â”€ */
 function showDemoShareBar(url, niche, dm, author, postUrl) {
   const old = document.getElementById('demo-share-bar');
   if (old) old.remove();
@@ -4400,7 +4719,7 @@ function showDemoShareBar(url, niche, dm, author, postUrl) {
   bar.innerHTML = `
     <div class="dsb-header">
       <i class="fas fa-bolt" style="color:var(--accent)"></i>
-      <span>Demo ready · <strong>${safeNich}</strong></span>
+      <span>Demo ready Â· <strong>${safeNich}</strong></span>
       <span class="dsb-copied-badge" id="dsb-copied">DM copied</span>
       <button onclick="document.getElementById('demo-share-bar').remove()" class="dsb-close">&times;</button>
     </div>
@@ -4447,7 +4766,7 @@ function copyDemoDM() {
   const dm = window._currentDemoDM || '';
   if (!dm) return;
   navigator.clipboard.writeText(dm).then(() => {
-    toast('DM copied — paste into Reddit', 'ok');
+    toast('DM copied â€” paste into Reddit', 'ok');
     logOutreachSent(dm);
   });
 }
@@ -4516,7 +4835,7 @@ async function saveFeedLead(postId) {
         baseScore:   (post.metadata && post.metadata.ranking && post.metadata.ranking.baseOverall) || score
       })
     });
-    // Visual feedback — grey out the saved card
+    // Visual feedback â€” grey out the saved card
     const card = document.getElementById('fc-' + postId);
     if (card) {
       card.style.opacity = '0.45';
@@ -4529,9 +4848,9 @@ async function saveFeedLead(postId) {
   } catch { toast('Could not save lead', 'err'); }
 }
 
-/* ══════════════════════════════════
-   BUILD DEMO — route lead → Client Creator prefilled with pain
-══════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   BUILD DEMO â€” route lead â†’ Client Creator prefilled with pain
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function buildDemoForLead(postId) {
   const d = window._feedData && window._feedData[postId];
   if (!d) { toast('Lead data not found', 'err'); return; }
@@ -4556,11 +4875,11 @@ function buildDemoForLead(postId) {
     ].filter(Boolean).join('\n'));
 
     window.__activeLeadContext = { post, analysis: a, painProfile };
-    toast('Loaded into Client Creator — click Generate to build the demo', 'ok');
+    toast('Loaded into Client Creator â€” click Generate to build the demo', 'ok');
   }, 120);
 }
 
-/* ── PAIN-MATCHED DELIVERABLE (prepends to pkg-bar on Generate) ── */
+/* â”€â”€ PAIN-MATCHED DELIVERABLE (prepends to pkg-bar on Generate) â”€â”€ */
 const PAIN_DELIVERABLES = {
   no_clients:         'Emergency lead-gen demo page',
   low_conversions:    'Rebuilt landing page mock',
@@ -4578,12 +4897,12 @@ function painHeadline(key, niche) {
   const n = (niche || 'business').toLowerCase();
   return ({
     no_clients:         `${niche}: stop waiting for the phone to ring`,
-    low_conversions:    `Your site is getting traffic — here's why it isn't converting`,
+    low_conversions:    `Your site is getting traffic â€” here's why it isn't converting`,
     outreach_gap:       `Cold outreach that actually gets replies (for ${n}s)`,
-    web_presence_gap:   `A proper online home for your ${n} business — live in 48h`,
+    web_presence_gap:   `A proper online home for your ${n} business â€” live in 48h`,
     low_visibility:     `Be the ${n} Google shows first in your area`,
     referrals_dried_up: `When referrals slow down, here's what takes their place`,
-    time_overwhelm:     `Buy back 10 hours a week — built for ${n} operators`,
+    time_overwhelm:     `Buy back 10 hours a week â€” built for ${n} operators`,
     ads_waste:          `Stop losing ad clicks. Start capturing them.`,
     proposal_ghosting:  `Proposals going cold? Here's the follow-up that fixes it`,
     growth_gap:         `${niche} systems that unlock the next stage`
@@ -4591,16 +4910,16 @@ function painHeadline(key, niche) {
 }
 function painSubline(key) {
   return ({
-    no_clients:         `A simple system that brings enquiries in on autopilot — no ads required to start.`,
-    low_conversions:    `We rebuild the page around the offer and the buyer — conversions usually double.`,
+    no_clients:         `A simple system that brings enquiries in on autopilot â€” no ads required to start.`,
+    low_conversions:    `We rebuild the page around the offer and the buyer â€” conversions usually double.`,
     outreach_gap:       `Personalised sequences that reference the prospect's actual situation, not a template.`,
-    web_presence_gap:   `One page, one offer, one CTA — built to convert, not to impress.`,
+    web_presence_gap:   `One page, one offer, one CTA â€” built to convert, not to impress.`,
     low_visibility:     `Local SEO + Google Profile set up properly so you show up where buyers look.`,
     referrals_dried_up: `Build an inbound pipeline so a quiet month isn't a panic month.`,
-    time_overwhelm:     `Automate the admin, keep the craft — more clients, fewer hours.`,
+    time_overwhelm:     `Automate the admin, keep the craft â€” more clients, fewer hours.`,
     ads_waste:          `A capture + follow-up flow so every ad click has somewhere to land.`,
     proposal_ghosting:  `A 3-step sequence that brings cold quotes back to life.`,
-    growth_gap:         `Diagnosis first, build second — nothing generic.`
+    growth_gap:         `Diagnosis first, build second â€” nothing generic.`
   })[key] || 'A system that fits your offer and your buyers.';
 }
 function painCTA(key) {
@@ -4631,25 +4950,25 @@ function renderLeadDeliverable(ctx, meta) {
 
   const sections = [
     { label: 'DM Opener (send first)',
-      body: a.opener || `Saw your post on ${source} — I work with ${niche.toLowerCase()} owners in exactly this situation. I can put a quick preview together for you. Worth a look?` },
+      body: a.opener || `Saw your post on ${source} â€” I work with ${niche.toLowerCase()} owners in exactly this situation. I can put a quick preview together for you. Worth a look?` },
     { label: 'Pain-Framed Hook',
-      body: `"${pp.label}" — ${pp.challenge}. Fix = ${pp.demoFocus || a.demoFocus}.` },
+      body: `"${pp.label}" â€” ${pp.challenge}. Fix = ${pp.demoFocus || a.demoFocus}.` },
     { label: 'Demo Page Headline', body: painHeadline(key, niche) },
     { label: 'Demo Page Sub-headline', body: painSubline(key) },
     { label: 'Demo Page CTA', body: painCTA(key) },
     { label: 'Social Post Hook (for proof)',
-      body: `How I helped a ${niche.toLowerCase()} owner stop "${(pp.label || '').toLowerCase()}" in 7 days — the one system that changed it →` },
+      body: `How I helped a ${niche.toLowerCase()} owner stop "${(pp.label || '').toLowerCase()}" in 7 days â€” the one system that changed it â†’` },
     { label: 'Follow-up DM (48h later)',
-      body: `Hey — did my note land? Happy to drop the preview over with zero strings. Just reply "yes" and I'll send it across.` },
+      body: `Hey â€” did my note land? Happy to drop the preview over with zero strings. Just reply "yes" and I'll send it across.` },
     { label: 'Breakup DM (7d later)',
-      body: `No worries if the timing's off — I'll close the loop here. If "${(pp.label || '').toLowerCase()}" is still on the table later, you've got my handle.` }
+      body: `No worries if the timing's off â€” I'll close the loop here. If "${(pp.label || '').toLowerCase()}" is still on the table later, you've got my handle.` }
   ];
 
   const card = `
     <div class="pkg-lead-demo" style="border:1px solid var(--accent);border-radius:10px;padding:14px 16px;margin:12px;background:linear-gradient(180deg,rgba(255,42,42,.08),transparent)">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)">
         <i class="fas fa-bullseye"></i> Lead Demo: ${esc2(artefact)}
-        <span style="margin-left:auto;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0">${esc2(who)} · ${esc2(source)} · ${esc2(pp.label || '')}</span>
+        <span style="margin-left:auto;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0">${esc2(who)} Â· ${esc2(source)} Â· ${esc2(pp.label || '')}</span>
       </div>
       ${sections.map(s => `
         <div style="display:flex;gap:12px;padding:8px 0;border-top:1px solid rgba(255,255,255,.05)">
@@ -4662,7 +4981,7 @@ function renderLeadDeliverable(ctx, meta) {
   bar.insertAdjacentHTML('afterbegin', card);
 }
 
-/* ── REPLY DRAWER ── */
+/* â”€â”€ REPLY DRAWER â”€â”€ */
 let _replyPostId = null;
 
 async function openReplyDrawer(postId) {
@@ -4679,17 +4998,17 @@ async function openReplyDrawer(postId) {
   const sendBtn   = document.getElementById('reply-send-btn');
   const sub       = document.getElementById('reply-drawer-sub');
 
-  if (loading)   { loading.style.display = 'block'; loading.textContent = 'Generating draft…'; }
+  if (loading)   { loading.style.display = 'block'; loading.textContent = 'Generating draftâ€¦'; }
   if (area)      { area.style.display = 'none'; area.value = ''; }
   if (actions)   actions.style.display = 'none';
   if (rationale) { rationale.style.display = 'none'; rationale.textContent = ''; }
   if (sendBtn)   sendBtn.disabled = true;
-  if (sub)       sub.textContent = 'AI-drafted · edit then approve';
+  if (sub)       sub.textContent = 'AI-drafted Â· edit then approve';
 
   openDrawer('reply-drawer');
 
   if (!window._aiEnabled) {
-    if (loading) loading.textContent = 'AI not configured — paste your message below.';
+    if (loading) loading.textContent = 'AI not configured â€” paste your message below.';
     const fallbackOpener = buildTypeOpener(a.leadType && a.leadType.key, a, post);
     if (area) { area.value = fallbackOpener; area.style.display = 'block'; }
     if (actions) { actions.style.display = 'flex'; }
@@ -4720,7 +5039,7 @@ async function openReplyDrawer(postId) {
       throw new Error(data.error || 'draft failed');
     }
   } catch (e) {
-    if (loading) { loading.textContent = 'Could not generate draft — type manually below.'; loading.style.display = 'block'; }
+    if (loading) { loading.textContent = 'Could not generate draft â€” type manually below.'; loading.style.display = 'block'; }
     if (area)    { area.style.display = 'block'; }
     if (actions) { actions.style.display = 'flex'; }
     if (sendBtn) sendBtn.disabled = false;
@@ -4785,7 +5104,7 @@ async function sendReply() {
   _replyPostId = null;
 }
 
-/* ── AUTO-MESSAGE FLOW ── */
+/* â”€â”€ AUTO-MESSAGE FLOW â”€â”€ */
 let _autoPostId = null;
 let _autoCountdownTimer = null;
 let _autoCancelMs = 20000;
@@ -4807,7 +5126,7 @@ async function triggerAutoMessage(postId) {
 
   strip.removeAttribute('hidden');
   if (tierEl)    tierEl.textContent    = 'Tier A';
-  if (preview)   preview.textContent   = 'Generating…';
+  if (preview)   preview.textContent   = 'Generatingâ€¦';
   if (countdown) countdown.textContent = '';
 
   document.getElementById('auto-confirm-send').onclick   = () => confirmAutoSend();
@@ -4897,7 +5216,7 @@ function cancelAutoConfirm(logSignal) {
   _autoPostId = null;
 }
 
-/* ── FEED FEEDBACK SIGNALS ── */
+/* â”€â”€ FEED FEEDBACK SIGNALS â”€â”€ */
 function recordFeedSignal(post, outcome) {
   const meta = post && post.metadata;
   if (!meta) return;
@@ -4945,10 +5264,33 @@ async function pushLeadToCRM(postId) {
   recordFeedSignal(d.post, 'saved_from_feed');
 }
 
-/* ── INIT ── */
+/* â”€â”€ INIT â”€â”€ */
 loadClients();
+function mountLateCreativePanel() {
+  const creativePanel = document.getElementById('panel-boss-creative');
+  const content = document.getElementById('content');
+  if (creativePanel && content && creativePanel.parentElement !== content) {
+    content.appendChild(creativePanel);
+  }
+}
 
-/* ── X SETUP ── */
+function recoverCreativePanelIfActive() {
+  mountLateCreativePanel();
+  const activeCreative = document.querySelector('.nav-item.active[data-panel="boss-creative"]');
+  const creativePanel = document.getElementById('panel-boss-creative');
+  if (activeCreative && creativePanel && !creativePanel.classList.contains('active')) {
+    switchPanel('boss-creative');
+    if (typeof window.bossLoadCreative === 'function') window.bossLoadCreative();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => setTimeout(recoverCreativePanelIfActive, 0));
+} else {
+  setTimeout(recoverCreativePanelIfActive, 0);
+}
+
+/* â”€â”€ X SETUP â”€â”€ */
 function showXSetup() {
   const existing = document.getElementById('x-setup-modal');
   if (existing) { existing.style.display = 'flex'; return; }
@@ -4959,13 +5301,13 @@ function showXSetup() {
   modal.innerHTML = `
     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 24px;width:340px;display:flex;flex-direction:column;gap:14px">
       <div style="font-size:1rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px">
-        <span style="font-size:1.2rem">𝕏</span> Connect X / Twitter
+        <span style="font-size:1.2rem">ð•</span> Connect X / Twitter
       </div>
       <div style="font-size:.78rem;color:var(--muted);line-height:1.5">
         X search requires a Bearer Token from the X Developer Portal.<br><br>
         1. Go to <a href="https://developer.twitter.com" target="_blank" style="color:var(--accent)">developer.twitter.com</a><br>
         2. Create a free developer account<br>
-        3. Create an App → copy the Bearer Token<br><br>
+        3. Create an App â†’ copy the Bearer Token<br><br>
         <strong style="color:var(--warn)">Note:</strong> Search requires the Basic plan ($100/mo). Free tier is write-only.
       </div>
       <input id="x-token-input" type="password" placeholder="Paste Bearer Token here..."
@@ -4984,10 +5326,10 @@ async function saveXToken() {
   if (!token) return;
   await fetch(API + '/config', { method: 'POST', body: JSON.stringify({ xBearerToken: token }) });
   document.getElementById('x-setup-modal').style.display = 'none';
-  toast('𝕏 connected — fetch leads to see X results', 'ok');
+  toast('ð• connected â€” fetch leads to see X results', 'ok');
 }
 
-/* ── SERPER SETUP — Google results inc. Facebook Groups, LinkedIn, Quora ── */
+/* â”€â”€ SERPER SETUP â€” Google results inc. Facebook Groups, LinkedIn, Quora â”€â”€ */
 function showGoogleSetup() {
   if (document.getElementById('serper-setup-modal')) return;
   const modal = document.createElement('div');
@@ -4996,19 +5338,19 @@ function showGoogleSetup() {
   modal.innerHTML = `
     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 24px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:14px">
       <div style="font-size:1rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px">
-        <span style="font-size:1.1rem">🔍</span> Connect Web Search
-        <button onclick="document.getElementById('serper-setup-modal').remove()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem">×</button>
+        <span style="font-size:1.1rem">ðŸ”</span> Connect Web Search
+        <button onclick="document.getElementById('serper-setup-modal').remove()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem">Ã—</button>
       </div>
       <div style="font-size:.78rem;color:var(--muted);line-height:1.6;background:rgba(255,255,255,.03);border-radius:8px;padding:12px">
-        Searches <strong style="color:var(--text)">Facebook, LinkedIn, Quora, Indie Hackers, Product Hunt, Instagram, Upwork, Fiverr, Google Maps, and directories</strong> via Google — anything publicly indexed.<br><br>
-        <strong style="color:var(--text)">Free: 2,500 searches</strong> — no card needed to start.<br><br>
-        1. Go to <a href="https://serper.dev" target="_blank" rel="noopener" style="color:var(--accent)">serper.dev</a> → Sign up free<br>
-        2. Dashboard → copy your <strong style="color:var(--text)">API Key</strong><br>
+        Searches <strong style="color:var(--text)">Facebook, LinkedIn, Quora, Indie Hackers, Product Hunt, Instagram, Upwork, Fiverr, Google Maps, and directories</strong> via Google â€” anything publicly indexed.<br><br>
+        <strong style="color:var(--text)">Free: 2,500 searches</strong> â€” no card needed to start.<br><br>
+        1. Go to <a href="https://serper.dev" target="_blank" rel="noopener" style="color:var(--accent)">serper.dev</a> â†’ Sign up free<br>
+        2. Dashboard â†’ copy your <strong style="color:var(--text)">API Key</strong><br>
         3. Paste it below and save
       </div>
       <div>
         <label style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:5px">Serper API Key</label>
-        <input id="serper-api-key-input" type="password" placeholder="Paste your key here…" style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:7px;padding:10px 12px;color:var(--text);font-size:.85rem;font-family:inherit;outline:none">
+        <input id="serper-api-key-input" type="password" placeholder="Paste your key hereâ€¦" style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:7px;padding:10px 12px;color:var(--text);font-size:.85rem;font-family:inherit;outline:none">
       </div>
       <div>
         <label style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:5px">Sites to search <span style="text-transform:none;letter-spacing:0;opacity:.6">(space-separated)</span></label>
@@ -5026,10 +5368,10 @@ async function saveSerperSetup() {
   await fetch(API + '/config', { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ serperApiKey: key, serperSearchSites: sites }) });
   document.getElementById('serper-setup-modal').remove();
-  toast('Web search connected — extended source scraping enabled', 'ok');
+  toast('Web search connected â€” extended source scraping enabled', 'ok');
 }
 
-/* ── AI SETUP MODAL ── */
+/* â”€â”€ AI SETUP MODAL â”€â”€ */
 function showAISetup() {
   const existing = document.getElementById('ai-setup-modal');
   if (existing) { existing.style.display = 'flex'; return; }
@@ -5040,14 +5382,14 @@ function showAISetup() {
   modal.innerHTML = `
     <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 24px;width:360px;display:flex;flex-direction:column;gap:14px">
       <div style="font-size:1rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px">
-        <span style="color:var(--accent);font-size:1.1rem">⚡</span> Connect AI Assist
+        <span style="color:var(--accent);font-size:1.1rem">âš¡</span> Connect AI Assist
       </div>
       <div style="font-size:.78rem;color:var(--muted);line-height:1.6">
-        AI Assist sharpens your headlines, sublines, and outreach DMs using Claude — so demos are send-ready without editing.<br><br>
+        AI Assist sharpens your headlines, sublines, and outreach DMs using Claude â€” so demos are send-ready without editing.<br><br>
         1. Go to <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a><br>
-        2. API Keys → Create Key<br>
+        2. API Keys â†’ Create Key<br>
         3. Paste it below<br><br>
-        <span style="color:var(--accent);font-weight:600">Free to start</span> · ~$0.001 per lead refinement
+        <span style="color:var(--accent);font-weight:600">Free to start</span> Â· ~$0.001 per lead refinement
       </div>
       <input id="ai-key-input" type="password" placeholder="sk-ant-..."
         style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-size:.82rem;font-family:inherit;outline:none;width:100%">
@@ -5066,7 +5408,7 @@ async function saveAIKey() {
   await fetch(API + '/config', { method: 'POST', body: JSON.stringify({ anthropicApiKey: key }) });
   document.getElementById('ai-setup-modal').style.display = 'none';
   updateAIStatus(true);
-  toast('⚡ AI Assist connected — demos will now be AI-refined', 'ok');
+  toast('âš¡ AI Assist connected â€” demos will now be AI-refined', 'ok');
 }
 
 let _aiEnabled = false;
@@ -5082,15 +5424,15 @@ function updateAIStatus(enabled) {
   _aiEnabled = enabled;
   const btn = document.getElementById('btn-ai-status');
   if (!btn) return;
-  btn.textContent = enabled ? '⚡ AI On' : '⚡ AI Off';
+  btn.textContent = enabled ? 'âš¡ AI On' : 'âš¡ AI Off';
   btn.style.color = enabled ? 'var(--accent)' : 'var(--muted)';
   btn.style.borderColor = enabled ? 'rgba(255,42,42,.4)' : 'var(--border)';
 }
 
 checkAIStatus();
 
-/* ── MOBILE LINK ── */
-/* ── Fetch ngrok URL (tries live tunnel first, falls back to saved static domain) ── */
+/* â”€â”€ MOBILE LINK â”€â”€ */
+/* â”€â”€ Fetch ngrok URL (tries live tunnel first, falls back to saved static domain) â”€â”€ */
 async function getNgrokUrl() {
   // 1. Try live ngrok tunnel
   try {
@@ -5107,7 +5449,7 @@ async function getNgrokUrl() {
   return null;
 }
 
-/* ── Persistent URL bar in topbar ── */
+/* â”€â”€ Persistent URL bar in topbar â”€â”€ */
 let _ngrokUrl = null;
 async function detectNgrokAndShowBar() {
   const url = await getNgrokUrl();
@@ -5171,7 +5513,7 @@ async function showMobileLink() {
     img.style.borderRadius = '8px';
     qrWrap.appendChild(img);
   } else {
-    status.textContent = '⚠ ngrok not running';
+    status.textContent = 'âš  ngrok not running';
     qrWrap.innerHTML   = `
       <div style="font-size:.8rem;color:var(--muted);text-align:center;padding:12px;line-height:1.6">
         Start ngrok first:<br>
@@ -5192,7 +5534,7 @@ async function saveStaticDomain() {
   const domain = input.value.trim();
   await fetch(API + '/config', { method: 'POST', body: JSON.stringify({ ngrokDomain: domain }) });
   _ngrokUrl = domain;
-  document.getElementById('mobile-modal-status').textContent = 'Saved — scan below:';
+  document.getElementById('mobile-modal-status').textContent = 'Saved â€” scan below:';
   const qrWrap = document.getElementById('mobile-qr-wrap');
   const qrUrl  = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(domain)}&bgcolor=ffffff&color=000000&margin=10`;
   const img    = document.createElement('img');
@@ -5217,7 +5559,7 @@ function copyMobileUrl() {
 // Auto-detect ngrok on load
 detectNgrokAndShowBar();
 
-/* ── LEAD TYPE FILTER ── */
+/* â”€â”€ LEAD TYPE FILTER â”€â”€ */
 function filterLeadType(type) {
   document.querySelectorAll('.ltf-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
   document.querySelectorAll('.feed-card, .feed-card-v2').forEach(card => {
@@ -5225,9 +5567,9 @@ function filterLeadType(type) {
   });
 }
 
-/* ══════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    ANALYTICS
-══════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 function toggleAnalyticsDrawer() {
   const d = document.getElementById('an-drawer');
@@ -5241,12 +5583,12 @@ async function loadAnalytics() {
   // Support both the standalone panel body AND the drawer body
   const body = document.getElementById('an-body') || document.getElementById('an-drawer-body');
   if (!body) return;
-  body.innerHTML = '<div class="an-loading"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  body.innerHTML = '<div class="an-loading"><i class="fas fa-spinner fa-spin"></i> Loadingâ€¦</div>';
   let outreachRows = [];
   try {
     const data = await fetch(API + '/analytics').then(r => r.json());
     outreachRows = data.outreach || [];
-  } catch { /* server may be down — still show feed stats */ }
+  } catch { /* server may be down â€” still show feed stats */ }
   renderAnalytics(outreachRows);
 }
 
@@ -5260,11 +5602,11 @@ async function renderAnalytics(rows) {
   const hasActivity = fa.scans.length > 0 || rows.length > 0;
 
   if (!hasActivity) {
-    body.innerHTML = `<div class="an-empty"><i class="fas fa-chart-bar"></i><p>No data yet — scan the Lead Feed to start building analytics</p></div>`;
+    body.innerHTML = `<div class="an-empty"><i class="fas fa-chart-bar"></i><p>No data yet â€” scan the Lead Feed to start building analytics</p></div>`;
     return;
   }
 
-  // ── FEED ACTIVITY STATS ──
+  // â”€â”€ FEED ACTIVITY STATS â”€â”€
   const totalScans = fa.scans.length;
   const totalLeads = fa.totalLeadsFound;
   const act = fa.actions;
@@ -5303,7 +5645,7 @@ async function renderAnalytics(rows) {
     </div>`;
   }).join('') : '<div class="an-chart-empty">No scans yet</div>';
 
-  // ── CONVERSION FUNNEL ──
+  // â”€â”€ CONVERSION FUNNEL â”€â”€
   let allLeads = [];
   try {
     const leadsRes = await fetch(API + '/leads');
@@ -5335,7 +5677,7 @@ async function renderAnalytics(rows) {
     </div>`;
   }).join('');
 
-  // ── FEED ACTIVITY HTML ──
+  // â”€â”€ FEED ACTIVITY HTML â”€â”€
   const feedHTML = `
     <div class="an-section-label"><i class="fas fa-funnel"></i> Conversion Funnel</div>
     <div class="funnel-container">
@@ -5364,7 +5706,7 @@ async function renderAnalytics(rows) {
     </div>
   `;
 
-  // ── OUTREACH STATS (only if there are rows) ──
+  // â”€â”€ OUTREACH STATS (only if there are rows) â”€â”€
   let outreachHTML = '';
   if (rows.length) {
     const total     = rows.length;
@@ -5441,18 +5783,18 @@ async function renderAnalytics(rows) {
             ${r.subreddit ? `<span class="an-log-sub">r/${esc(r.subreddit)}</span>` : ''}
             ${r.niche     ? `<span class="an-log-niche">${esc(r.niche)}</span>` : ''}
           </div>
-          <div class="an-log-title">${esc((r.postTitle||'').substring(0,80))}${(r.postTitle||'').length>80?'…':''}</div>
+          <div class="an-log-title">${esc((r.postTitle||'').substring(0,80))}${(r.postTitle||'').length>80?'â€¦':''}</div>
           <div class="an-log-meta">
             ${new Date(r.timestamp).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}
-            ${r.keyword ? ` · <em>${esc(r.keyword)}</em>` : ''}
-            ${r.demoUrl  ? ` · <a href="${esc(r.demoUrl)}" target="_blank" rel="noopener" style="color:var(--accent)">Demo ↗</a>` : ''}
-            ${r.postUrl  ? ` · <a href="${esc(r.postUrl)}"  target="_blank" rel="noopener" style="color:var(--muted)">Post ↗</a>` : ''}
+            ${r.keyword ? ` Â· <em>${esc(r.keyword)}</em>` : ''}
+            ${r.demoUrl  ? ` Â· <a href="${esc(r.demoUrl)}" target="_blank" rel="noopener" style="color:var(--accent)">Demo â†—</a>` : ''}
+            ${r.postUrl  ? ` Â· <a href="${esc(r.postUrl)}"  target="_blank" rel="noopener" style="color:var(--muted)">Post â†—</a>` : ''}
           </div>
         </div>
         <div class="an-log-right">
           ${statusBadge(r.status)}
           <div class="an-log-actions">${statusBtns(r.id, r.status)}</div>
-          <textarea class="an-note" placeholder="Notes…" onblur="saveOutreachNote(${r.id},this.value)">${esc(r.notes||'')}</textarea>
+          <textarea class="an-note" placeholder="Notesâ€¦" onblur="saveOutreachNote(${r.id},this.value)">${esc(r.notes||'')}</textarea>
         </div>
       </div>`).join('');
 
@@ -5460,8 +5802,8 @@ async function renderAnalytics(rows) {
       <div class="an-section-label"><i class="fas fa-paper-plane"></i> Outreach Performance</div>
       <div class="an-stats-row">
         <div class="an-stat"><div class="an-stat-val">${total}</div><div class="an-stat-label">DMs Sent</div></div>
-        <div class="an-stat"><div class="an-stat-val" style="color:var(--accent)">${replied}</div><div class="an-stat-label">Replied · ${replyRate}%</div></div>
-        <div class="an-stat"><div class="an-stat-val" style="color:var(--success)">${booked}</div><div class="an-stat-label">Booked · ${bookRate}%</div></div>
+        <div class="an-stat"><div class="an-stat-val" style="color:var(--accent)">${replied}</div><div class="an-stat-label">Replied Â· ${replyRate}%</div></div>
+        <div class="an-stat"><div class="an-stat-val" style="color:var(--success)">${booked}</div><div class="an-stat-label">Booked Â· ${bookRate}%</div></div>
         <div class="an-stat"><div class="an-stat-val" style="color:#f59e0b">${rows.filter(r=>r.status==='interested').length}</div><div class="an-stat-label">Interested</div></div>
       </div>
 
@@ -5489,12 +5831,12 @@ async function renderAnalytics(rows) {
     outreachHTML = `
       <div class="an-section-label"><i class="fas fa-paper-plane"></i> Outreach Performance</div>
       <div class="an-outreach-empty">
-        <p>No DMs sent yet — build a demo from the Lead Feed and copy the message to start tracking outreach performance here.</p>
+        <p>No DMs sent yet â€” build a demo from the Lead Feed and copy the message to start tracking outreach performance here.</p>
       </div>
     `;
   }
 
-  // ── CLEAR BUTTON ──
+  // â”€â”€ CLEAR BUTTON â”€â”€
   const clearBtn = `<div class="an-clear-wrap"><button class="btn btn-secondary btn-sm" onclick="if(confirm('Clear all feed activity data?')){localStorage.removeItem('feedActivity');loadAnalytics();}"><i class="fas fa-trash"></i> Reset Feed Stats</button></div>`;
 
   body.innerHTML = feedHTML + outreachHTML + clearBtn;
@@ -5526,11 +5868,11 @@ function saveOutreachNote(id, notes) {
   }).catch(() => {});
 }
 
-/* ══════════════════════════════════
-   EXECUTION ENGINE — decision-execution core
-   Takes messy input → DIAGNOSIS / OPPORTUNITY / ACTION / MESSAGE / NEXT
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   EXECUTION ENGINE â€” decision-execution core
+   Takes messy input â†’ DIAGNOSIS / OPPORTUNITY / ACTION / MESSAGE / NEXT
    Pure local heuristics (no API key required). Reuses analyzePost + pain profile.
-══════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 const EXEC_CACHE = {};
 
 function execRun() {
@@ -5560,15 +5902,15 @@ function execDiagnose(input, type) {
   const isHot    = urgency >= 70;
 
   const diagnosis = [
-    'Classification: ' + niche + ' · ' + pp.label,
-    'Urgency: ' + urgency + '/100 ' + (isHot ? '(HOT — closes fast)' : '(qualify before investing)'),
+    'Classification: ' + niche + ' Â· ' + pp.label,
+    'Urgency: ' + urgency + '/100 ' + (isHot ? '(HOT â€” closes fast)' : '(qualify before investing)'),
     'Stripped signal: ' + pp.challenge,
-    'Root cause: ' + (analysis.cause || 'No acquisition system — relying on luck, timing, and word of mouth.')
+    'Root cause: ' + (analysis.cause || 'No acquisition system â€” relying on luck, timing, and word of mouth.')
   ].join('\n');
 
   const opportunity = [
     'Leverage point: ' + (pp.demoFocus || 'acquisition system') + '.',
-    'Why it matters: fixing "' + pp.label.toLowerCase() + '" unblocks the single biggest constraint — everything downstream compounds from this.',
+    'Why it matters: fixing "' + pp.label.toLowerCase() + '" unblocks the single biggest constraint â€” everything downstream compounds from this.',
     'Speed advantage: a working ' + (pp.demoFocus || 'system') + ' can be in their hands inside 48h. That beats any competitor pitching theory.'
   ].join('\n');
 
@@ -5578,9 +5920,9 @@ function execDiagnose(input, type) {
   const message = execMessage(pp, niche, urgency, who, analysis.opener);
 
   const next = [
-    'If they reply positively → send the ' + (pp.demoFocus || 'demo') + ' within 4h. Capture their specific context first.',
-    'If they reply cold → follow up in 48h with a proof asset (case study or screenshot).',
-    'If no reply in 7d → breakup message, close the loop, move on.',
+    'If they reply positively â†’ send the ' + (pp.demoFocus || 'demo') + ' within 4h. Capture their specific context first.',
+    'If they reply cold â†’ follow up in 48h with a proof asset (case study or screenshot).',
+    'If no reply in 7d â†’ breakup message, close the loop, move on.',
     'Feedback loop: log the response tier (reply / silence / objection) to refine the next diagnosis.'
   ].join('\n');
 
@@ -5591,54 +5933,54 @@ function execActionPlan(painKey, niche, type) {
   const n = niche.toLowerCase();
   const plans = {
     no_clients: [
-      'Build a 1-page capture site (headline / offer / CTA) — 90 min — success: live URL',
-      'Set up a 3-message DM sequence for ' + n + ' owners — 45 min — success: 20 sends',
-      'Track replies in CRM with pain tag — 15 min — success: zero lost leads'
+      'Build a 1-page capture site (headline / offer / CTA) â€” 90 min â€” success: live URL',
+      'Set up a 3-message DM sequence for ' + n + ' owners â€” 45 min â€” success: 20 sends',
+      'Track replies in CRM with pain tag â€” 15 min â€” success: zero lost leads'
     ],
     low_conversions: [
-      'Audit current landing page — identify the single weakest section — 20 min',
-      'Rewrite headline/CTA around the actual buyer pain — 45 min — success: new page live',
-      'A/B split test old vs new for 72h — success: measurable conversion delta'
+      'Audit current landing page â€” identify the single weakest section â€” 20 min',
+      'Rewrite headline/CTA around the actual buyer pain â€” 45 min â€” success: new page live',
+      'A/B split test old vs new for 72h â€” success: measurable conversion delta'
     ],
     outreach_gap: [
-      'Write 3 personalised opener variants referencing their situation — 30 min',
-      'Send to 20 matched prospects in batches of 5 — 60 min — success: reply rate ≥15%',
-      'Follow up non-repliers at 48h + 7d — automate via Outreach Queue'
+      'Write 3 personalised opener variants referencing their situation â€” 30 min',
+      'Send to 20 matched prospects in batches of 5 â€” 60 min â€” success: reply rate â‰¥15%',
+      'Follow up non-repliers at 48h + 7d â€” automate via Outreach Queue'
     ],
     web_presence_gap: [
-      'One-page site with offer + booking form — 2h — success: live URL',
-      'Claim / set up Google Business profile — 30 min',
-      'Seed 3 pieces of social proof (reviews / testimonials) — 45 min'
+      'One-page site with offer + booking form â€” 2h â€” success: live URL',
+      'Claim / set up Google Business profile â€” 30 min',
+      'Seed 3 pieces of social proof (reviews / testimonials) â€” 45 min'
     ],
     low_visibility: [
-      'Audit Google Business profile and local keywords — 30 min',
-      'Create location-specific landing pages for top 3 services — 90 min',
-      'Request 5 Google reviews from past customers — 20 min — success: +5 reviews in 7d'
+      'Audit Google Business profile and local keywords â€” 30 min',
+      'Create location-specific landing pages for top 3 services â€” 90 min',
+      'Request 5 Google reviews from past customers â€” 20 min â€” success: +5 reviews in 7d'
     ],
     referrals_dried_up: [
-      'Identify top 20 past clients — list built — 30 min',
-      'Send a reactivation DM with a specific ask — 45 min — success: 3+ responses',
-      'Start building inbound funnel in parallel — landing page + magnet — 2h'
+      'Identify top 20 past clients â€” list built â€” 30 min',
+      'Send a reactivation DM with a specific ask â€” 45 min â€” success: 3+ responses',
+      'Start building inbound funnel in parallel â€” landing page + magnet â€” 2h'
     ],
     time_overwhelm: [
-      'Audit 1 week of calendar — flag 5 automatable tasks — 30 min',
-      'Automate the top 3 (CRM follow-ups, proposal sends, booking confirms) — 2h',
-      'Block 2h/day for growth work only — success: no admin during growth block'
+      'Audit 1 week of calendar â€” flag 5 automatable tasks â€” 30 min',
+      'Automate the top 3 (CRM follow-ups, proposal sends, booking confirms) â€” 2h',
+      'Block 2h/day for growth work only â€” success: no admin during growth block'
     ],
     ads_waste: [
-      'Pause current ads — audit where clicks are landing — 20 min',
-      'Build a capture page with lead magnet + follow-up — 90 min',
-      'Re-launch with the funnel live — measure cost per capture, not cost per click'
+      'Pause current ads â€” audit where clicks are landing â€” 20 min',
+      'Build a capture page with lead magnet + follow-up â€” 90 min',
+      'Re-launch with the funnel live â€” measure cost per capture, not cost per click'
     ],
     proposal_ghosting: [
-      'Audit all open proposals — flag the ones past 7 days — 20 min',
-      'Send a 3-step rescue sequence (nudge → proof → breakup) — 45 min',
-      'Add a proposal deadline to every new quote — success: response rate ≥50%'
+      'Audit all open proposals â€” flag the ones past 7 days â€” 20 min',
+      'Send a 3-step rescue sequence (nudge â†’ proof â†’ breakup) â€” 45 min',
+      'Add a proposal deadline to every new quote â€” success: response rate â‰¥50%'
     ],
     growth_gap: [
-      'Diagnose the single biggest constraint (traffic / conversion / retention) — 30 min',
-      'Build the system that fixes that one constraint — scope for 48h',
-      'Measure the before/after, decide if it is the right lever — 7d review'
+      'Diagnose the single biggest constraint (traffic / conversion / retention) â€” 30 min',
+      'Build the system that fixes that one constraint â€” scope for 48h',
+      'Measure the before/after, decide if it is the right lever â€” 7d review'
     ]
   };
   const plan = plans[painKey] || plans.growth_gap;
@@ -5650,9 +5992,9 @@ function execMessage(pp, niche, urgency, who, openerHint) {
   if (openerHint && openerHint.length > 40) return openerHint;
   const n = niche.toLowerCase();
   if (isHot) {
-    return 'Saw your post — I work with ' + n + ' owners in this exact situation. "' + pp.label + '" is the constraint, and the fix is ' + pp.demoFocus + '. I can put a preview in your hands in 48h. No pitch — just the build. Want me to start?';
+    return 'Saw your post â€” I work with ' + n + ' owners in this exact situation. "' + pp.label + '" is the constraint, and the fix is ' + pp.demoFocus + '. I can put a preview in your hands in 48h. No pitch â€” just the build. Want me to start?';
   }
-  return 'Saw this and recognised it. Most ' + n + ' businesses hit "' + pp.label.toLowerCase() + '" not because of the service, but because of the system behind it. Happy to show you what the fix looks like — 15 min, no pitch. Worth a look?';
+  return 'Saw this and recognised it. Most ' + n + ' businesses hit "' + pp.label.toLowerCase() + '" not because of the service, but because of the system behind it. Happy to show you what the fix looks like â€” 15 min, no pitch. Worth a look?';
 }
 
 function renderExecOutput(r) {
@@ -5672,7 +6014,7 @@ function renderExecOutput(r) {
   const fillBtn = document.getElementById('btn-exec-fill-lead');
   if (fillBtn) fillBtn.addEventListener('click', () => {
     const ctx = window.__activeLeadContext;
-    if (!ctx) { toast('No active lead — open a lead from the feed first', 'err'); return; }
+    if (!ctx) { toast('No active lead â€” open a lead from the feed first', 'err'); return; }
     const input = [
       'Post: ' + ctx.post.title,
       ctx.post.text ? 'Body: ' + ctx.post.text : '',
@@ -5693,3 +6035,7 @@ function renderExecOutput(r) {
     });
   });
 })();
+
+
+
+

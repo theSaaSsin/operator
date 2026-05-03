@@ -1,0 +1,45 @@
+{
+  "notifications": [
+    {
+      "id": "1777725494739-3x1yg5",
+      "type": "outreach.queued",
+      "title": "Outreach queued: Email 1",
+      "body": "plumbing · Hi, you mentioned needing more leads...",
+      "source": "outreach",
+      "panel": "outreach",
+      "meta": {
+        "id": 1777725494738
+      },
+      "ts": 1777725494739,
+      "read": false
+    },
+    {
+      "id": "1777725494732-mofhfx",
+      "type": "lead.created",
+      "title": "New lead: Test Lead",
+      "body": "Apex Plumbing · score 85 · no leads",
+      "source": "lead",
+      "panel": "crm",
+      "meta": {
+        "id": 1777725494732,
+        "score": 85,
+        "intent": null
+      },
+      "ts": 1777725494732,
+      "read": false
+    },
+    {
+      "id": "1777725494725-wwiqjj",
+      "type": "client.created",
+      "title": "New client: Audit Test Co",
+      "body": "SaaS · goal: leads",
+      "source": "client",
+      "panel": "client",
+      "meta": {
+        "id": 1777725494720
+      },
+      "ts": 1777725494725,
+      "read": false
+    }
+  ]
+}
