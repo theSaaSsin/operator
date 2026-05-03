@@ -1,4 +1,4 @@
-﻿/* ── B.O.S.S — Business Optimization System Service — boss.js ── */
+/* ── B.O.S.S — Business Optimization System Service — boss.js ── */
 'use strict';
 (function () {
   const API = '/api';

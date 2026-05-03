@@ -58,9 +58,33 @@ function notify(type, payload = {}) {
 }
 
 const MIME = {
-  '.html': 'text/html', '.css': 'text/css',
-  '.js':   'text/javascript', '.json': 'application/json',
-  '.mp4':  'video/mp4', '.ico': 'image/x-icon'
+  '.html': 'text/html; charset=utf-8',
+  '.htm':  'text/html; charset=utf-8',
+  '.css':  'text/css; charset=utf-8',
+  '.js':   'text/javascript; charset=utf-8',
+  '.mjs':  'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.txt':  'text/plain; charset=utf-8',
+  '.md':   'text/markdown; charset=utf-8',
+  '.svg':  'image/svg+xml; charset=utf-8',
+  '.xml':  'application/xml; charset=utf-8',
+  '.csv':  'text/csv; charset=utf-8',
+  '.png':  'image/png',
+  '.jpg':  'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif':  'image/gif',
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+  '.mp4':  'video/mp4',
+  '.webm': 'video/webm',
+  '.mov':  'video/quicktime',
+  '.mp3':  'audio/mpeg',
+  '.wav':  'audio/wav',
+  '.ogg':  'audio/ogg',
+  '.woff':  'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf':   'font/ttf',
+  '.ico':  'image/x-icon'
 };
 
 function readJSON(file) {
@@ -1530,6 +1554,27 @@ What do you actually need done right now?`;
 }
 
 const ROUTES = {
+  'GET /api/browser-state': (_, res) => {
+    const file = path.join(DATA, 'browser-state.json');
+    let state = {};
+    try { state = JSON.parse(fs.readFileSync(file, 'utf8')) || {}; } catch (_) {}
+    res.end(JSON.stringify({ ok: true, state }));
+  },
+
+  'POST /api/browser-state': async (req, res) => {
+    const data = await body(req);
+    const file = path.join(DATA, 'browser-state.json');
+    let state = {};
+    try { state = JSON.parse(fs.readFileSync(file, 'utf8')) || {}; } catch (_) {}
+    if (data && typeof data === 'object') {
+      // Merge — accept either full snapshot ({state:{...}}) or flat updates
+      const incoming = data.state && typeof data.state === 'object' ? data.state : data;
+      Object.assign(state, incoming);
+      try { fs.writeFileSync(file, JSON.stringify(state, null, 2)); } catch (_) {}
+    }
+    res.end(JSON.stringify({ ok: true }));
+  },
+
   'GET /api/notifications': (req, res) => {
     let store;
     try { store = JSON.parse(fs.readFileSync(NOTIF_FILE, 'utf8')); } catch { store = { notifications: [] }; }
