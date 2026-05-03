@@ -1407,7 +1407,7 @@ gr.Interface(fn=generate,
             <div id="sc-canvas">
               <div id="sc-world"></div>
             </div>
-            <div class="sc-canvas-hint">Pan: hold SPACE + drag · Zoom: mouse wheel · Drag layers · Z = depth (3D)</div>
+            <div class="sc-canvas-hint">Pan: SPACE+drag · Zoom: wheel · Drag layers · 2× click text to edit · Arrows nudge · Cmd/Ctrl+D dup · Del remove · Esc deselect · Z=depth</div>
           </div>
           <div class="sc-right">
             <div class="sc-right-title">Properties</div>
@@ -1435,6 +1435,13 @@ gr.Interface(fn=generate,
           <span class="agent-badge">BETA</span>
           <div class="spacer"></div>
           <button class="btn btn-secondary btn-sm" id="agent-clear"><i class="fas fa-trash"></i> Clear</button>
+        </div>
+        <div class="agent-personabar">
+          <div class="agent-persona agent-persona-on" data-persona="operator" title="Default operator — system design + workflows"><i class="fas fa-bolt"></i> Operator</div>
+          <div class="agent-persona" data-persona="brainstorm" title="Divergent ideation — push back on weak ideas"><i class="fas fa-lightbulb"></i> Brainstorm</div>
+          <div class="agent-persona" data-persona="sales" title="Sales-focus — discovery, objections, proposals"><i class="fas fa-handshake"></i> Sales</div>
+          <div class="agent-persona" data-persona="builder" title="Technical — file paths, code, commands"><i class="fas fa-hammer"></i> Builder</div>
+          <div class="agent-persona" data-persona="copywriter" title="Copy — headlines, body, CTAs"><i class="fas fa-pen-fancy"></i> Copy</div>
         </div>
         <div id="agent-log"></div>
         <div class="agent-quickbar">

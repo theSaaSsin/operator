@@ -7,24 +7,63 @@
   if (window.__studioCanvasInit) return;
   window.__studioCanvasInit = true;
 
-  const STATE_KEY = 'tss_studio_canvas_v1';
+  const STATE_KEY = 'tss_studio_canvas_v2';
 
   // ── State ──────────────────────────────────
   const state = {
     pan: { x: 0, y: 0 },
     zoom: 1,
-    layers: [],         // {id, type, x, y, z, w, h, rot, src, text, fontSize, color, filter, kfs:[]}
+    layers: [],         // {id, type, x, y, z, w, h, rot, src, text, fontSize, color, weight, italic, align, filter, kfs:[]}
     selected: null,
     timeline: { dur: 12, time: 0, playing: false, beats: [], audioBuf: null, audioSrc: null },
+    background: {       // v2 — canvas background controls
+      type: 'grid',     // solid | gradient | grid | dots | noise | image
+      color1: '#0a0a0f',
+      color2: '#1a1a22',
+      imageSrc: null,
+      gridColor: 'rgba(255,255,255,0.025)',
+      gridSize: 40
+    },
     nextId: 1
   };
+
+  // ── Glow + FX palette (v2) ─────────────────
+  const GLOW_PALETTE = [
+    { name: 'None',    fx: '',                                           swatch: 'transparent' },
+    { name: 'Blur',    fx: 'blur(8px)',                                  swatch: '#888' },
+    { name: 'Mono',    fx: 'grayscale(1) contrast(1.1)',                 swatch: '#aaa' },
+    { name: 'Crush',   fx: 'brightness(0.5) contrast(1.4)',              swatch: '#222' },
+    { name: 'Filmic',  fx: 'saturate(0.4) brightness(.85)',              swatch: '#5a5440' },
+    { name: 'Red',     fx: 'drop-shadow(0 0 24px rgba(255,42,42,0.7))',  swatch: '#ff2a2a' },
+    { name: 'Cyan',    fx: 'drop-shadow(0 0 24px rgba(0,229,255,0.7))',  swatch: '#00e5ff' },
+    { name: 'Amber',   fx: 'drop-shadow(0 0 24px rgba(255,180,0,0.7))',  swatch: '#ffb400' },
+    { name: 'Purple',  fx: 'drop-shadow(0 0 24px rgba(168,85,247,0.7))', swatch: '#a855f7' },
+    { name: 'Green',   fx: 'drop-shadow(0 0 24px rgba(34,197,94,0.7))',  swatch: '#22c55e' },
+    { name: 'Blue',    fx: 'drop-shadow(0 0 24px rgba(59,130,246,0.7))', swatch: '#3b82f6' },
+    { name: 'White',   fx: 'drop-shadow(0 0 24px rgba(240,240,245,0.8))', swatch: '#f0f0f5' },
+    { name: 'Orange',  fx: 'drop-shadow(0 0 24px rgba(255,107,42,0.7))', swatch: '#ff6b2a' },
+    { name: 'Pink',    fx: 'drop-shadow(0 0 24px rgba(236,72,153,0.7))', swatch: '#ec4899' },
+    { name: 'Teal',    fx: 'drop-shadow(0 0 24px rgba(20,184,166,0.7))', swatch: '#14b8a6' },
+    { name: 'Multi',   fx: 'drop-shadow(0 0 18px rgba(255,42,42,0.6)) drop-shadow(0 0 18px rgba(0,229,255,0.5))', swatch: 'linear-gradient(135deg,#ff2a2a,#00e5ff)' }
+  ];
+
+  const BG_PRESETS = [
+    { id: 'grid',     label: 'Grid',     gen: (c1, c2) => `${c1};background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);background-size:40px 40px` },
+    { id: 'dots',     label: 'Dots',     gen: (c1, c2) => `${c1};background-image:radial-gradient(rgba(255,255,255,0.08) 1.2px,transparent 1.2px);background-size:30px 30px` },
+    { id: 'solid',    label: 'Solid',    gen: (c1, c2) => `${c1}` },
+    { id: 'gradient', label: 'Gradient', gen: (c1, c2) => `linear-gradient(135deg,${c1} 0%,${c2} 100%)` },
+    { id: 'radial',   label: 'Radial',   gen: (c1, c2) => `radial-gradient(circle at 50% 50%,${c2} 0%,${c1} 70%)` },
+    { id: 'noise',    label: 'Noise',    gen: (c1, c2) => `${c1};background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E")` },
+    { id: 'lines',    label: 'Lines',    gen: (c1, c2) => `${c1};background-image:repeating-linear-gradient(45deg,transparent,transparent 20px,rgba(255,255,255,0.025) 20px,rgba(255,255,255,0.025) 21px)` }
+  ];
 
   // ── Persistence ────────────────────────────
   function save() {
     try {
       const snap = {
         layers: state.layers,
-        timeline: { dur: state.timeline.dur, beats: state.timeline.beats, audioSrc: state.timeline.audioSrc }
+        timeline: { dur: state.timeline.dur, beats: state.timeline.beats, audioSrc: state.timeline.audioSrc },
+        background: state.background
       };
       localStorage.setItem(STATE_KEY, JSON.stringify(snap));
     } catch (e) { /* ignore */ }
@@ -43,7 +82,33 @@
         state.timeline.beats = snap.timeline.beats || [];
         state.timeline.audioSrc = snap.timeline.audioSrc || null;
       }
+      if (snap.background) {
+        Object.assign(state.background, snap.background);
+      }
     } catch (e) { /* ignore */ }
+  }
+
+  // ── Apply canvas background (v2) ──────────
+  function applyBackground() {
+    if (!canvasEl) return;
+    const bg = state.background;
+    if (bg.type === 'image' && bg.imageSrc) {
+      canvasEl.style.background = `url(${bg.imageSrc}) center/cover no-repeat, ${bg.color1}`;
+      canvasEl.style.backgroundImage = `url(${bg.imageSrc})`;
+      canvasEl.style.backgroundSize = 'cover';
+      return;
+    }
+    const preset = BG_PRESETS.find(p => p.id === bg.type) || BG_PRESETS[0];
+    const css = preset.gen(bg.color1, bg.color2);
+    if (css.includes('background-image')) {
+      const [bgCol, bgImg] = css.split(';background-image:');
+      canvasEl.style.background = bgCol.startsWith('linear') || bgCol.startsWith('radial') ? bgCol : bgCol;
+      canvasEl.style.backgroundImage = bgImg;
+      canvasEl.style.backgroundSize = '';
+    } else {
+      canvasEl.style.background = css;
+      canvasEl.style.backgroundImage = '';
+    }
   }
 
   // ── DOM refs (set in init) ────────────────
@@ -71,12 +136,16 @@
         el.innerHTML = `<img src="${layer.src}" draggable="false" style="width:100%;height:100%;object-fit:cover;">`;
       } else if (layer.type === 'video') {
         el.innerHTML = `<video src="${layer.src}" autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;"></video>`;
-      } else if (layer.type === 'text') {
-        const c = layer.color || '#f0f0f5';
-        const fs = layer.fontSize || 36;
-        el.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:800;color:${c};text-align:center;line-height:1.1;letter-spacing:-.02em;">${escapeHtml(layer.text || '')}</div>`;
-      } else if (layer.type === 'kanji') {
-        el.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:${layer.fontSize||120}px;font-weight:900;color:${layer.color||'#ff2a2a'};line-height:1;letter-spacing:-.04em;">${escapeHtml(layer.text || '暗殺')}</div>`;
+      } else if (layer.type === 'text' || layer.type === 'kanji') {
+        const c = layer.color || (layer.type === 'kanji' ? '#ff2a2a' : '#f0f0f5');
+        const fs = layer.fontSize || (layer.type === 'kanji' ? 120 : 36);
+        const weight = layer.weight || (layer.type === 'kanji' ? 900 : 800);
+        const italic = layer.italic ? 'italic' : 'normal';
+        const align = layer.align || 'center';
+        const flex = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center';
+        const ls = layer.type === 'kanji' ? '-.04em' : '-.02em';
+        const defaultText = layer.type === 'kanji' ? '暗殺' : '';
+        el.innerHTML = `<div class="sc-text-content" data-layer-id="${layer.id}" style="width:100%;height:100%;display:flex;align-items:center;justify-content:${flex};font-size:${fs}px;font-weight:${weight};font-style:${italic};color:${c};text-align:${align};line-height:1.1;letter-spacing:${ls};padding:6px;outline:none;">${escapeHtml(layer.text || defaultText)}</div>`;
       }
       worldEl.appendChild(el);
     });
@@ -97,20 +166,41 @@
         <i class="fas ${icon}"></i>
         <span class="sc-layer-label">${escapeHtml(label || l.type)}</span>
         <span class="sc-layer-z">z${l.z||0}</span>
-        <button class="sc-mini-btn" data-action="up" data-id="${l.id}" title="Bring forward"><i class="fas fa-arrow-up"></i></button>
+        <button class="sc-mini-btn" data-action="dup" data-id="${l.id}" title="Duplicate"><i class="fas fa-clone"></i></button>
+        <button class="sc-mini-btn" data-action="up"  data-id="${l.id}" title="Bring forward"><i class="fas fa-arrow-up"></i></button>
         <button class="sc-mini-btn" data-action="del" data-id="${l.id}" title="Delete"><i class="fas fa-trash"></i></button>
       </div>`;
     }).join('');
+  }
+
+  function backgroundSection() {
+    const bg = state.background;
+    return `
+      <div class="sc-bg-section">
+        <div class="sc-section-title">CANVAS BACKGROUND</div>
+        <div class="sc-bg-presets">
+          ${BG_PRESETS.map(p => `<button class="sc-bg-btn${bg.type === p.id ? ' sc-bg-btn-on' : ''}" data-bg-type="${p.id}">${p.label}</button>`).join('')}
+          <button class="sc-bg-btn${bg.type === 'image' ? ' sc-bg-btn-on' : ''}" data-bg-type="image"><i class="fas fa-image"></i> Image</button>
+        </div>
+        <div class="sc-props-grid" style="margin-top:8px">
+          <label>Colour 1<input type="color" data-bg-prop="color1" value="${bg.color1}"></label>
+          <label>Colour 2<input type="color" data-bg-prop="color2" value="${bg.color2}"></label>
+        </div>
+        ${bg.imageSrc ? `<button class="sc-bg-btn" data-bg-action="clear-image" style="width:100%;margin-top:8px"><i class="fas fa-times"></i> Clear background image</button>` : ''}
+      </div>
+    `;
   }
 
   function renderProps() {
     if (!propsEl) return;
     const layer = state.layers.find(l => l.id === state.selected);
     if (!layer) {
-      propsEl.innerHTML = '<div class="sc-empty">Select a layer to edit its properties + keyframes.</div>';
+      propsEl.innerHTML = backgroundSection() + '<div class="sc-empty" style="padding-top:14px">Select a layer to edit its properties + keyframes.</div>';
       return;
     }
-    propsEl.innerHTML = `
+    propsEl.innerHTML = backgroundSection() + `
+      <div class="sc-section-title" style="margin-top:14px">LAYER PROPERTIES</div>`;
+    propsEl.innerHTML += `
       <div class="sc-props-grid">
         <label>X<input type="number" data-prop="x" value="${layer.x}"></label>
         <label>Y<input type="number" data-prop="y" value="${layer.y}"></label>
@@ -124,17 +214,28 @@
         <label class="sc-full">Text<input type="text" data-prop="text" value="${escapeHtml(layer.text || '')}"></label>
         <div class="sc-props-grid">
           <label>Font px<input type="number" data-prop="fontSize" value="${layer.fontSize||36}"></label>
-          <label>Color<input type="color" data-prop="color" value="${layer.color||'#f0f0f5'}"></label>
+          <label>Weight<select data-prop="weight">${[300,400,500,600,700,800,900].map(w => `<option value="${w}"${(layer.weight||(layer.type==='kanji'?900:800))===w?' selected':''}>${w}</option>`).join('')}</select></label>
+          <label>Color<input type="color" data-prop="color" value="${layer.color||(layer.type==='kanji'?'#ff2a2a':'#f0f0f5')}"></label>
+          <label>Italic<select data-prop="italic"><option value="">Normal</option><option value="1"${layer.italic?' selected':''}>Italic</option></select></label>
+          <label class="sc-full">Align
+            <div class="sc-align-row">
+              <button class="sc-align-btn${(layer.align||'center')==='left'?' sc-align-btn-on':''}" data-prop="align" data-val="left"><i class="fas fa-align-left"></i></button>
+              <button class="sc-align-btn${(layer.align||'center')==='center'?' sc-align-btn-on':''}" data-prop="align" data-val="center"><i class="fas fa-align-center"></i></button>
+              <button class="sc-align-btn${(layer.align||'center')==='right'?' sc-align-btn-on':''}" data-prop="align" data-val="right"><i class="fas fa-align-right"></i></button>
+            </div>
+          </label>
         </div>
       ` : ''}
       <div class="sc-fx">
-        <span class="sc-fx-label">EFFECTS</span>
-        <button class="sc-fx-btn" data-fx="none">None</button>
-        <button class="sc-fx-btn" data-fx="blur(8px)">Blur</button>
-        <button class="sc-fx-btn" data-fx="grayscale(1) contrast(1.1)">Mono</button>
-        <button class="sc-fx-btn" data-fx="brightness(0.5) contrast(1.4)">Crush</button>
-        <button class="sc-fx-btn" data-fx="hue-rotate(0deg) saturate(0.4) brightness(.85)">Filmic</button>
-        <button class="sc-fx-btn" data-fx="drop-shadow(0 0 24px rgba(255,42,42,0.6))">Red glow</button>
+        <span class="sc-fx-label">GLOW + EFFECTS</span>
+        ${GLOW_PALETTE.map(g => `
+          <button class="sc-fx-btn${(layer.filter||'') === g.fx ? ' sc-fx-btn-on' : ''}" data-fx="${g.fx}" title="${g.name}">
+            <span class="sc-fx-swatch" style="background:${g.swatch}"></span>${g.name}
+          </button>`).join('')}
+        <label class="sc-fx-custom" title="Custom glow color">
+          <span class="sc-fx-label" style="margin:0">CUSTOM</span>
+          <input type="color" data-prop="customGlow" value="${layer.customGlow || '#ff2a2a'}" style="width:32px;height:24px;border:none;background:transparent;cursor:pointer;">
+        </label>
       </div>
       <div class="sc-kf-bar">
         <div class="sc-kf-label">KEYFRAMES @ ${state.timeline.time.toFixed(2)}s</div>
@@ -322,6 +423,33 @@
 
   // ── Helpers ───────────────────────────────
   function escapeHtml(s){ return String(s == null ? '' : s).replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function duplicateLayer(src) {
+    const dup = JSON.parse(JSON.stringify(src));
+    dup.id = state.nextId++;
+    dup.x = (src.x || 0) + 24;
+    dup.y = (src.y || 0) + 24;
+    dup.kfs = []; // don't carry keyframes
+    state.layers.push(dup);
+    state.selected = dup.id;
+    save(); renderWorld(); renderProps(); renderTimeline();
+    toast('Layer duplicated', 'ok');
+  }
+
+  function nudgeSelected(dx, dy) {
+    const layer = state.layers.find(l => l.id === state.selected);
+    if (!layer) return;
+    layer.x = (layer.x || 0) + dx;
+    layer.y = (layer.y || 0) + dy;
+    save(); renderWorld(); renderProps();
+  }
+
+  function deleteSelected() {
+    if (state.selected == null) return;
+    state.layers = state.layers.filter(l => l.id !== state.selected);
+    state.selected = null;
+    save(); renderWorld(); renderProps(); renderTimeline();
+  }
   function toast(msg, kind) {
     const t = document.getElementById('toast');
     if (!t) { console.log(msg); return; }
@@ -345,6 +473,7 @@
     timeReadoutEl = document.getElementById('sc-time-readout');
 
     load();
+    applyBackground();
     renderWorld(); renderProps(); renderTimeline();
 
     // Pan with middle-mouse / space+drag, zoom with wheel
@@ -364,7 +493,39 @@
       renderWorld();
     });
     window.addEventListener('mouseup', () => { panning = false; canvasEl.style.cursor = ''; });
-    window.addEventListener('keydown', e => { if (e.key === ' ') { spaceDown = true; canvasEl.style.cursor = 'grab'; } });
+
+    // ── Keyboard shortcuts (only when canvas has focus / is visible) ──
+    function panelActive() {
+      const p = document.getElementById('panel-studio-canvas');
+      return p && p.classList.contains('active');
+    }
+    function inEditableField(target) {
+      const t = (target.tagName || '').toUpperCase();
+      return t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || target.isContentEditable;
+    }
+    window.addEventListener('keydown', e => {
+      if (!panelActive()) return;
+      if (e.key === ' ' && !inEditableField(e.target)) { spaceDown = true; canvasEl.style.cursor = 'grab'; e.preventDefault(); return; }
+      if (inEditableField(e.target)) return;
+      // Delete selected layer
+      if ((e.key === 'Delete' || e.key === 'Backspace') && state.selected != null) {
+        e.preventDefault(); deleteSelected();
+      }
+      // Duplicate Cmd/Ctrl+D
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd' && state.selected != null) {
+        e.preventDefault();
+        const layer = state.layers.find(l => l.id === state.selected);
+        if (layer) duplicateLayer(layer);
+      }
+      // Arrow nudges (1px / 10px with Shift)
+      const step = e.shiftKey ? 10 : 1;
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); nudgeSelected(-step, 0); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); nudgeSelected( step, 0); }
+      if (e.key === 'ArrowUp')    { e.preventDefault(); nudgeSelected(0, -step); }
+      if (e.key === 'ArrowDown')  { e.preventDefault(); nudgeSelected(0,  step); }
+      // Esc to deselect
+      if (e.key === 'Escape' && state.selected != null) { state.selected = null; renderWorld(); renderProps(); }
+    });
     window.addEventListener('keyup',   e => { if (e.key === ' ') { spaceDown = false; canvasEl.style.cursor = ''; } });
     canvasEl.addEventListener('wheel', e => {
       e.preventDefault();
@@ -383,6 +544,8 @@
     // Layer click to select + drag to move
     let dragging = null, dragStart = null;
     worldEl.addEventListener('mousedown', e => {
+      // Don't intercept clicks on a contenteditable text being edited
+      if (e.target.isContentEditable) return;
       const layerEl = e.target.closest('.sc-layer');
       if (!layerEl || spaceDown) return;
       const id = +layerEl.dataset.id;
@@ -393,6 +556,48 @@
       dragStart = { x: e.clientX, y: e.clientY, lx: layer.x, ly: layer.y };
       e.stopPropagation();
       renderWorld(); renderProps();
+    });
+
+    // Click empty canvas to deselect
+    canvasEl.addEventListener('click', e => {
+      if (panning || spaceDown) return;
+      if (e.target === canvasEl || e.target === worldEl) {
+        if (state.selected != null) {
+          state.selected = null;
+          renderWorld(); renderProps();
+        }
+      }
+    });
+
+    // Double-click text/kanji layers to edit in-place
+    worldEl.addEventListener('dblclick', e => {
+      const textEl = e.target.closest('.sc-text-content');
+      if (!textEl) return;
+      const id = +textEl.dataset.layerId;
+      const layer = state.layers.find(l => l.id === id);
+      if (!layer || (layer.type !== 'text' && layer.type !== 'kanji')) return;
+      textEl.contentEditable = 'true';
+      textEl.focus();
+      // Select all
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(textEl);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      const finish = () => {
+        textEl.contentEditable = 'false';
+        layer.text = textEl.textContent.trim();
+        textEl.removeEventListener('blur', finish);
+        textEl.removeEventListener('keydown', onKey);
+        save(); renderWorld(); renderProps();
+      };
+      const onKey = ev => {
+        if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); finish(); }
+        if (ev.key === 'Escape') { ev.preventDefault(); finish(); }
+        ev.stopPropagation();
+      };
+      textEl.addEventListener('blur', finish);
+      textEl.addEventListener('keydown', onKey);
     });
     window.addEventListener('mousemove', e => {
       if (!dragging) return;
@@ -452,6 +657,8 @@
           if (state.selected === id) state.selected = null;
         } else if (btn.dataset.action === 'up') {
           layer.z = (layer.z || 0) + 50;
+        } else if (btn.dataset.action === 'dup') {
+          duplicateLayer(layer);
         }
         save(); renderWorld(); renderProps();
         e.stopPropagation();
@@ -463,8 +670,27 @@
       }
     });
 
-    // Props panel interactions
+    // Props panel interactions — input changes (props + bg colours + bg image upload)
     propsEl.addEventListener('input', e => {
+      // Background colour change
+      const bgProp = e.target.dataset.bgProp;
+      if (bgProp) {
+        state.background[bgProp] = e.target.value;
+        save(); applyBackground();
+        return;
+      }
+      // Custom glow colour — synthesise drop-shadow filter
+      if (e.target.dataset.prop === 'customGlow') {
+        const layer = state.layers.find(l => l.id === state.selected);
+        if (!layer) return;
+        const c = e.target.value;
+        const r = parseInt(c.slice(1,3), 16), g = parseInt(c.slice(3,5), 16), b = parseInt(c.slice(5,7), 16);
+        layer.customGlow = c;
+        layer.filter = `drop-shadow(0 0 28px rgba(${r},${g},${b},0.75))`;
+        save(); renderWorld();
+        return;
+      }
+      // Layer property
       const layer = state.layers.find(l => l.id === state.selected);
       if (!layer) return;
       const prop = e.target.dataset.prop;
@@ -474,12 +700,51 @@
       save(); renderWorld();
     });
     propsEl.addEventListener('click', e => {
+      // Background type buttons
+      const bgBtn = e.target.closest('[data-bg-type]');
+      if (bgBtn) {
+        const t = bgBtn.dataset.bgType;
+        if (t === 'image') {
+          const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*';
+          i.onchange = ev => {
+            const f = ev.target.files[0]; if (!f) return;
+            const reader = new FileReader();
+            reader.onload = re => {
+              state.background.imageSrc = re.target.result;
+              state.background.type = 'image';
+              save(); applyBackground(); renderProps();
+            };
+            reader.readAsDataURL(f);
+          };
+          i.click();
+        } else {
+          state.background.type = t;
+          save(); applyBackground(); renderProps();
+        }
+        return;
+      }
+      // Clear bg image
+      if (e.target.closest('[data-bg-action="clear-image"]')) {
+        state.background.imageSrc = null;
+        state.background.type = 'grid';
+        save(); applyBackground(); renderProps();
+        return;
+      }
+      // Alignment buttons
+      const alignBtn = e.target.closest('.sc-align-btn');
+      if (alignBtn) {
+        const layer = state.layers.find(l => l.id === state.selected);
+        if (!layer) return;
+        layer.align = alignBtn.dataset.val;
+        save(); renderWorld(); renderProps();
+        return;
+      }
       const fxBtn = e.target.closest('.sc-fx-btn');
       if (fxBtn) {
         const layer = state.layers.find(l => l.id === state.selected);
         if (!layer) return;
-        layer.filter = fxBtn.dataset.fx === 'none' ? '' : fxBtn.dataset.fx;
-        save(); renderWorld();
+        layer.filter = fxBtn.dataset.fx;
+        save(); renderWorld(); renderProps();
       }
       const action = e.target.closest('[data-action]')?.dataset.action;
       const layer = state.layers.find(l => l.id === state.selected);

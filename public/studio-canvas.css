@@ -77,3 +77,24 @@ label.sc-full{grid-column:1/-1;}
 
 #sc-time-readout{font-family:'JetBrains Mono','Courier New',monospace;font-size:.72rem;font-weight:600;letter-spacing:.04em;color:var(--text);width:140px;text-align:right;flex-shrink:0;}
 #sc-audio{display:none;}
+
+/* ── v2 — background section, alignment, swatches ── */
+.sc-section-title{font-family:'JetBrains Mono','Courier New',monospace;font-size:.62rem;font-weight:700;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+.sc-bg-section{padding-bottom:10px;border-bottom:1px solid var(--border);}
+.sc-bg-presets{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;}
+.sc-bg-btn{font-family:'JetBrains Mono','Courier New',monospace;font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--muted);padding:7px 9px;border-radius:5px;cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center;transition:all .15s;}
+.sc-bg-btn:hover{color:var(--text);border-color:rgba(255,42,42,0.4);}
+.sc-bg-btn-on{background:var(--accent);color:#fff;border-color:var(--accent);}
+.sc-fx-btn{display:inline-flex;align-items:center;gap:5px;}
+.sc-fx-btn-on{background:var(--accent);color:#fff;border-color:var(--accent);}
+.sc-fx-swatch{display:inline-block;width:10px;height:10px;border-radius:2px;background:#666;border:1px solid rgba(255,255,255,0.15);flex-shrink:0;}
+.sc-fx-custom{display:flex;align-items:center;gap:6px;padding:5px 8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;font-family:'JetBrains Mono','Courier New',monospace;font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);cursor:pointer;}
+.sc-align-row{display:flex;gap:4px;}
+.sc-align-btn{flex:1;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--muted);padding:6px 0;border-radius:4px;cursor:pointer;font-size:.78rem;}
+.sc-align-btn:hover{color:var(--text);}
+.sc-align-btn-on{background:var(--accent);color:#fff;border-color:var(--accent);}
+/* contenteditable text feedback */
+.sc-text-content[contenteditable="true"]{outline:2px dashed var(--accent);background:rgba(255,42,42,0.06);}
+/* dropdown styling */
+.sc-props-grid select{background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:4px;font-size:.78rem;font-family:Inter,system-ui,sans-serif;outline:none;cursor:pointer;}
+.sc-props-grid select:focus{border-color:var(--accent);}

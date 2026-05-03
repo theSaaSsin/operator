@@ -8,11 +8,49 @@
     : 'http://localhost:4000/api';
 
   const STORAGE_KEY = 'tss_operator_agent_history_v1';
+  const PERSONA_KEY = 'tss_operator_agent_persona';
   let history = [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) history = JSON.parse(raw);
   } catch (_) { history = []; }
+
+  let currentPersona = localStorage.getItem(PERSONA_KEY) || 'operator';
+
+  const PERSONAS = {
+    operator: {
+      label: 'Operator',
+      icon: 'fa-bolt',
+      system: null  // null → server uses default master operator prompt
+    },
+    brainstorm: {
+      label: 'Brainstorm',
+      icon: 'fa-lightbulb',
+      system: 'You are a sharp brainstorming partner inside The SaaSsin Studio. Generate divergent ideas fast, push back on weak ones, never settle for obvious. Output 8-12 ideas per request, ranked. Include a one-line "kill it" reason for the bottom 3. No fluff.'
+    },
+    sales: {
+      label: 'Sales',
+      icon: 'fa-handshake',
+      system: 'You are the sales lead inside The SaaSsin Studio. Builder voice, no hype. Output: discovery questions, objection handlers, follow-up sequences, and proposal frameworks. Always include a money question. Specific over generic. No emojis.'
+    },
+    builder: {
+      label: 'Builder',
+      icon: 'fa-hammer',
+      system: 'You are the technical builder inside The SaaSsin Studio. Output: file paths, exact code, tested commands, version-pinned dependencies. Skip the explanation unless asked. If a step is risky, say so in one line and continue. Prefer the simplest working solution over the elegant one.'
+    },
+    copywriter: {
+      label: 'Copy',
+      icon: 'fa-pen-fancy',
+      system: 'You are the copywriter inside The SaaSsin Studio. Builder voice. No emojis, no exclamation marks, no "10X". Headlines under 12 words. Body in active voice. Every CTA verb-first. Always end with a one-line stinger that lands like AUTOMATE. ELIMINATE. DOMINATE.'
+    }
+  };
+
+  function setPersona(key) {
+    if (!PERSONAS[key]) return;
+    currentPersona = key;
+    try { localStorage.setItem(PERSONA_KEY, key); } catch (_) {}
+    document.querySelectorAll('.agent-persona').forEach(p => p.classList.toggle('agent-persona-on', p.dataset.persona === key));
+  }
 
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(-40))); } catch (_) {}
@@ -66,10 +104,11 @@
         return;
       }
 
+      const personaSystem = (PERSONAS[currentPersona] || PERSONAS.operator).system;
       const res = await fetch(APIBase + '/agent/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history })
+        body: JSON.stringify({ messages: history, system: personaSystem || undefined })
       });
       const data = await res.json();
       thinking.remove();
@@ -124,6 +163,14 @@
         input.focus();
       });
     });
+
+    // Persona pill clicks + restore selection
+    document.querySelectorAll('.agent-persona').forEach(function (p) {
+      p.addEventListener('click', function () {
+        setPersona(p.dataset.persona);
+      });
+    });
+    setPersona(currentPersona);
 
     if (history.length === 0) {
       history.push({

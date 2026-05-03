@@ -29,3 +29,11 @@
 #agent-input:focus{border-color:rgba(255,42,42,.35);}
 #agent-send{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 18px;font-family:'JetBrains Mono','Courier New',monospace;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:opacity .2s;display:flex;align-items:center;gap:6px;}
 #agent-send:hover{opacity:.85;}
+
+/* ── persona pills (v2) ── */
+.agent-personabar{padding:8px 24px 4px;display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0;background:var(--bg);border-bottom:1px solid var(--border);}
+.agent-persona{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--muted);font-family:'JetBrains Mono','Courier New',monospace;font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .15s;user-select:none;}
+.agent-persona i{font-size:.7rem;}
+.agent-persona:hover{color:var(--text);border-color:rgba(255,42,42,0.35);background:rgba(255,42,42,0.04);}
+.agent-persona-on{background:var(--accent);color:#fff;border-color:var(--accent);}
+.agent-persona-on:hover{background:var(--accent);color:#fff;}
