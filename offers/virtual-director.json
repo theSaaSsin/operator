@@ -1,0 +1,52 @@
+{
+  "offer": "Virtual Director",
+  "url": "{{SITE_URL}}",
+  "pitch": "Previs for AI video: block the shot in 3D, fly the camera, export the exact Higgsfield camera, prompt and reference clip. Seedance followed 7 of 7 previs camera moves in testing.",
+  "prices": { "pro": "£19/month or £149/year", "doneForYou": "£149 per scene (up to 6 shots, 48 h, includes 1 month of Pro)" },
+  "leadSources": [
+    { "where": "X search", "query": "\"higgsfield\" (\"wasted credits\" OR \"burned credits\" OR \"camera\" OR \"reroll\")", "why": "People complaining about failed generations and camera control" },
+    { "where": "X search", "query": "(seedance OR kling OR veo) \"camera movement\" (doesn't OR won't OR ignored)", "why": "Model ignored the camera move: exactly what previs fixes" },
+    { "where": "Reddit", "query": "r/aivideo, r/HiggsfieldAI, r/StableDiffusion: 'camera control', 'consistent shot', 'dolly zoom', 'whip pan'", "why": "Help-seeking threads" },
+    { "where": "YouTube comments", "query": "Higgsfield / Seedance tutorial videos: comments asking 'how do I get this camera move'", "why": "Warm, specific intent" },
+    { "where": "Fiverr / Upwork buyers", "query": "'AI music video', 'AI commercial', 'AI short film' job posts", "why": "Done-for-you scenes at £149" },
+    { "where": "Agencies", "query": "Small creative/social agencies posting AI video work on LinkedIn", "why": "Pro seats plus done-for-you overflow" }
+  ],
+  "scoring": [
+    { "signal": "Mentions wasted or burned credits", "score": 30 },
+    { "signal": "Mentions a specific camera move (dolly, whip, orbit, POV, dutch)", "score": 25 },
+    { "signal": "Posts AI video work at least weekly", "score": 20 },
+    { "signal": "Paid client work / agency", "score": 25 }
+  ],
+  "messages": [
+    {
+      "label": "Opener: wasted credits",
+      "niche": "AI video creators",
+      "message": "Saw your post about the camera move not landing. That's the exact problem I built Virtual Director for: you fly the move in a quick 3D previs, and it exports the Higgsfield call with the previs clip as the motion reference. In my test Seedance followed 7 of 7 moves (dutch roll within half a degree). Free to try: {{SITE_URL}}. Happy to set up your next shot with you if you send me the idea."
+    },
+    {
+      "label": "Opener: specific move",
+      "niche": "AI video creators",
+      "message": "That {{MOVE}} is hard to prompt. Text alone rarely gets the timing right. I made a free previs tool where you block the move with grey boxes (or fly it with a controller) and it gives Higgsfield the exact reference clip and camera wording. Side-by-side proof here: {{SITE_URL}}#proof"
+    },
+    {
+      "label": "Follow-up (48 h)",
+      "niche": "AI video creators",
+      "message": "Quick follow-up: if you send me one shot you've been struggling with, I'll previs it and send you the Higgsfield-ready package back, free. If it saves you a reroll, Pro is £19/month."
+    },
+    {
+      "label": "Done-for-you pitch",
+      "niche": "Brands / musicians / agencies",
+      "message": "I direct AI video scenes shot by shot: previs first, so every Higgsfield generation is planned (camera, timing, references) instead of rolled until it works. £149 per scene, up to 6 shots, delivered in 48 hours, with the packages so you can re-generate anytime. Examples: {{SITE_URL}}#proof. Want me to do one for your next release?"
+    },
+    {
+      "label": "Agency pitch",
+      "niche": "Creative agencies",
+      "message": "If your team is producing AI video for clients, credits and revision rounds are probably eating the margin. Virtual Director lets your editors block the shot in 3D and export the exact generation call, so the first render is the one. Pro is £19/seat/month. Happy to run a free 15-minute walkthrough on one of your briefs."
+    },
+    {
+      "label": "Community post (Reddit / Discord)",
+      "niche": "Community",
+      "message": "I tested whether AI video actually follows a previs camera move. Grey-box previs → Seedance 2.0 Mini on Higgsfield, 7 moves (POV walk, dutch roll, slow pan, whip pan, tilt reveal, dolly zoom, orbit). All 7 followed; the dutch roll came back at 43.9° vs 44.4° planned. Side-by-sides and method: {{SITE_URL}}#proof. The tool is free to use. Happy to answer questions about the workflow."
+    }
+  ]
+}
